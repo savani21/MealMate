@@ -1,0 +1,19 @@
+# Node Modules
+backend/node_modules/
+frontend/node_modules/
+
+# Environment Files
+backend/.env
+frontend/.env
+
+# Build Files
+frontend/dist/
+
+# Logs
+*.log
+
+# Vite Cache
+.vite/
+
+# VS Code Settings
+.vscode/
