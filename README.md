@@ -3,8 +3,8 @@
 ## Team Members
 
 - Avani Savani
-- Member 2
-- Member 3
+- Dhruv Shah
+- Krisha Thakar
 
 ## Tech Stack
 
