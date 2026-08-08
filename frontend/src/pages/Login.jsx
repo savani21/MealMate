@@ -3,6 +3,9 @@ import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import axios from "axios";
 import { Leaf, Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { useAuth } from "../context/AuthContext";
+
+
 
 const BENEFITS = [
   'Personalized AI meal plans every week',
@@ -18,6 +21,7 @@ export default function Login() {
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const { login } = useAuth();
 
   async function handleSubmit(e) {
 
@@ -45,10 +49,11 @@ export default function Login() {
         }
       );
 
-      localStorage.setItem("token", res.data.token);
+      //save login data to local storage and update context
+      login(res.data.user, res.data.token);
 
       alert("Login Successful");
-
+      // We'll redirect later
     }
     catch (err) {
 
@@ -68,8 +73,6 @@ export default function Login() {
     }
 
   }
-
-
 
   return (
     <div className="min-h-screen flex">
