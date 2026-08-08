@@ -1,7 +1,6 @@
-const User=require("../models/User");
-const bcrypt=require("bcryptjs");
-const jwt=require("jsonwebtoken");
-
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 exports.register = async (req, res) => {
   try {
@@ -26,10 +25,12 @@ exports.register = async (req, res) => {
       password: hashedPassword,
     });
 
+    const userResponse = await User.findById(user._id).select("-password");
+
     res.status(201).json({
       success: true,
       message: "Registration successful",
-      user,
+      user: userResponse,
     });
   } catch (err) {
     res.status(500).json({
@@ -38,60 +39,68 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.login=async(req,res)=>{
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-try{
+    const user = await User.findOne({ email });
 
-const {email,password}=req.body;
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
-const user=await User.findOne({email});
+    const match = await bcrypt.compare(password, user.password);
 
-if(!user){
+    if (!match) {
+      return res.status(400).json({
+        message: "Invalid Password",
+      });
+    }
 
-return res.status(404).json({
-message:"User not found"
-});
+    const token = jwt.sign(
+      { id: user._id },
 
-}
+      process.env.JWT_SECRET,
 
-const match=await bcrypt.compare(password,user.password);
+      { expiresIn: "7d" },
+    );
 
-if(!match){
+    res.json({
+      success: true,
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
+};
 
-return res.status(400).json({
-message:"Invalid Password"
-});
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
 
-}
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
-const token=jwt.sign(
-
-{id:user._id},
-
-process.env.JWT_SECRET,
-
-{expiresIn:"7d"}
-
-);
-
-res.json({
-
-success:true,
-
-token,
-
-user
-
-});
-
-}
-
-catch(err){
-
-res.status(500).json({
-message:err.message
-});
-
-}
-
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
+    });
+  }
 };
