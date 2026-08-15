@@ -1,7 +1,6 @@
-const User=require("../models/User");
-const bcrypt=require("bcryptjs");
-const jwt=require("jsonwebtoken");
-
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 exports.register = async (req, res) => {
   try {
@@ -26,10 +25,13 @@ exports.register = async (req, res) => {
       password: hashedPassword,
     });
 
+    // Don't send password to frontend
+    const userResponse = await User.findById(user._id).select("-password");
+
     res.status(201).json({
       success: true,
       message: "Registration successful",
-      user,
+      user: userResponse,
     });
   } catch (err) {
     res.status(500).json({
@@ -42,42 +44,71 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find user
     const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found"
+        message: "User not found",
       });
     }
 
+    // Compare password
     const match = await bcrypt.compare(password, user.password);
 
     if (!match) {
       return res.status(400).json({
-        message: "Invalid Password"
+        message: "Invalid Password",
       });
     }
 
+    // Create JWT with user ID and role
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      {
+        id: user._id,
+        role: user.role,
+      },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      {
+        expiresIn: "7d",
+      }
     );
 
+    // Send user information without password
     res.json({
       success: true,
       token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role
-      }
+        role: user.role,
+      },
     });
-
   } catch (err) {
     res.status(500).json({
-      message: err.message
+      message: err.message,
+    });
+  }
+};
+
+exports.getProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: err.message,
     });
   }
 };

@@ -6,29 +6,49 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Restore session on refresh
+  // Restore login session when the application starts
   useEffect(() => {
-    const storedUser = localStorage.getItem("mealmate_user");
-    if (storedUser) setUser(JSON.parse(storedUser));
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to restore user session:", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
+    }
+
     setLoading(false);
   }, []);
 
-  // Call this after a successful login API call.
-  // userData must include: { id, name, role } where role is "admin" or "user"
+  // Called after successful login
   const login = (userData, token) => {
-    localStorage.setItem("mealmate_token", token);
-    localStorage.setItem("mealmate_user", JSON.stringify(userData));
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(userData));
+
     setUser(userData);
   };
 
+  // Logout user
   const logout = () => {
-    localStorage.removeItem("mealmate_token");
-    localStorage.removeItem("mealmate_user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        isAuthenticated: !!user,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

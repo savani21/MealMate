@@ -53,8 +53,6 @@ const { login } = useAuth();
   }
 }
 
-
-
   return (
     <div className="min-h-screen flex">
 
