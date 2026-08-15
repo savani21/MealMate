@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import axios from "axios";
 import { Leaf, Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { useAuth } from '@/context/AuthContext';
 
 const BENEFITS = [
   'Personalized AI meal plans every week',
@@ -18,56 +20,38 @@ export default function Login() {
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [, setLocation] = useLocation();
+const { login } = useAuth();
 
-  async function handleSubmit(e) {
+ async function handleSubmit(e) {
+  e.preventDefault();
+  setError("");
 
-    e.preventDefault();
-
-    setError("");
-
-    if (!email || !password) {
-
-      setError("Please fill in all fields.");
-
-      return;
-
-    }
-
-    try {
-
-      setLoading(true);
-
-      const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
-
-      localStorage.setItem("token", res.data.token);
-
-      alert("Login Successful");
-
-    }
-    catch (err) {
-
-      setError(
-
-        err.response?.data?.message ||
-
-        "Login Failed"
-
-      );
-
-    }
-    finally {
-
-      setLoading(false);
-
-    }
-
+  if (!email || !password) {
+    setError("Please fill in all fields.");
+    return;
   }
+
+  try {
+    setLoading(true);
+
+    const res = await axios.post(
+      "http://localhost:5000/api/auth/login",
+      { email, password }
+    );
+
+    localStorage.setItem("token", res.data.token);
+    login(res.data.user, res.data.token); // stores user (with role) in AuthContext
+    setLocation("/dashboard"); // redirect
+
+  } catch (err) {
+    setError(
+      err.response?.data?.message || "Login Failed"
+    );
+  } finally {
+    setLoading(false);
+  }
+}
 
 
 
