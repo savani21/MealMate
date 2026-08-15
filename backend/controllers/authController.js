@@ -25,6 +25,7 @@ exports.register = async (req, res) => {
       password: hashedPassword,
     });
 
+    // Don't send password to frontend
     const userResponse = await User.findById(user._id).select("-password");
 
     res.status(201).json({
@@ -43,6 +44,7 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Find user
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -51,6 +53,7 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Compare password
     const match = await bcrypt.compare(password, user.password);
 
     if (!match) {
@@ -59,14 +62,19 @@ exports.login = async (req, res) => {
       });
     }
 
+    // Create JWT with user ID and role
     const token = jwt.sign(
-      { id: user._id },
-
+      {
+        id: user._id,
+        role: user.role,
+      },
       process.env.JWT_SECRET,
-
-      { expiresIn: "7d" },
+      {
+        expiresIn: "7d",
+      }
     );
 
+    // Send user information without password
     res.json({
       success: true,
       token,

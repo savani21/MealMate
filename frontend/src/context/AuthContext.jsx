@@ -1,18 +1,29 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // Restore login session when the application starts
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
 
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error("Failed to restore user session:", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
     }
+
+    setLoading(false);
   }, []);
 
+  // Called after successful login
   const login = (userData, token) => {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
@@ -20,6 +31,7 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
 
+  // Logout user
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -33,6 +45,7 @@ export function AuthProvider({ children }) {
         user,
         login,
         logout,
+        loading,
         isAuthenticated: !!user,
       }}
     >
