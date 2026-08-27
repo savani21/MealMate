@@ -1,51 +1,189 @@
 import { useAuth } from "@/context/AuthContext";
-import AdminSection from "./dashboard/AdminSection";
-import UserSection from "./dashboard/UserSection";
+import AdminSection from "./Dashboard/AdminSection";
+import UserSection from "./Dashboard/UserSection";
 
-// One dashboard, one route (/dashboard), for both roles.
-// Shared widgets render for everyone; the section below splits by role.
+import {
+  ChefHat,
+  Bell,
+  LogOut,
+  UserCircle,
+} from "lucide-react";
+
+// One dashboard route for both admin and user
 export default function Dashboard() {
   const { user, logout } = useAuth();
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800">MealMate Dashboard</h1>
-          <p className="text-sm text-gray-500">
-            Welcome back, {user.name} <span className="capitalize">({user.role})</span>
-          </p>
+    <div className="min-h-screen bg-[#f7faf7]">
+
+      {/* ================= HEADER ================= */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+
+            <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center">
+              <ChefHat className="w-6 h-6 text-primary" />
+            </div>
+
+            <div>
+              <h1 className="text-xl font-black text-gray-900">
+                Meal<span className="text-primary">Mate</span>
+              </h1>
+
+              <p className="text-xs text-gray-400 hidden sm:block">
+                Your smart meal companion
+              </p>
+            </div>
+
+          </div>
+
+
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+
+            {/* Notification */}
+            <button
+              className="relative w-10 h-10 rounded-xl hover:bg-gray-50 flex items-center justify-center transition"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5 text-gray-600" />
+
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
+            </button>
+
+
+            {/* User */}
+            <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">
+
+              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                <UserCircle className="w-6 h-6 text-primary" />
+              </div>
+
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-gray-800">
+                  {user.name}
+                </p>
+
+                <p className="text-xs text-gray-400 capitalize">
+                  {user.role}
+                </p>
+              </div>
+
+            </div>
+
+
+            {/* Logout */}
+            <button
+              onClick={logout}
+              className="ml-2 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">
+                Logout
+              </span>
+            </button>
+
+          </div>
+
         </div>
-        <button
-          onClick={logout}
-          className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm hover:bg-red-700 transition"
-        >
-          Logout
-        </button>
+
       </header>
 
-      <main className="p-6 max-w-6xl mx-auto">
-        {/* Shared stats - same for both roles for now */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <StatCard label="Meals Logged" value="--" />
-          <StatCard label="Active Plans" value="--" />
-          <StatCard label="Notifications" value="--" />
+
+      {/* ================= MAIN ================= */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Small welcome line */}
+        <div className="mb-8">
+
+          <p className="text-sm text-primary font-semibold">
+            Welcome back 👋
+          </p>
+
+          <p className="text-sm text-gray-500 mt-1">
+            Manage your meals, recipes and nutrition from one place.
+          </p>
+
         </div>
 
-        {/* Role-specific section - swap this out as functionality diverges */}
-        {user.role === "admin" ? <AdminSection /> : <UserSection />}
+
+        {/* ================= COMMON STATS ================= */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+
+          <StatCard
+            label="Meals Logged"
+            value="--"
+            description="Keep tracking your meals"
+          />
+
+          <StatCard
+            label="Active Plans"
+            value="--"
+            description="Your current meal plans"
+          />
+
+          <StatCard
+            label="Notifications"
+            value="--"
+            description="Stay updated"
+          />
+
+        </div>
+
+
+        {/* ================= ROLE SECTION ================= */}
+
+        {user.role === "admin" ? (
+          <AdminSection />
+        ) : (
+          <UserSection />
+        )}
+
       </main>
+
     </div>
   );
 }
 
-function StatCard({ label, value }) {
+
+/* ================= STAT CARD ================= */
+
+function StatCard({ label, value, description }) {
+
   return (
-    <div className="bg-white rounded-xl shadow p-5">
-      <p className="text-sm text-gray-500">{label}</p>
-      <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+    <div className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all">
+
+      <div className="flex items-start justify-between">
+
+        <div>
+
+          <p className="text-sm text-gray-500">
+            {label}
+          </p>
+
+          <p className="text-3xl font-black text-gray-900 mt-2">
+            {value}
+          </p>
+
+          <p className="text-xs text-gray-400 mt-2">
+            {description}
+          </p>
+
+        </div>
+
+        <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+
+          <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
