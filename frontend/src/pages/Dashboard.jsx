@@ -1,4 +1,7 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
+
 import AdminSection from "./Dashboard/AdminSection";
 import UserSection from "./Dashboard/UserSection";
 
@@ -7,85 +10,170 @@ import {
   Bell,
   LogOut,
   UserCircle,
+  Menu,
+  X,
+  Home,
+  User,
+  Settings,
+  CalendarDays,
+  ClipboardList,
+  ShoppingBasket,
+  Heart,
+  ChevronRight,
 } from "lucide-react";
 
-// One dashboard route for both admin and user
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const [, setLocation] = useLocation();
 
-  if (!user) return null;
+  /*
+    Desktop:
+    menu open by default
+
+    Mobile:
+    menu closed by default
+  */
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  if (!user) {
+    return null;
+  }
+
+  const handleLogout = () => {
+    logout();
+    setLocation("/login");
+  };
+
+  const goTo = (path) => {
+    setLocation(path);
+    setMenuOpen(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
 
-      {/* ================= HEADER ================= */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-gray-100">
+      {/* =====================================================
+          TOP HEADER
+      ===================================================== */}
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
 
-          {/* Logo */}
+        <div className="
+          max-w-7xl
+          mx-auto
+          h-20
+          px-4
+          sm:px-6
+          lg:px-8
+          flex
+          items-center
+          justify-between
+        ">
+
+          {/* MEALMATE LOGO */}
+
           <div className="flex items-center gap-3">
 
-            <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center">
+            <div className="
+              w-11
+              h-11
+              rounded-xl
+              bg-green-50
+              flex
+              items-center
+              justify-center
+            ">
               <ChefHat className="w-6 h-6 text-primary" />
             </div>
 
             <div>
-              <h1 className="text-xl font-black text-gray-900">
+
+              <h1 className="
+                text-xl
+                font-black
+                text-gray-900
+              ">
                 Meal<span className="text-primary">Mate</span>
               </h1>
 
-              <p className="text-xs text-gray-400 hidden sm:block">
+              <p className="
+                text-xs
+                text-gray-400
+                hidden
+                sm:block
+              ">
                 Your smart meal companion
               </p>
+
             </div>
 
           </div>
 
 
-          {/* Right side */}
-          <div className="flex items-center gap-3">
+          {/* HEADER RIGHT */}
+
+          <div className="flex items-center gap-2">
 
             {/* Notification */}
+
             <button
-              className="relative w-10 h-10 rounded-xl hover:bg-gray-50 flex items-center justify-center transition"
-              title="Notifications"
+              onClick={() => goTo("/notifications")}
+              className="
+                relative
+                w-10
+                h-10
+                rounded-xl
+                flex
+                items-center
+                justify-center
+                hover:bg-gray-50
+                transition
+              "
             >
+
               <Bell className="w-5 h-5 text-gray-600" />
 
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
+              <span className="
+                absolute
+                top-2
+                right-2
+                w-2
+                h-2
+                rounded-full
+                bg-primary
+              " />
+
             </button>
 
 
-            {/* User */}
-            <div className="hidden sm:flex items-center gap-3 pl-3 border-l border-gray-200">
+            {/* MENU BUTTON */}
 
-              <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                <UserCircle className="w-6 h-6 text-primary" />
-              </div>
-
-              <div className="leading-tight">
-                <p className="text-sm font-semibold text-gray-800">
-                  {user.name}
-                </p>
-
-                <p className="text-xs text-gray-400 capitalize">
-                  {user.role}
-                </p>
-              </div>
-
-            </div>
-
-
-            {/* Logout */}
             <button
-              onClick={logout}
-              className="ml-2 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800 transition"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="
+                w-11
+                h-11
+                rounded-xl
+                bg-white
+                border
+                border-gray-200
+                shadow-sm
+                hover:shadow-md
+                hover:bg-gray-50
+                flex
+                items-center
+                justify-center
+                transition
+              "
+              aria-label="Toggle menu"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                Logout
-              </span>
+
+              {menuOpen ? (
+                <X className="w-5 h-5 text-gray-700" />
+              ) : (
+                <Menu className="w-5 h-5 text-gray-700" />
+              )}
+
             </button>
 
           </div>
@@ -95,25 +183,67 @@ export default function Dashboard() {
       </header>
 
 
-      {/* ================= MAIN ================= */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Small welcome line */}
-        <div className="mb-8">
+      {/* =====================================================
+          MAIN CONTENT
+      ===================================================== */}
 
-          <p className="text-sm text-primary font-semibold">
+      <main className="
+        max-w-7xl
+        mx-auto
+        px-4
+        sm:px-6
+        lg:px-8
+        py-8
+      ">
+
+        {/* =================================================
+            WELCOME
+        ================================================== */}
+
+        <section className="mb-8">
+
+          <p className="
+            text-sm
+            text-primary
+            font-semibold
+          ">
             Welcome back 👋
           </p>
 
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="
+            text-2xl
+            md:text-3xl
+            font-black
+            text-gray-900
+            mt-1
+          ">
+            {user.name}
+          </h1>
+
+          <p className="
+            text-sm
+            text-gray-500
+            mt-2
+          ">
             Manage your meals, recipes and nutrition from one place.
           </p>
 
-        </div>
+        </section>
 
 
-        {/* ================= COMMON STATS ================= */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+
+        {/* =================================================
+            SHARED STATS
+        ================================================== */}
+
+        <section className="
+          grid
+          grid-cols-1
+          sm:grid-cols-3
+          gap-5
+          mb-8
+        ">
 
           <StatCard
             label="Meals Logged"
@@ -133,10 +263,13 @@ export default function Dashboard() {
             description="Stay updated"
           />
 
-        </div>
+        </section>
 
 
-        {/* ================= ROLE SECTION ================= */}
+
+        {/* =================================================
+            USER / ADMIN CONTENT
+        ================================================== */}
 
         {user.role === "admin" ? (
           <AdminSection />
@@ -146,39 +279,497 @@ export default function Dashboard() {
 
       </main>
 
+
+
+      {/* =====================================================
+          DARK OVERLAY
+          Only mobile
+      ===================================================== */}
+
+      {menuOpen && (
+        <div
+          className="
+            fixed
+            inset-0
+            bg-black/20
+            z-40
+            lg:hidden
+          "
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+
+
+      {/* =====================================================
+          FOLDING MENU WINDOW
+      ===================================================== */}
+
+      <div
+        className={`
+          fixed
+          z-50
+
+          top-24
+          right-4
+
+          w-[calc(100%-2rem)]
+          sm:w-80
+          lg:w-80
+
+          max-h-[calc(100vh-7rem)]
+
+          bg-white
+
+          rounded-2xl
+
+          border
+          border-gray-200
+
+          shadow-2xl
+
+          overflow-hidden
+
+          transition-all
+          duration-300
+          ease-out
+
+          ${
+            menuOpen
+              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+              : "opacity-0 -translate-y-3 scale-95 pointer-events-none"
+          }
+        `}
+      >
+
+        {/* =================================================
+            MENU SCROLL AREA
+        ================================================== */}
+
+        <div className="max-h-[calc(100vh-7rem)] overflow-y-auto">
+
+
+          {/* =================================================
+              USER PROFILE
+          ================================================== */}
+
+          <div className="
+            p-5
+            border-b
+            border-gray-100
+          ">
+
+            <div className="flex items-center gap-3">
+
+              {/* Avatar */}
+
+              <div className="
+                w-12
+                h-12
+                rounded-full
+                bg-green-50
+                flex
+                items-center
+                justify-center
+                shrink-0
+              ">
+
+                <UserCircle className="
+                  w-7
+                  h-7
+                  text-primary
+                " />
+
+              </div>
+
+
+              {/* User */}
+
+              <div className="min-w-0">
+
+                <p className="
+                  font-bold
+                  text-gray-900
+                  truncate
+                ">
+                  {user.name}
+                </p>
+
+                <p className="
+                  text-sm
+                  text-gray-400
+                  capitalize
+                  mt-1
+                ">
+                  {user.role}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+
+          {/* =================================================
+              MENU
+          ================================================== */}
+
+          <div className="p-4">
+
+            <p className="
+              text-xs
+              font-bold
+              uppercase
+              tracking-wider
+              text-gray-400
+              px-3
+              mb-3
+            ">
+              Menu
+            </p>
+
+
+            {/* =================================================
+                DASHBOARD
+            ================================================== */}
+
+            <MenuItem
+              icon={<Home className="w-5 h-5" />}
+              label="Dashboard"
+              active
+              onClick={() => goTo("/dashboard")}
+            />
+
+
+            {/* =================================================
+                PROFILE
+            ================================================== */}
+
+            <MenuItem
+              icon={<User className="w-5 h-5" />}
+              label="Profile"
+              onClick={() => goTo("/profile")}
+            />
+
+
+            {/* =================================================
+                USER ONLY MENU
+            ================================================== */}
+
+            {user.role === "user" && (
+              <>
+                <div className="
+                  mt-5
+                  mb-3
+                  px-3
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-wider
+                  text-gray-400
+                ">
+                  My MealMate
+                </div>
+
+
+                <MenuItem
+                  icon={
+                    <ShoppingBasket className="w-5 h-5" />
+                  }
+                  label="Grocery List"
+                  onClick={() =>
+                    goTo("/user/grocery")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <ChefHat className="w-5 h-5" />
+                  }
+                  label="Recipes"
+                  onClick={() =>
+                    goTo("/recipes")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <Heart className="w-5 h-5" />
+                  }
+                  label="Favorites"
+                  onClick={() =>
+                    goTo("/favorites")
+                  }
+                />
+              </>
+            )}
+
+
+
+            {/* =================================================
+                ADMIN ONLY
+            ================================================== */}
+
+            {user.role === "admin" && (
+              <>
+                <div className="
+                  mt-5
+                  mb-3
+                  px-3
+                  text-xs
+                  font-bold
+                  uppercase
+                  tracking-wider
+                  text-gray-400
+                ">
+                  Administration
+                </div>
+
+
+                <MenuItem
+                  icon={
+                    <User className="w-5 h-5" />
+                  }
+                  label="Manage Users"
+                  onClick={() =>
+                    goTo("/admin/users")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <ShoppingBasket className="w-5 h-5" />
+                  }
+                  label="Manage Grocery Stores"
+                  onClick={() =>
+                    goTo("/admin/grocery-stores")
+                  }
+                />
+              </>
+            )}
+
+
+
+            {/* =================================================
+                SHARED
+            ================================================== */}
+
+            <div className="
+              mt-5
+              mb-3
+              px-3
+              text-xs
+              font-bold
+              uppercase
+              tracking-wider
+              text-gray-400
+            ">
+              General
+            </div>
+
+
+            <MenuItem
+              icon={
+                <Bell className="w-5 h-5" />
+              }
+              label="Notifications"
+              onClick={() =>
+                goTo("/notifications")
+              }
+            />
+
+
+            <MenuItem
+              icon={
+                <Settings className="w-5 h-5" />
+              }
+              label="Settings"
+              onClick={() =>
+                goTo("/settings")
+              }
+            />
+
+
+            {/* =================================================
+                LOGOUT
+            ================================================== */}
+
+            <div className="
+              border-t
+              border-gray-100
+              my-4
+            " />
+
+            <button
+              onClick={handleLogout}
+              className="
+                w-full
+                flex
+                items-center
+                gap-3
+                px-3
+                py-3
+                rounded-xl
+                text-red-500
+                font-semibold
+                text-sm
+                hover:bg-red-50
+                transition
+              "
+            >
+
+              <LogOut className="w-5 h-5" />
+
+              <span>
+                Logout
+              </span>
+
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
 
 
-/* ================= STAT CARD ================= */
+/* =========================================================
+   MENU ITEM
+========================================================= */
 
-function StatCard({ label, value, description }) {
-
+function MenuItem({
+  icon,
+  label,
+  onClick,
+  active = false,
+}) {
   return (
-    <div className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all">
+    <button
+      onClick={onClick}
+      className={`
+        w-full
+        flex
+        items-center
+        justify-between
+        px-3
+        py-3
+        rounded-xl
+        text-sm
+        font-semibold
+        transition
+        mb-1
 
-      <div className="flex items-start justify-between">
+        ${
+          active
+            ? "bg-green-50 text-primary"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        }
+      `}
+    >
+
+      <div className="flex items-center gap-3">
+
+        {icon}
+
+        <span>
+          {label}
+        </span>
+
+      </div>
+
+
+      <ChevronRight className="
+        w-4
+        h-4
+        text-gray-300
+      " />
+
+    </button>
+  );
+}
+
+
+/* =========================================================
+   STAT CARD
+========================================================= */
+
+function StatCard({
+  label,
+  value,
+  description,
+}) {
+  return (
+    <div className="
+      bg-white
+      rounded-2xl
+      border
+      border-gray-100
+      p-6
+      shadow-sm
+      hover:shadow-md
+      transition
+    ">
+
+      <div className="
+        flex
+        items-start
+        justify-between
+      ">
 
         <div>
 
-          <p className="text-sm text-gray-500">
+          <p className="
+            text-sm
+            text-gray-500
+          ">
             {label}
           </p>
 
-          <p className="text-3xl font-black text-gray-900 mt-2">
+          <p className="
+            text-3xl
+            font-black
+            text-gray-900
+            mt-2
+          ">
             {value}
           </p>
 
-          <p className="text-xs text-gray-400 mt-2">
+          <p className="
+            text-xs
+            text-gray-400
+            mt-2
+          ">
             {description}
           </p>
 
         </div>
 
-        <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
 
-          <div className="w-2.5 h-2.5 rounded-full bg-primary" />
+        <div className="
+          w-10
+          h-10
+          rounded-xl
+          bg-green-50
+          flex
+          items-center
+          justify-center
+        ">
+
+          <div className="
+            w-2.5
+            h-2.5
+            rounded-full
+            bg-primary"
+          />
 
         </div>
 

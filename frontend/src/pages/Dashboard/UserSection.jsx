@@ -1,440 +1,539 @@
 import {
-  ChefHat,
   CalendarDays,
-  Heart,
-  TrendingUp,
+  ChefHat,
   ShoppingBasket,
-  Sparkles,
+  Heart,
   ArrowRight,
-  Clock,
-  Flame,
-  Beef,
-  Leaf,
+  Sparkles,
+  ClipboardList,
 } from "lucide-react";
 
+import { useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
+
 export default function UserSection() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+
   return (
     <div className="space-y-8">
 
-      {/* ================= WELCOME ================= */}
-      <section className="relative overflow-hidden rounded-3xl bg-green-50 border border-green-100 p-8 md:p-10">
+      {/* =====================================================
+          USER WELCOME SECTION
+      ===================================================== */}
 
-        <div className="relative z-10 max-w-2xl">
+      <section className="
+        bg-green-50
+        border
+        border-green-100
+        rounded-3xl
+        p-8
+        md:p-10
+      ">
 
-          <p className="text-primary font-semibold tracking-wide uppercase text-sm mb-3">
-            Your MealMate Kitchen
-          </p>
+        <p className="
+          text-primary
+          font-semibold
+          text-sm
+          uppercase
+          tracking-wide
+        ">
+          Welcome to MealMate
+        </p>
 
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-tight">
-            Eat better.
-            <br />
-            <span className="text-primary">
-              Live healthier.
-            </span>
-          </h1>
+        <h1 className="
+          text-3xl
+          md:text-4xl
+          font-black
+          text-gray-900
+          mt-2
+        ">
+          Eat better.
+          <br />
+          <span className="text-primary">
+            Live healthier.
+          </span>
+        </h1>
 
-          <p className="text-gray-600 mt-4 text-base md:text-lg max-w-xl">
-            Plan your meals, discover delicious recipes and stay on track
-            with your nutrition — all in one place.
-          </p>
-
-          <div className="flex flex-wrap gap-3 mt-7">
-
-            <button className="bg-primary text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 hover:opacity-90 transition">
-              <CalendarDays className="w-5 h-5" />
-              Plan My Meals
-            </button>
-
-            <button className="bg-white text-gray-700 px-5 py-3 rounded-xl font-semibold border border-gray-200 flex items-center gap-2 hover:shadow-md transition">
-              <ChefHat className="w-5 h-5 text-primary" />
-              Find a Recipe
-            </button>
-
-          </div>
-
-        </div>
-
-        {/* Decorative element */}
-        <div className="absolute -right-12 -bottom-16 w-56 h-56 rounded-full bg-white/60" />
-        <div className="absolute right-10 top-8 w-20 h-20 rounded-full bg-green-100/70" />
-
-      </section>
-
-
-      {/* ================= QUICK STATS ================= */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-
-        {/* Calories */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-sm text-gray-500">
-                Today's Calories
-              </p>
-
-              <h3 className="text-2xl font-black text-gray-900 mt-1">
-                1,540
-                <span className="text-sm font-normal text-gray-400">
-                  {" "}/ 2,000 kcal
-                </span>
-              </h3>
-            </div>
-
-            <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center">
-              <Flame className="w-6 h-6 text-orange-500" />
-            </div>
-
-          </div>
-
-          <div className="mt-5 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full w-[77%]" />
-          </div>
-
-        </div>
-
-
-        {/* Protein */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-sm text-gray-500">
-                Protein
-              </p>
-
-              <h3 className="text-2xl font-black text-gray-900 mt-1">
-                82g
-                <span className="text-sm font-normal text-gray-400">
-                  {" "}/ 120g
-                </span>
-              </h3>
-            </div>
-
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-              <Beef className="w-6 h-6 text-primary" />
-            </div>
-
-          </div>
-
-          <div className="mt-5 h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className="h-full bg-primary rounded-full w-[68%]" />
-          </div>
-
-        </div>
-
-
-        {/* Meals */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition">
-
-          <div className="flex items-center justify-between">
-
-            <div>
-              <p className="text-sm text-gray-500">
-                Meals Planned
-              </p>
-
-              <h3 className="text-2xl font-black text-gray-900 mt-1">
-                3
-                <span className="text-sm font-normal text-gray-400">
-                  {" "}meals today
-                </span>
-              </h3>
-            </div>
-
-            <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center">
-              <Leaf className="w-6 h-6 text-primary" />
-            </div>
-
-          </div>
-
-          <p className="text-xs text-gray-400 mt-5">
-            Breakfast • Lunch • Dinner
-          </p>
-
-        </div>
+        <p className="
+          text-gray-600
+          mt-4
+          max-w-xl
+        ">
+          Welcome back, { user?.name || "User" }!
+          Plan your meals, manage your saved plans
+          and organize your groceries.
+        </p>
 
       </section>
 
 
-      {/* ================= TODAY'S MEALS ================= */}
+      {/* =====================================================
+          USER QUICK ACTIONS
+      ===================================================== */}
+
       <section>
 
-        <div className="flex items-end justify-between mb-5">
+        <div className="mb-5">
 
-          <div>
-            <p className="text-primary font-semibold text-sm uppercase tracking-wide">
-              Your plan
-            </p>
+          <p className="
+            text-primary
+            font-semibold
+            text-sm
+            uppercase
+            tracking-wide
+          ">
+            Your MealMate
+          </p>
 
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">
-              Today's Meals
-            </h2>
+          <h2 className="
+            text-2xl
+            md:text-3xl
+            font-black
+            text-gray-900
+            mt-1
+          ">
+            What would you like to do?
+          </h2>
 
-            <p className="text-gray-500 mt-1">
-              Delicious meals planned for your day.
-            </p>
+        </div>
+
+
+        <div className="
+          grid
+          grid-cols-1
+          sm:grid-cols-2
+          lg:grid-cols-4
+          gap-5
+        ">
+
+          {/* =================================================
+              MEAL PLANNER
+          ================================================== */}
+
+          <ActionCard
+            icon={
+              <CalendarDays className="w-6 h-6 text-primary" />
+            }
+            title="Meal Planner"
+            description="Create a personalized meal plan."
+            onClick={ () => setLocation("/meal-planner") }
+          />
+
+
+          {/* =================================================
+              MY MEAL PLANS
+          ================================================== */}
+
+          <ActionCard
+            icon={
+              <ClipboardList className="w-6 h-6 text-primary" />
+            }
+            title="My Meal Plans"
+            description="View your saved meal plans."
+            onClick={ () => setLocation("/my-meal-plans") }
+          />
+
+
+          {/* =================================================
+              GROCERY LIST
+          ================================================== */}
+
+          <ActionCard
+            icon={
+              <ShoppingBasket className="w-6 h-6 text-primary" />
+            }
+            title="Grocery List"
+            description="View and manage your grocery list."
+            onClick={ () => setLocation("/user/grocery") }
+          />
+
+
+          {/* =================================================
+              FAVORITES
+          ================================================== */}
+
+          <ActionCard
+            icon={
+              <Heart className="w-6 h-6 text-primary" />
+            }
+            title="Favorites"
+            description="View your saved favorite recipes."
+            onClick={ () => setLocation("/favorites") }
+          />
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          AI RECIPE SECTION
+      ===================================================== */}
+
+      <section className="
+        bg-white
+        rounded-3xl
+        border
+        border-gray-100
+        shadow-sm
+        p-7
+        md:p-8
+      ">
+
+        <div className="
+          flex
+          flex-col
+          md:flex-row
+          md:items-center
+          md:justify-between
+          gap-5
+        ">
+
+          <div className="flex items-start gap-4">
+
+            <div className="
+              w-12
+              h-12
+              rounded-xl
+              bg-green-50
+              flex
+              items-center
+              justify-center
+              shrink-0
+            ">
+              <Sparkles className="
+                w-6
+                h-6
+                text-primary
+              " />
+            </div>
+
+
+            <div>
+
+              <p className="
+                text-xs
+                font-bold
+                uppercase
+                tracking-wide
+                text-primary
+              ">
+                MealMate AI
+              </p>
+
+              <h2 className="
+                text-xl
+                font-black
+                text-gray-900
+                mt-1
+              ">
+                Need a meal idea?
+              </h2>
+
+              <p className="
+                text-sm
+                text-gray-500
+                mt-1
+              ">
+                Get personalized recipe recommendations
+                based on your preferences.
+              </p>
+
+            </div>
+
           </div>
 
-          <button className="hidden sm:flex items-center gap-2 text-primary font-semibold text-sm hover:gap-3 transition-all">
-            View meal plan
+
+          <button
+            onClick={ () => setLocation("/recipes") }
+            className="
+              flex
+              items-center
+              justify-center
+              gap-2
+              bg-primary
+              text-white
+              px-5
+              py-3
+              rounded-xl
+              font-semibold
+              hover:opacity-90
+              transition
+              whitespace-nowrap
+            "
+          >
+            <ChefHat className="w-5 h-5" />
+            Find Recipes
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {/* =====================================================
+          TODAY'S MEALS
+      ===================================================== */}
+
+      <section>
+
+        <div className="
+          flex
+          items-center
+          justify-between
+          mb-5
+        ">
+
+          <div>
+
+            <p className="
+              text-primary
+              font-semibold
+              text-sm
+              uppercase
+              tracking-wide
+            ">
+              Today's Plan
+            </p>
+
+            <h2 className="
+              text-2xl
+              md:text-3xl
+              font-black
+              text-gray-900
+              mt-1
+            ">
+              Your Meals Today
+            </h2>
+
+          </div>
+
+
+          <button
+            onClick={ () => setLocation("/my-meal-plans") }
+            className="
+              hidden
+              sm:flex
+              items-center
+              gap-1
+              text-primary
+              font-semibold
+              text-sm
+              hover:gap-2
+              transition-all
+            "
+          >
+            View Plan
             <ArrowRight className="w-4 h-4" />
           </button>
 
         </div>
 
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="
+          grid
+          grid-cols-1
+          md:grid-cols-3
+          gap-5
+        ">
 
-          {/* Breakfast */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+          <MealCard
+            type="Breakfast"
+            time="8:00 AM"
+            meal="Healthy Oat Bowl"
+            description="Oats, banana, berries and almonds"
+          />
 
-            <div className="h-36 bg-green-50 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
-                <ChefHat className="w-8 h-8 text-primary" />
-              </div>
-            </div>
+          <MealCard
+            type="Lunch"
+            time="1:00 PM"
+            meal="Veggie Rice Bowl"
+            description="Rice, vegetables, tofu and herbs"
+          />
 
-            <div className="p-5">
-
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                Breakfast
-              </p>
-
-              <h3 className="text-lg font-bold text-gray-900 mt-2">
-                Healthy Oat Bowl
-              </h3>
-
-              <div className="flex items-center gap-2 text-gray-400 text-sm mt-3">
-                <Clock className="w-4 h-4" />
-                8:00 AM
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* Lunch */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-
-            <div className="h-36 bg-green-50 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
-                <Leaf className="w-8 h-8 text-primary" />
-              </div>
-            </div>
-
-            <div className="p-5">
-
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                Lunch
-              </p>
-
-              <h3 className="text-lg font-bold text-gray-900 mt-2">
-                Veggie Rice Bowl
-              </h3>
-
-              <div className="flex items-center gap-2 text-gray-400 text-sm mt-3">
-                <Clock className="w-4 h-4" />
-                1:00 PM
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* Dinner */}
-          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-
-            <div className="h-36 bg-green-50 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-sm">
-                <ShoppingBasket className="w-8 h-8 text-primary" />
-              </div>
-            </div>
-
-            <div className="p-5">
-
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">
-                Dinner
-              </p>
-
-              <h3 className="text-lg font-bold text-gray-900 mt-2">
-                Protein Veggie Bowl
-              </h3>
-
-              <div className="flex items-center gap-2 text-gray-400 text-sm mt-3">
-                <Clock className="w-4 h-4" />
-                8:00 PM
-              </div>
-
-            </div>
-
-          </div>
+          <MealCard
+            type="Dinner"
+            time="8:00 PM"
+            meal="Protein Veggie Bowl"
+            description="Mixed vegetables, paneer and quinoa"
+          />
 
         </div>
 
       </section>
 
+    </div>
+  );
+}
 
-      {/* ================= AI ASSISTANT ================= */}
-      <section className="rounded-2xl bg-white border border-gray-100 shadow-sm overflow-hidden">
 
-        <div className="p-6 md:p-8">
+/* =========================================================
+   ACTION CARD
+========================================================= */
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+function ActionCard({
+  icon,
+  title,
+  description,
+  onClick,
+}) {
+  return (
+    <button
+      onClick={ onClick }
+      className="
+        text-left
+        bg-white
+        rounded-2xl
+        border
+        border-gray-100
+        p-6
+        shadow-sm
+        hover:shadow-lg
+        hover:-translate-y-1
+        transition-all
+        duration-300
+        group
+      "
+    >
 
-            <div className="flex gap-4">
+      <div className="
+        w-12
+        h-12
+        rounded-xl
+        bg-green-50
+        flex
+        items-center
+        justify-center
+        mb-5
+      ">
+        { icon }
+      </div>
 
-              <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center shrink-0">
-                <Sparkles className="w-7 h-7 text-primary" />
-              </div>
 
-              <div>
+      <h3 className="
+        font-bold
+        text-lg
+        text-gray-900
+      ">
+        { title }
+      </h3>
 
-                <p className="text-primary font-semibold text-sm uppercase tracking-wide">
-                  Powered by AI
-                </p>
 
-                <h2 className="text-xl md:text-2xl font-black text-gray-900 mt-1">
-                  Your AI Kitchen Assistant
-                </h2>
+      <p className="
+        text-sm
+        text-gray-500
+        mt-2
+      ">
+        { description }
+      </p>
 
-                <p className="text-gray-500 text-sm md:text-base mt-2 max-w-xl">
-                  You have spinach and tomatoes available. Use them today
-                  to create a healthy meal before they expire.
-                </p>
 
-              </div>
+      <div className="
+        flex
+        items-center
+        gap-1
+        text-primary
+        text-sm
+        font-semibold
+        mt-4
+        group-hover:gap-2
+        transition-all
+      ">
+        Open
+        <ArrowRight className="w-4 h-4" />
+      </div>
 
-            </div>
+    </button>
+  );
+}
 
-            <button className="bg-primary text-white px-5 py-3 rounded-xl font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition shrink-0">
-              Get AI Recipe
-              <ArrowRight className="w-4 h-4" />
-            </button>
 
-          </div>
+/* =========================================================
+   MEAL CARD
+========================================================= */
 
+function MealCard({
+  type,
+  time,
+  meal,
+  description,
+}) {
+  return (
+    <div className="
+      bg-white
+      rounded-2xl
+      border
+      border-gray-100
+      overflow-hidden
+      shadow-sm
+      hover:shadow-lg
+      hover:-translate-y-1
+      transition-all
+      duration-300
+    ">
+
+      <div className="
+        h-28
+        bg-green-50
+        flex
+        items-center
+        justify-center
+      ">
+        <div className="text-4xl">
+          🍽️
         </div>
+      </div>
 
-      </section>
 
+      <div className="p-6">
 
-      {/* ================= FEATURE CARDS ================= */}
-      <section>
+        <div className="
+          flex
+          items-center
+          justify-between
+        ">
 
-        <div className="mb-5">
-
-          <p className="text-primary font-semibold text-sm uppercase tracking-wide">
-            Explore MealMate
+          <p className="
+            text-xs
+            font-bold
+            uppercase
+            tracking-wide
+            text-primary
+          ">
+            { type }
           </p>
 
-          <h2 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">
-            Everything you need
-          </h2>
+          <span className="
+            text-xs
+            text-gray-400
+          ">
+            { time }
+          </span>
 
         </div>
 
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-
-          {/* Meal Planner */}
-          <div className="group bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all">
-
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mb-5">
-              <CalendarDays className="w-6 h-6 text-primary" />
-            </div>
-
-            <h3 className="font-bold text-gray-900">
-              Meal Planner
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Plan breakfast, lunch and dinner for your week.
-            </p>
-
-            <button className="text-primary font-semibold text-sm mt-4 flex items-center gap-1 group-hover:gap-2 transition-all">
-              Plan meals
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-          </div>
+        <h3 className="
+          text-lg
+          font-bold
+          text-gray-900
+          mt-3
+        ">
+          { meal }
+        </h3>
 
 
-          {/* AI Recipes */}
-          <div className="group bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all">
+        <p className="
+          text-sm
+          text-gray-500
+          mt-2
+          leading-relaxed
+        ">
+          { description }
+        </p>
 
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mb-5">
-              <Sparkles className="w-6 h-6 text-primary" />
-            </div>
-
-            <h3 className="font-bold text-gray-900">
-              AI Recipes
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Turn your available ingredients into delicious recipes.
-            </p>
-
-            <button className="text-primary font-semibold text-sm mt-4 flex items-center gap-1 group-hover:gap-2 transition-all">
-              Get recipe
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-          </div>
-
-
-          {/* Grocery */}
-          <div className="group bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all">
-
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mb-5">
-              <ShoppingBasket className="w-6 h-6 text-primary" />
-            </div>
-
-            <h3 className="font-bold text-gray-900">
-              Smart Grocery
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Manage your grocery list and avoid unnecessary spending.
-            </p>
-
-            <button className="text-primary font-semibold text-sm mt-4 flex items-center gap-1 group-hover:gap-2 transition-all">
-              View grocery
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-          </div>
-
-
-          {/* Favorites */}
-          <div className="group bg-white border border-gray-100 rounded-2xl p-6 shadow-sm hover:shadow-lg transition-all">
-
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mb-5">
-              <Heart className="w-6 h-6 text-primary" />
-            </div>
-
-            <h3 className="font-bold text-gray-900">
-              Favorites
-            </h3>
-
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-              Quickly access your favorite meals and recipes.
-            </p>
-
-            <button className="text-primary font-semibold text-sm mt-4 flex items-center gap-1 group-hover:gap-2 transition-all">
-              View favorites
-              <ArrowRight className="w-4 h-4" />
-            </button>
-
-          </div>
-
-        </div>
-
-      </section>
+      </div>
 
     </div>
   );
