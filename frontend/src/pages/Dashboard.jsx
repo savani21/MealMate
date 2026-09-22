@@ -20,6 +20,8 @@ import {
   ShoppingBasket,
   Heart,
   ChevronRight,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -543,11 +545,55 @@ export default function Dashboard() {
 
                 <MenuItem
                   icon={
-                    <ShoppingBasket className="w-5 h-5" />
+                    <ChefHat className="w-5 h-5" />
                   }
-                  label="Manage Grocery Stores"
+                  label="Manage Recipes"
                   onClick={() =>
-                    goTo("/admin/grocery-stores")
+                    goTo("/admin/recipes")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <ClipboardList className="w-5 h-5" />
+                  }
+                  label="Meal Plans"
+                  onClick={() =>
+                    goTo("/admin/meal-plans")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <CalendarDays className="w-5 h-5" />
+                  }
+                  label="Analytics"
+                  onClick={() =>
+                    goTo("/admin/analytics")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <Sparkles className="w-5 h-5" />
+                  }
+                  label="AI Features"
+                  onClick={() =>
+                    goTo("/admin/ai-features")
+                  }
+                />
+
+
+                <MenuItem
+                  icon={
+                    <ShieldCheck className="w-5 h-5" />
+                  }
+                  label="Security"
+                  onClick={() =>
+                    goTo("/admin/security")
                   }
                 />
               </>

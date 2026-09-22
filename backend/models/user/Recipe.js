@@ -42,6 +42,12 @@ const recipeSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
+    source: {
+      type: String,
+      enum: ["manual", "ai"],
+      default: "manual",
+    },
   },
   {
     timestamps: true,
