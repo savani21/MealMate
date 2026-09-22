@@ -14,9 +14,11 @@ export default function MealPlanDetails() {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [groceryLoading, setGroceryLoading] = useState(false);
+  const [recipes, setRecipes] = useState([]);
 
   useEffect(() => {
     fetchMealPlan();
+    fetchRecipes();
   }, []);
 
   const fetchMealPlan = async () => {
@@ -60,6 +62,40 @@ export default function MealPlanDetails() {
       alert("Unable to connect to server.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRecipes = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/recipes"
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setRecipes(data.recipes || []);
+      }
+    } catch (error) {
+      console.error("Recipe loading error:", error);
+    }
+  };
+
+  const findRecipe = (mealName) => {
+    if (!mealName) return null;
+
+    return recipes.find(
+      (recipe) =>
+        recipe.name?.trim().toLowerCase() ===
+        mealName.trim().toLowerCase()
+    );
+  };
+
+  const openRecipe = (mealName) => {
+    const recipe = findRecipe(mealName);
+
+    if (recipe) {
+      setLocation(`/recipes/${recipe._id}`);
     }
   };
 
@@ -236,24 +272,32 @@ export default function MealPlanDetails() {
                   icon="🌅"
                   title="Breakfast"
                   meal={day.breakfast}
+                  recipe={findRecipe(day.breakfast)}
+                  onRecipe={() => openRecipe(day.breakfast)}
                 />
 
                 <MealCard
                   icon="☀️"
                   title="Lunch"
                   meal={day.lunch}
+                  recipe={findRecipe(day.lunch)}
+                  onRecipe={() => openRecipe(day.lunch)}
                 />
 
                 <MealCard
                   icon="🍎"
                   title="Snack"
                   meal={day.snack}
+                  recipe={findRecipe(day.snack)}
+                  onRecipe={() => openRecipe(day.snack)}
                 />
 
                 <MealCard
                   icon="🌙"
                   title="Dinner"
                   meal={day.dinner}
+                  recipe={findRecipe(day.dinner)}
+                  onRecipe={() => openRecipe(day.dinner)}
                 />
 
               </div>
@@ -324,7 +368,7 @@ function InfoCard({ title, value }) {
 
 /* Meal Card */
 
-function MealCard({ icon, title, meal }) {
+function MealCard({ icon, title, meal, recipe, onRecipe }) {
   return (
     <div className="border border-gray-100 rounded-2xl p-5">
 
@@ -339,6 +383,15 @@ function MealCard({ icon, title, meal }) {
       <p className="font-bold text-gray-900 mt-2">
         {meal || "Meal not available"}
       </p>
+
+      {recipe && (
+        <button
+          onClick={onRecipe}
+          className="mt-4 w-full py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90 transition"
+        >
+          View Recipe
+        </button>
+      )}
 
     </div>
   );
