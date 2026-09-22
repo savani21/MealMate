@@ -67,10 +67,15 @@ export default function MealPlanner() {
 
       console.log("AI Meal Plan:", data);
 
-      // Get generated meals from backend
-      setMealPlan(data.mealPlan.meals || []);
+      // The meal plan is already saved by the backend.
+      // Continue directly to its details page so the user stays
+      // inside the MealMate planning flow.
+      if (!data.mealPlan?._id) {
+        alert("Meal plan was generated but no plan ID was returned.");
+        return;
+      }
 
-      setGenerated(true);
+      setLocation(`/meal-plans/${data.mealPlan._id}`);
 
     } catch (error) {
       console.error("Meal plan error:", error);
