@@ -28,6 +28,11 @@ const mealPlanSchema = new mongoose.Schema(
       default: "",
     },
 
+    availableIngredients: {
+      type: String,
+      default: "",
+    },
+
     duration: {
       type: Number,
       required: true,
