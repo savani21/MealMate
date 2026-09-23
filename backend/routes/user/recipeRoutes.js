@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   getRecipes,
+  getRecommendedRecipes,
   getRecipeById,
   createRecipe,
   deleteRecipe,
@@ -10,6 +11,7 @@ const {
 const router = express.Router();
 
 router.get("/", getRecipes);
+router.get("/recommended", getRecommendedRecipes);
 router.get("/:id", getRecipeById);
 router.post("/", createRecipe);
 router.delete("/:id", deleteRecipe);
