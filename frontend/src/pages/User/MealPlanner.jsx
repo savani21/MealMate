@@ -1,30 +1,20 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import {
-  ArrowLeft,
-  Sparkles,
-  Target,
-  Utensils,
-  AlertCircle,
-  ShoppingBasket,
-  Search,
-  ThumbsUp,
-} from "lucide-react";
+import { ArrowLeft, Sparkles, Target, ShoppingBasket, Search, ThumbsUp } from "lucide-react";
 
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
+  const params = new URLSearchParams(window.location.search);
 
   const [goal, setGoal] = useState("");
   const [diet, setDiet] = useState("");
-  const [allergies, setAllergies] = useState("");
-  const [ingredients, setIngredients] = useState("");
-  const [duration, setDuration] = useState("7");
-  const [ingredientMode, setIngredientMode] = useState("available");
-  const [recommendedIngredients, setRecommendedIngredients] = useState([]);
+  const [ingredients, setIngredients] = useState(params.get("ingredients") || "");
+  const [duration, setDuration] = useState("3");
+  const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
+  const [recommendedIngredients, setRecommendedIngredients] = useState(
+    params.get("recommended") ? params.get("recommended").split(",").filter(Boolean) : []
+  );
   const [recommendationLoading, setRecommendationLoading] = useState(false);
-
-  const [generated, setGenerated] = useState(false);
-  const [mealPlan, setMealPlan] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const getRecommendedIngredients = async () => {
@@ -32,16 +22,9 @@ export default function MealPlanner() {
 
     try {
       setRecommendationLoading(true);
-
-      const response = await fetch(
-        "http://localhost:5000/api/recipes/recommended"
-      );
+      const response = await fetch("http://localhost:5000/api/recipes/recommended");
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to get recommendations");
-      }
-
+      if (!response.ok) throw new Error(data.message || "Failed to get recommendations");
       setRecommendedIngredients(data.ingredients || []);
       return data.ingredients || [];
     } catch (error) {
@@ -53,30 +36,34 @@ export default function MealPlanner() {
     }
   };
 
-  const findRecipes = (mode) => {
-    const available = ingredients
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+  const getAvailableIngredients = () =>
+    ingredients.split(",").map((item) => item.trim()).filter(Boolean);
 
-    if (mode === "available" && available.length === 0) {
+  const openRecipeGenerator = async (mode) => {
+    const available = getAvailableIngredients();
+    if (available.length === 0) {
       alert("Enter your available ingredients first.");
       return;
     }
 
+    let combined = available;
+    let recommended = [];
+
     if (mode === "recommended") {
-      getRecommendedIngredients().then((recommended) => {
-        const combined = [...new Set([...available, ...recommended])];
-        if (combined.length === 0) {
-          alert("No ingredients are available yet.");
-          return;
-        }
-        setLocation(`/recipes?ingredients=${encodeURIComponent(combined.join(","))}`);
-      });
-      return;
+      recommended = await getRecommendedIngredients();
+      combined = [...new Set([...available, ...recommended])];
     }
 
-    setLocation(`/recipes?ingredients=${encodeURIComponent(available.join(","))}`);
+    const query = new URLSearchParams({
+      generate: "1",
+      ingredients: combined.join(","),
+      return: "meal-planner",
+      available: available.join(","),
+      recommended: recommended.join(","),
+      mode,
+    });
+
+    setLocation(`/recipes?${query.toString()}`);
   };
 
   const generatePlan = async () => {
@@ -85,49 +72,42 @@ export default function MealPlanner() {
       return;
     }
 
+    const available = getAvailableIngredients();
+    if (available.length === 0) {
+      alert("Enter your available ingredients first.");
+      return;
+    }
+
     try {
       setLoading(true);
-      setGenerated(false);
-
       const token = localStorage.getItem("token");
-
       if (!token) {
         alert("Please login again.");
         setLocation("/login");
         return;
       }
 
-      let finalIngredients = ingredients;
-
+      let finalIngredients = available;
       if (ingredientMode === "recommended") {
         const recommended = await getRecommendedIngredients();
-        const available = ingredients
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean);
-        finalIngredients = [...new Set([...available, ...recommended])].join(", ");
+        finalIngredients = [...new Set([...available, ...recommended])];
       }
 
-      const response = await fetch(
-        "http://localhost:5000/api/meal-plans",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            goal,
-            diet,
-            allergies,
-            ingredients: finalIngredients,
-            duration: Number(duration),
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/meal-plans", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          goal,
+          diet,
+          ingredients: finalIngredients.join(", "),
+          duration: Number(duration),
+        }),
+      });
 
       const data = await response.json();
-
       if (!response.ok) {
         alert(data.message || "Failed to generate meal plan");
         return;
@@ -152,20 +132,11 @@ export default function MealPlanner() {
       <header className="bg-white border-b border-gray-100">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="h-20 flex items-center justify-between">
-            <button
-              onClick={() => setLocation("/dashboard")}
-              className="flex items-center gap-2 text-gray-600 hover:text-primary transition"
-            >
+            <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2 text-gray-600 hover:text-primary transition">
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Back to Dashboard</span>
             </button>
-
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-primary" />
-              <span className="text-xl font-black text-gray-900">
-                Meal<span className="text-primary">Mate</span>
-              </span>
-            </div>
+            <span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
           </div>
         </div>
       </header>
@@ -173,31 +144,24 @@ export default function MealPlanner() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <section className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold">
-            <Sparkles className="w-4 h-4" />
-            Powered by AI
+            <Sparkles className="w-4 h-4" /> Powered by AI
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">
-            AI Meal Planner
-          </h1>
-          <p className="text-gray-500 mt-3 max-w-2xl mx-auto">
-            Tell MealMate about your food preferences and goals. Our AI will create a personalized meal plan for you.
-          </p>
+          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">AI Meal Planner</h1>
+          <p className="text-gray-500 mt-3 max-w-2xl mx-auto">Create a practical meal plan around your preferences and the ingredients you have.</p>
         </section>
 
         <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-              <Target className="w-6 h-6 text-primary" />
-            </div>
+            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center"><Target className="w-6 h-6 text-primary" /></div>
             <div>
-              <h2 className="text-xl font-black text-gray-900">Tell us about yourself</h2>
-              <p className="text-sm text-gray-500">This helps AI create a better meal plan.</p>
+              <h2 className="text-xl font-black text-gray-900">Meal Plan Preferences</h2>
+              <p className="text-sm text-gray-500">Choose the options that fit your current needs.</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">What is your goal?</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Goal</label>
               <select value={goal} onChange={(e) => setGoal(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary">
                 <option value="">Select your goal</option>
                 <option value="weight-loss">Weight Loss</option>
@@ -220,23 +184,15 @@ export default function MealPlanner() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Food Allergies</label>
-              <div className="relative">
-                <AlertCircle className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-                <input type="text" value={allergies} onChange={(e) => setAllergies(e.target.value)} placeholder="e.g. peanuts, dairy" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" />
-              </div>
-            </div>
-
-            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Plan Duration</label>
               <select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary">
+                <option value="1">1 Day</option>
                 <option value="3">3 Days</option>
                 <option value="7">7 Days</option>
-                <option value="14">14 Days</option>
               </select>
             </div>
 
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Available Ingredients</label>
               <div className="relative">
                 <ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
@@ -247,60 +203,28 @@ export default function MealPlanner() {
           </div>
 
           <div className="mt-8 border-t border-gray-100 pt-8">
-            <h3 className="font-black text-gray-900 text-lg mb-4">How should MealMate use your ingredients?</h3>
-
+            <h3 className="font-black text-gray-900 text-lg mb-4">Ingredient Preference</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setIngredientMode("available")}
-                className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "available" ? "border-primary bg-green-50" : "border-gray-100 bg-white hover:border-gray-200"}`}
-              >
-                <div className="flex items-center gap-3">
-                  <ShoppingBasket className="w-5 h-5 text-primary" />
-                  <span className="font-bold text-gray-900">Only My Ingredients</span>
+              <div className={`rounded-2xl border-2 p-5 ${ingredientMode === "available" ? "border-primary bg-green-50" : "border-gray-100"}`}>
+                <div className="flex items-center gap-3"><ShoppingBasket className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Only Available Ingredients</span></div>
+                <p className="text-sm text-gray-500 mt-2">Build the meal plan using only what you already have.</p>
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <button type="button" onClick={() => setIngredientMode("available")} className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold">Use This Option</button>
+                  <button type="button" onClick={() => openRecipeGenerator("available")} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold"><Sparkles className="w-4 h-4" /> Generate Recipe</button>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">Create the meal plan using only the ingredients you already have.</p>
-                <span
-                  onClick={(e) => { e.stopPropagation(); findRecipes("available"); }}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-primary mt-4 hover:underline"
-                >
-                  <Search className="w-4 h-4" /> Find Recipes for These Ingredients
-                </span>
-              </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={async () => {
-                  setIngredientMode("recommended");
-                  await getRecommendedIngredients();
-                }}
-                className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "recommended" ? "border-primary bg-green-50" : "border-gray-100 bg-white hover:border-gray-200"}`}
-              >
-                <div className="flex items-center gap-3">
-                  <ThumbsUp className="w-5 h-5 text-primary" />
-                  <span className="font-bold text-gray-900">Add Popular Ingredients</span>
-                </div>
+              <div className={`rounded-2xl border-2 p-5 ${ingredientMode === "recommended" ? "border-primary bg-green-50" : "border-gray-100"}`}>
+                <div className="flex items-center gap-3"><ThumbsUp className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Available + Popular Ingredients</span></div>
                 <p className="text-sm text-gray-500 mt-2">Use your ingredients plus ingredients from recipes liked by the most users.</p>
-                {recommendationLoading ? (
-                  <p className="text-sm text-primary font-semibold mt-4">Finding popular ingredients...</p>
-                ) : recommendedIngredients.length > 0 ? (
-                  <>
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {recommendedIngredients.slice(0, 8).map((item) => (
-                        <span key={item} className="px-2.5 py-1 rounded-full bg-white border border-green-100 text-xs font-medium text-gray-600">{item}</span>
-                      ))}
-                    </div>
-                    <span
-                      onClick={(e) => { e.stopPropagation(); findRecipes("recommended"); }}
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-primary mt-4 hover:underline"
-                    >
-                      <Search className="w-4 h-4" /> Find Recipes with These Ingredients
-                    </span>
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400 mt-4">Popular ingredients will appear after users start liking recipes.</p>
-                )}
-              </button>
+                {recommendationLoading ? <p className="text-sm text-primary font-semibold mt-4">Loading popular ingredients...</p> : recommendedIngredients.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mt-4">{recommendedIngredients.slice(0, 8).map((item) => <span key={item} className="px-2.5 py-1 rounded-full bg-white border border-green-100 text-xs font-medium text-gray-600">{item}</span>)}</div>
+                ) : <p className="text-xs text-gray-400 mt-4">Popular ingredients will appear as recipes receive more likes.</p>}
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <button type="button" onClick={async () => { setIngredientMode("recommended"); await getRecommendedIngredients(); }} className="px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-semibold">Use This Option</button>
+                  <button type="button" onClick={() => openRecipeGenerator("recommended")} disabled={recommendationLoading} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50"><Sparkles className="w-4 h-4" /> Generate Recipe</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -312,16 +236,6 @@ export default function MealPlanner() {
           </div>
         </section>
       </main>
-    </div>
-  );
-}
-
-function MealCard({ icon, title, meal }) {
-  return (
-    <div className="border border-gray-100 rounded-2xl p-5">
-      <div className="text-3xl">{icon}</div>
-      <p className="text-xs uppercase tracking-wide font-bold text-primary mt-4">{title}</p>
-      <h3 className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</h3>
     </div>
   );
 }
