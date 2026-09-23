@@ -20,6 +20,12 @@ import Profile from "@/pages/Profile";
 import Notifications from "@/pages/Notifications";
 import Settings from "@/pages/Settings";
 import MealMateAssistant from "@/components/MealMateAssistant";
+import AdminUsers from "@/pages/Admin/Users";
+import AdminRecipes from "@/pages/Admin/Recipes";
+import AdminMealPlans from "@/pages/Admin/MealPlans";
+import AdminAnalytics from "@/pages/Admin/Analytics";
+import AdminAIFeatures from "@/pages/Admin/AIFeatures";
+import AdminSecurity from "@/pages/Admin/Security";
 
 
 
@@ -54,6 +60,14 @@ function Router() {
         component={ GroceryList }
         allowedRoles={ ["user"] }
       />
+
+      <ProtectedRoute path="/admin/users" component={ AdminUsers } allowedRoles={ ["admin"] } />
+      <ProtectedRoute path="/admin/recipes" component={ AdminRecipes } allowedRoles={ ["admin"] } />
+      <ProtectedRoute path="/admin/meal-plans" component={ AdminMealPlans } allowedRoles={ ["admin"] } />
+      <ProtectedRoute path="/admin/analytics" component={ AdminAnalytics } allowedRoles={ ["admin"] } />
+      <ProtectedRoute path="/admin/ai-features" component={ AdminAIFeatures } allowedRoles={ ["admin"] } />
+      <ProtectedRoute path="/admin/security" component={ AdminSecurity } allowedRoles={ ["admin"] } />
+
       <Route path="/profile" component={Profile} />
       <Route path="/notifications" component={Notifications} />
       <Route path="/settings" component={Settings} />
