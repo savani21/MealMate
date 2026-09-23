@@ -13,6 +13,7 @@ import MealPlanner from "@/pages/User/MealPlanner";
 import MyMealPlans from "@/pages/User/MyMealPlans";
 import MealPlanDetails from "@/pages/User/MealPlanDetails";
 import GroceryList from "@/pages/User/GroceryList";
+import GroceryStore from "@/pages/User/GroceryStore";
 import Recipes from "@/pages/User/Recipes";
 import RecipeDetails from "@/pages/User/RecipeDetails";
 import Favorites from "@/pages/User/Favorites";
@@ -27,8 +28,6 @@ import AdminAnalytics from "@/pages/Admin/Analytics";
 import AdminAIFeatures from "@/pages/Admin/AIFeatures";
 import AdminSecurity from "@/pages/Admin/Security";
 
-
-
 const queryClient = new QueryClient();
 
 function Router() {
@@ -38,28 +37,11 @@ function Router() {
       <Route path="/login" component={ Login } />
       <Route path="/signup" component={ Signup } />
       <ProtectedRoute path="/dashboard" component={ Dashboard } allowedRoles={ ['admin', 'user'] } />
-      <ProtectedRoute
-        path="/meal-planner"
-        component={ MealPlanner }
-        allowedRoles={ ["user"] }
-      />
-      <ProtectedRoute
-        path="/my-meal-plans"
-        component={ MyMealPlans }
-        allowedRoles={ ["user"] }
-      />
-
-      <ProtectedRoute
-        path="/meal-plans/:id"
-        component={ MealPlanDetails }
-        allowedRoles={ ["user"] }
-      />
-
-      <ProtectedRoute
-        path="/user/grocery"
-        component={ GroceryList }
-        allowedRoles={ ["user"] }
-      />
+      <ProtectedRoute path="/meal-planner" component={ MealPlanner } allowedRoles={ ["user"] } />
+      <ProtectedRoute path="/my-meal-plans" component={ MyMealPlans } allowedRoles={ ["user"] } />
+      <ProtectedRoute path="/meal-plans/:id" component={ MealPlanDetails } allowedRoles={ ["user"] } />
+      <ProtectedRoute path="/user/grocery" component={ GroceryList } allowedRoles={ ["user"] } />
+      <ProtectedRoute path="/grocery-store" component={ GroceryStore } allowedRoles={ ["user"] } />
 
       <ProtectedRoute path="/admin/users" component={ AdminUsers } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/recipes" component={ AdminRecipes } allowedRoles={ ["admin"] } />
@@ -76,9 +58,7 @@ function Router() {
       <Route path="/recipes/:id" component={RecipeDetails} />
       <Route component={ NotFound } />
     </Switch>
-    
   );
-  
 }
 
 function App() {
@@ -87,7 +67,6 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Router />
-           {/* MealMate AI Assistant */}
           <MealMateAssistant />
           <Toaster />
         </TooltipProvider>
