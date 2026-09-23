@@ -7,9 +7,9 @@ require("dotenv").config();
 
 const app = express();
 const recipeRoutes = require("./routes/user/recipeRoutes");
-
 const favoriteRoutes = require("./routes/user/favoriteRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
+const storeRoutes = require("./routes/user/storeRoutes");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
 const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
@@ -29,6 +29,7 @@ mongoose
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
 app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
+app.use("/api/store", storeRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/ai", aiRoutes);
