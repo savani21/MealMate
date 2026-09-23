@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
 import {
   ArrowLeft,
   Bell,
@@ -13,8 +14,13 @@ import {
 
 export default function Notifications() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
 
-  const [notifications, setNotifications] = useState([
+  const notificationStorageKey = `mealMateNotifications:${
+    user?._id || user?.email || "guest"
+  }`;
+
+  const defaultNotifications = [
     {
       id: 1,
       type: "meal",
@@ -39,7 +45,32 @@ export default function Notifications() {
       time: "Yesterday",
       read: true,
     },
-  ]);
+  ];
+
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const stored = localStorage.getItem(notificationStorageKey);
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load notifications:", error);
+    }
+
+    return defaultNotifications;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(
+      notificationStorageKey,
+      JSON.stringify(notifications)
+    );
+  }, [notificationStorageKey, notifications]);
 
   const markAsRead = (id) => {
     setNotifications((prev) =>

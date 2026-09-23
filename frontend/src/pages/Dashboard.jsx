@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 
@@ -36,6 +36,114 @@ export default function Dashboard() {
     menu closed by default
   */
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // User dashboard statistics
+  const [dashboardStats, setDashboardStats] = useState({
+    mealsLogged: 0,
+    activePlans: 0,
+    notifications: 3,
+  });
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user || user.role !== "user") {
+      return;
+    }
+
+    const loadDashboardStats = async () => {
+      try {
+        setStatsLoading(true);
+
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          return;
+        }
+
+        // MealMate currently stores generated meal plans.
+        // Each day can contain breakfast, lunch, dinner and snack.
+        const response = await fetch(
+          "http://localhost:5000/api/meal-plans",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load meal plans");
+        }
+
+        const data = await response.json();
+        const mealPlans = data.mealPlans || [];
+
+        // Count individual meals, not just the number of days.
+        const mealsLogged = mealPlans.reduce((total, plan) => {
+          if (!Array.isArray(plan.meals)) {
+            return total;
+          }
+
+          return (
+            total +
+            plan.meals.reduce((dayTotal, day) => {
+              const mealTypes = ["breakfast", "lunch", "dinner", "snack"];
+
+              return (
+                dayTotal +
+                mealTypes.filter(
+                  (mealType) =>
+                    day &&
+                    typeof day[mealType] === "string" &&
+                    day[mealType].trim() !== ""
+                ).length
+              );
+            }, 0)
+          );
+        }, 0);
+
+        // There is no active/inactive status in the current MealPlan model,
+        // so all saved plans are treated as active plans.
+        const activePlans = mealPlans.length;
+
+        const notificationStorageKey = `mealMateNotifications:${
+          user?._id || user?.email || "guest"
+        }`;
+
+        const storedNotifications = localStorage.getItem(
+          notificationStorageKey
+        );
+
+        let notifications = 3;
+
+        if (storedNotifications) {
+          try {
+            const parsedNotifications = JSON.parse(storedNotifications);
+
+            if (Array.isArray(parsedNotifications)) {
+              notifications = parsedNotifications.filter(
+                (notification) => !notification.read
+              ).length;
+            }
+          } catch (error) {
+            console.error("Failed to read notifications:", error);
+          }
+        }
+
+        setDashboardStats({
+          mealsLogged,
+          activePlans,
+          notifications,
+        });
+      } catch (error) {
+        console.error("Dashboard stats error:", error);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    loadDashboardStats();
+  }, [user]);
 
   if (!user) {
     return null;
@@ -236,36 +344,40 @@ export default function Dashboard() {
 
 
         {/* =================================================
-            SHARED STATS
+            USER STATS
+            These metrics are user-specific and should not be
+            displayed on the admin dashboard.
         ================================================== */}
 
-        <section className="
-          grid
-          grid-cols-1
-          sm:grid-cols-3
-          gap-5
-          mb-8
-        ">
+        {user.role === "user" && (
+          <section className="
+            grid
+            grid-cols-1
+            sm:grid-cols-3
+            gap-5
+            mb-8
+          ">
 
-          <StatCard
-            label="Meals Logged"
-            value="--"
-            description="Keep tracking your meals"
-          />
+            <StatCard
+              label="Meals Logged"
+              value={statsLoading ? "..." : dashboardStats.mealsLogged}
+              description="Meals in your saved meal plans"
+            />
 
-          <StatCard
-            label="Active Plans"
-            value="--"
-            description="Your current meal plans"
-          />
+            <StatCard
+              label="Active Plans"
+              value={statsLoading ? "..." : dashboardStats.activePlans}
+              description="Your saved meal plans"
+            />
 
-          <StatCard
-            label="Notifications"
-            value="--"
-            description="Stay updated"
-          />
+            <StatCard
+              label="Notifications"
+              value={statsLoading ? "..." : dashboardStats.notifications}
+              description="Unread notifications"
+            />
 
-        </section>
+          </section>
+        )}
 
 
 
