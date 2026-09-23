@@ -60,16 +60,21 @@ Do not provide medical diagnosis.
 
 const generateRecipe = async (req, res) => {
   try {
-    const { ingredients, diet = "Any", category = "Other" } = req.body;
+    const { ingredients, diet = "Any", category = "Other", mealName = "" } = req.body;
 
     if (!ingredients || !ingredients.trim()) {
       return res.status(400).json({ message: "Ingredients are required" });
     }
 
+    const mealInstruction = mealName.trim()
+      ? `The recipe should be specifically suitable for this planned meal: ${mealName}.`
+      : "Create a suitable recipe from the ingredients.";
+
     const prompt = `
 Create one practical recipe using these ingredients: ${ingredients}.
 Diet preference: ${diet}.
 Category: ${category}.
+${mealInstruction}
 
 Return ONLY valid JSON. Do not use markdown or code fences.
 Use exactly this structure:
