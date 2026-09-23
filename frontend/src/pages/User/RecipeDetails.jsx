@@ -7,6 +7,8 @@ export default function RecipeDetails() {
   const [, params] = useRoute("/recipes/:id");
   const query = new URLSearchParams(window.location.search);
   const returnToPlanner = query.get("return") === "meal-planner";
+  const returnToMealPlan = query.get("return") === "meal-plan";
+  const planId = query.get("planId") || "";
   const available = query.get("available") || "";
   const recommended = query.get("recommended") || "";
   const mode = query.get("mode") || "available";
@@ -22,7 +24,7 @@ export default function RecipeDetails() {
       const data = await response.json();
       if (!response.ok) {
         alert(data.message || "Recipe not found");
-        setLocation(returnToPlanner ? "/meal-planner" : "/recipes");
+        setLocation(returnToMealPlan && planId ? `/meal-plans/${planId}` : returnToPlanner ? "/meal-planner" : "/recipes");
         return;
       }
       setRecipe(data.recipe);
@@ -33,6 +35,7 @@ export default function RecipeDetails() {
   };
 
   const goBack = () => {
+    if (returnToMealPlan && planId) return setLocation(`/meal-plans/${planId}`);
     if (!returnToPlanner) return setLocation("/recipes");
     const query = new URLSearchParams({ ingredients: available, recommended, mode });
     setLocation(`/meal-planner?${query.toString()}`);
@@ -48,7 +51,7 @@ export default function RecipeDetails() {
           <div className="h-20 flex items-center justify-between">
             <button onClick={goBack} className="flex items-center gap-2 text-gray-600 hover:text-primary transition">
               <ArrowLeft className="w-5 h-5" />
-              {returnToPlanner ? "Back to Meal Planner" : "Back to Recipes"}
+              {returnToMealPlan ? "Back to Meal Plan" : returnToPlanner ? "Back to Meal Planner" : "Back to Recipes"}
             </button>
             <div className="flex items-center gap-2"><ChefHat className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div>
           </div>
