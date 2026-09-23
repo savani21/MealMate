@@ -6,6 +6,9 @@ export default function Recipes() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const returnToPlanner = params.get("return") === "meal-planner";
+  const returnToMealPlan = params.get("return") === "meal-plan";
+  const planId = params.get("planId") || "";
+  const mealName = params.get("meal") || "";
   const initialIngredients = params.get("ingredients") || "";
   const available = params.get("available") || "";
   const recommended = params.get("recommended") || "";
@@ -35,15 +38,16 @@ export default function Recipes() {
     } finally { setLoading(false); }
   };
 
-  const backToPlanner = () => {
-    if (!returnToPlanner) return setLocation("/dashboard");
-    const query = new URLSearchParams({
-      ingredients: available || initialIngredients,
-      recommended,
-      mode,
-    });
-    setLocation(`/meal-planner?${query.toString()}`);
+  const backDestination = () => {
+    if (returnToMealPlan && planId) return `/meal-plans/${planId}`;
+    if (returnToPlanner) {
+      const query = new URLSearchParams({ ingredients: available || initialIngredients, recommended, mode });
+      return `/meal-planner?${query.toString()}`;
+    }
+    return "/dashboard";
   };
+
+  const backLabel = returnToMealPlan ? "Back to Meal Plan" : returnToPlanner ? "Back to Meal Planner" : "Back to Dashboard";
 
   const generateRecipe = async () => {
     if (!ingredients.trim()) { alert("Enter at least one ingredient."); return; }
@@ -52,7 +56,7 @@ export default function Recipes() {
       const response = await fetch("http://localhost:5000/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients, diet }),
+        body: JSON.stringify({ ingredients, diet, mealName }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
@@ -60,7 +64,9 @@ export default function Recipes() {
       setShowGenerator(false);
       setRecipes((prev) => [data.recipe, ...prev]);
       const query = new URLSearchParams({
-        return: returnToPlanner ? "meal-planner" : "recipes",
+        return: returnToMealPlan ? "meal-plan" : returnToPlanner ? "meal-planner" : "recipes",
+        planId,
+        meal: mealName,
         available,
         recommended,
         mode,
@@ -101,9 +107,9 @@ export default function Recipes() {
     <div className="min-h-screen bg-[#f7faf7]">
       <header className="bg-white border-b border-gray-100">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <button onClick={backToPlanner} className="flex items-center gap-2 text-gray-600 hover:text-primary transition">
+          <button onClick={() => setLocation(backDestination())} className="flex items-center gap-2 text-gray-600 hover:text-primary transition">
             <ArrowLeft className="w-5 h-5" />
-            {returnToPlanner ? "Back to Meal Planner" : "Back to Dashboard"}
+            {backLabel}
           </button>
           <div className="flex items-center gap-2"><ChefHat className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div>
         </div>
@@ -114,14 +120,17 @@ export default function Recipes() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Utensils className="w-4 h-4" /> MealMate Recipes</div>
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">Discover Delicious Recipes</h1>
           <p className="text-gray-500 mt-3">Find recipes or create one with AI from your ingredients.</p>
-          <button onClick={() => setShowGenerator(true)} className="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition"><Sparkles className="w-5 h-5" /> Generate Recipe with AI</button>
+          {!returnToMealPlan && <button onClick={() => setShowGenerator(true)} className="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition"><Sparkles className="w-5 h-5" /> Generate Recipe with AI</button>}
         </section>
 
         {showGenerator && (
           <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between mb-5">
-              <div><h2 className="text-xl font-bold text-gray-900">Generate Recipe</h2><p className="text-sm text-gray-500 mt-1">MealMate will create a recipe around these ingredients.</p></div>
-              <button onClick={backToPlanner} className="p-2 text-gray-400 hover:text-gray-700" title="Back to Meal Planner"><X className="w-5 h-5" /></button>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Generate Recipe{mealName ? ` for ${mealName}` : ""}</h2>
+                <p className="text-sm text-gray-500 mt-1">MealMate will create a recipe around the selected meal and ingredients.</p>
+              </div>
+              <button onClick={() => setLocation(backDestination())} className="p-2 text-gray-400 hover:text-gray-700" title="Back"><X className="w-5 h-5" /></button>
             </div>
             <textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="Example: paneer, tomato, onion, spinach" rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-primary resize-none" />
             <div className="mt-4"><label className="block text-sm font-semibold text-gray-700 mb-2">Diet</label><select value={diet} onChange={(e) => setDiet(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary"><option>Any</option><option>Vegetarian</option><option>Vegan</option><option>High Protein</option></select></div>
