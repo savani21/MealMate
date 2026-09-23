@@ -75,6 +75,7 @@ export default function MealPlanner() {
           goal,
           diet,
           ingredients: finalIngredients.join(", "),
+          availableIngredients: available.join(", "),
           duration: Number(duration),
         }),
       });
