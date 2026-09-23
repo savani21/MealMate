@@ -25,8 +25,8 @@ const chatWithAI = async (req, res) => {
     });
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.6-flash",
-      contents: contents,
+      model: "gemini-3.6-flash",
+      contents,
       config: {
         systemInstruction: `
 You are MealMate AI, a friendly food and meal assistant.
