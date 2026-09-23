@@ -1,5 +1,6 @@
 const GroceryList = require("../../models/user/GroceryList");
 const MealPlan = require("../../models/MealPlan");
+const Recipe = require("../../models/user/Recipe");
 
 exports.createGroceryList = async (req, res) => {
   try {
@@ -12,7 +13,6 @@ exports.createGroceryList = async (req, res) => {
       });
     }
 
-    // Make sure the meal plan belongs to the logged-in user
     const mealPlan = await MealPlan.findOne({
       _id: mealPlanId,
       user: req.user.id,
@@ -25,33 +25,39 @@ exports.createGroceryList = async (req, res) => {
       });
     }
 
-    // Extract meals from the saved plan
-    const items = [];
+    const mealNames = mealPlan.meals
+      .flatMap((day) => [day.breakfast, day.lunch, day.snack, day.dinner])
+      .filter(Boolean)
+      .map((name) => name.trim());
 
-    mealPlan.meals.forEach((day) => {
-      items.push(
-        {
-          name: day.breakfast,
-          quantity: "",
-          checked: false,
-        },
-        {
-          name: day.lunch,
-          quantity: "",
-          checked: false,
-        },
-        {
-          name: day.snack,
-          quantity: "",
-          checked: false,
-        },
-        {
-          name: day.dinner,
-          quantity: "",
-          checked: false,
-        }
-      );
+    const recipes = await Recipe.find({
+      name: { $in: mealNames },
     });
+
+    const recipeMap = new Map(
+      recipes.map((recipe) => [recipe.name.trim().toLowerCase(), recipe])
+    );
+
+    const ingredientMap = new Map();
+
+    mealNames.forEach((mealName) => {
+      const recipe = recipeMap.get(mealName.toLowerCase());
+
+      if (recipe?.ingredients?.length) {
+        recipe.ingredients.forEach((ingredient) => {
+          const clean = ingredient.trim();
+          if (clean) ingredientMap.set(clean.toLowerCase(), clean);
+        });
+      } else {
+        ingredientMap.set(mealName.toLowerCase(), mealName);
+      }
+    });
+
+    const items = Array.from(ingredientMap.values()).map((name) => ({
+      name,
+      quantity: "",
+      checked: false,
+    }));
 
     const groceryList = await GroceryList.create({
       user: req.user.id,
@@ -64,7 +70,6 @@ exports.createGroceryList = async (req, res) => {
       message: "Grocery list created successfully",
       groceryList,
     });
-
   } catch (err) {
     console.error("Grocery List Error:", err);
 
@@ -74,7 +79,6 @@ exports.createGroceryList = async (req, res) => {
     });
   }
 };
-
 
 exports.getMyGroceryLists = async (req, res) => {
   try {
@@ -88,7 +92,6 @@ exports.getMyGroceryLists = async (req, res) => {
       success: true,
       groceryLists,
     });
-
   } catch (err) {
     res.status(500).json({
       success: false,
