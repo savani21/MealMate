@@ -110,6 +110,11 @@ const deleteRecipe = async (req, res) => {
       });
     }
 
+    await User.updateMany(
+      { favorites: recipe._id },
+      { $pull: { favorites: recipe._id } }
+    );
+
     res.status(200).json({ message: "Recipe deleted successfully" });
   } catch (error) {
     console.error(error);
