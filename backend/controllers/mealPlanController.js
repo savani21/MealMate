@@ -38,10 +38,6 @@ function mealViolatesDiet(meal, diet) {
 
 exports.createMealPlan = async (req, res) => {
   try {
-    const { goal, diet, allergies, ingredients, duration } = req.body;
-    if (!goal || !diet || !duration) return res.status(400).json({ success: false, message: "Goal, diet and duration are required" });
-
-    const prompt = `Create a personalized ${duration}-day meal plan.\n\nUser goal: ${goal}\nDiet type: ${diet}\nFood allergies: ${allergies || "None"}\nAvailable ingredients: ${ingredients || "No specific ingredients"}\n\nFor every day provide:\n- Breakfast\n- Lunch\n- Dinner\n- Snack\n\nReturn ONLY valid JSON in this exact structure:\n{\n  "days": [\n    {\n      "day": 1,\n      "breakfast": "meal name",\n      "lunch": "meal name",\n      "dinner": "meal name",\n      "snack": "meal name"\n    }\n  ]\n}\n\nDo not include markdown.\nDo not include explanations outside the JSON.`;
     const {
       goal,
       diet,
