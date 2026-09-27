@@ -36,10 +36,7 @@ const getRecommendedRecipes = async (req, res) => {
       .slice(0, 10);
 
     if (rankedIds.length === 0) {
-      return res.status(200).json({
-        recipes: [],
-        ingredients: [],
-      });
+      return res.status(200).json({ recipes: [], ingredients: [] });
     }
 
     const recipes = await Recipe.find({
@@ -47,7 +44,9 @@ const getRecommendedRecipes = async (req, res) => {
     }).lean();
 
     const rankMap = Object.fromEntries(rankedIds);
-    recipes.sort((a, b) => (rankMap[b._id.toString()] || 0) - (rankMap[a._id.toString()] || 0));
+    recipes.sort(
+      (a, b) => (rankMap[b._id.toString()] || 0) - (rankMap[a._id.toString()] || 0)
+    );
 
     const ingredients = [
       ...new Set(
@@ -58,10 +57,7 @@ const getRecommendedRecipes = async (req, res) => {
       ),
     ].slice(0, 15);
 
-    res.status(200).json({
-      recipes,
-      ingredients,
-    });
+    res.status(200).json({ recipes, ingredients });
   } catch (error) {
     console.error("RECOMMENDED RECIPES ERROR:", error);
 
@@ -77,13 +73,16 @@ const getRecipeById = async (req, res) => {
     const recipe = await Recipe.findById(req.params.id);
 
     if (!recipe) {
-      return res.status(404).json({
-        message: "Recipe not found",
-      });
+      return res.status(404).json({ message: "Recipe not found" });
     }
+
+    const canDelete = Boolean(
+      recipe.createdBy && recipe.createdBy.toString() === req.user.id.toString()
+    );
 
     res.status(200).json({
       recipe,
+      canDelete,
     });
   } catch (error) {
     console.error(error);
@@ -97,9 +96,6 @@ const getRecipeById = async (req, res) => {
 // CREATE recipe
 const createRecipe = async (req, res) => {
   try {
-    console.log("BODY RECEIVED:", req.body);
-    console.log("NAME RECEIVED:", req.body.name);
-
     const recipe = new Recipe({
       name: req.body.name,
       description: req.body.description,
@@ -109,6 +105,7 @@ const createRecipe = async (req, res) => {
       instructions: req.body.instructions,
       prepTime: req.body.prepTime,
       image: req.body.image,
+      createdBy: req.user.id,
     });
 
     await recipe.save();
@@ -117,7 +114,6 @@ const createRecipe = async (req, res) => {
       message: "Recipe created successfully",
       recipe,
     });
-
   } catch (error) {
     console.error("CREATE RECIPE ERROR:", error);
 
@@ -128,20 +124,21 @@ const createRecipe = async (req, res) => {
   }
 };
 
-// DELETE recipe
+// DELETE only the logged-in user's own recipe
 const deleteRecipe = async (req, res) => {
   try {
-    const recipe = await Recipe.findByIdAndDelete(req.params.id);
+    const recipe = await Recipe.findOneAndDelete({
+      _id: req.params.id,
+      createdBy: req.user.id,
+    });
 
     if (!recipe) {
       return res.status(404).json({
-        message: "Recipe not found",
+        message: "Recipe not found or you do not have permission to delete it",
       });
     }
 
-    res.status(200).json({
-      message: "Recipe deleted successfully",
-    });
+    res.status(200).json({ message: "Recipe deleted successfully" });
   } catch (error) {
     console.error(error);
 
