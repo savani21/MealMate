@@ -23,7 +23,10 @@ export default function Recipes() {
   const [ingredients, setIngredients] = useState(initialIngredients);
   const [generating, setGenerating] = useState(false);
 
-  useEffect(() => { fetchRecipes(); }, []);
+  useEffect(() => {
+    fetchRecipes();
+    fetchFavorites();
+  }, []);
 
   const fetchRecipes = async () => {
     try {
@@ -35,6 +38,23 @@ export default function Recipes() {
       console.error(error);
       alert("Unable to connect to server.");
     } finally { setLoading(false); }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const response = await fetch("http://localhost:5000/api/favorites", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const favoriteRecipes = data.favorites || data.recipes || [];
+        setFavorites(favoriteRecipes.map((item) => item._id || item));
+      }
+    } catch (error) {
+      console.error("Load favorites error:", error);
+    }
   };
 
   const backDestination = () => {
@@ -92,6 +112,7 @@ export default function Recipes() {
   const toggleFavorite = async (recipeId) => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) { alert("Please log in to manage favorites."); return; }
       const isFavorite = favorites.includes(recipeId);
       const response = await fetch(`http://localhost:5000/api/favorites/${recipeId}`, {
         method: isFavorite ? "DELETE" : "POST",
@@ -99,7 +120,7 @@ export default function Recipes() {
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to update favorite"); return; }
-      setFavorites(isFavorite ? favorites.filter((id) => id !== recipeId) : [...favorites, recipeId]);
+      setFavorites((prev) => isFavorite ? prev.filter((id) => id !== recipeId) : [...prev, recipeId]);
     } catch (error) {
       console.error(error);
       alert("Unable to update favorite");
