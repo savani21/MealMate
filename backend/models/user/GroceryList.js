@@ -2,45 +2,20 @@ const mongoose = require("mongoose");
 
 const groceryListSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    mealPlan: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MealPlan",
-      required: true,
-    },
-
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    mealPlan: { type: mongoose.Schema.Types.ObjectId, ref: "MealPlan", required: true },
     items: [
       {
-        name: {
-          type: String,
-          required: true,
-        },
-
-        quantity: {
-          type: String,
-          default: "",
-        },
-
-        checked: {
-          type: Boolean,
-          default: false,
-        },
+        name: { type: String, required: true },
+        quantity: { type: String, default: "" },
+        checked: { type: Boolean, default: false },
+        day: { type: Number, default: null },
+        mealType: { type: String, default: "" },
+        mealName: { type: String, default: "" },
       },
     ],
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-const GroceryList = mongoose.model(
-  "GroceryList",
-  groceryListSchema
-);
-
-module.exports = GroceryList;
+module.exports = mongoose.model("GroceryList", groceryListSchema);

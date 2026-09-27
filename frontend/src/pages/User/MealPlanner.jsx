@@ -60,8 +60,10 @@ export default function MealPlanner() {
       }
 
       let finalIngredients = available;
+      let recommendedToUse = [];
       if (ingredientMode === "recommended") {
         const recommended = await getRecommendedIngredients();
+        recommendedToUse = recommended;
         finalIngredients = [...new Set([...available, ...recommended])];
       }
 
@@ -74,6 +76,9 @@ export default function MealPlanner() {
         body: JSON.stringify({
           goal,
           diet,
+          availableIngredients: available.join(", "),
+          recommendedIngredients: ingredientMode === "recommended" ? recommendedToUse.join(", ") : "",
+          ingredientMode,
           ingredients: finalIngredients.join(", "),
           duration: Number(duration),
         }),

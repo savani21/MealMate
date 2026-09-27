@@ -8,10 +8,13 @@ export default function GroceryStore() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const requestedIngredients = (params.get("ingredients") || "")
+  const listId = params.get("listId");
+  const requestedIngredientsFromUrl = (params.get("ingredients") || "")
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
+
+  const [requestedItems, setRequestedItems] = useState([]);
 
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({ items: [] });
@@ -28,7 +31,27 @@ export default function GroceryStore() {
     }
     loadStore();
     loadCart();
-  }, []);
+    if (listId) loadRequestedGroceryList();
+  }, [listId]);
+
+  const loadRequestedGroceryList = async () => {
+    try {
+      const response = await fetch(`${API}/api/user/grocery`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        const list = (data.groceryLists || []).find((item) => item._id === listId);
+        setRequestedItems((list?.items || []).filter((item) => !item.checked));
+      }
+    } catch (error) {
+      console.error("Grocery context loading error:", error);
+    }
+  };
+
+  const requestedIngredients = requestedItems.length
+    ? [...new Set(requestedItems.map((item) => item.name.toLowerCase()))]
+    : requestedIngredientsFromUrl;
 
   const loadStore = async () => {
     try {
@@ -137,6 +160,37 @@ export default function GroceryStore() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {requestedItems.length > 0 && (
+          <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
+            <div className="mb-4">
+              <p className="font-bold text-gray-900">Ingredients you need to buy</p>
+              <p className="text-sm text-gray-500 mt-1">Grouped by the meal that needs each ingredient.</p>
+            </div>
+            <div className="space-y-3">
+              {Object.values(requestedItems.reduce((groups, item) => {
+                const key = `${item.day || ""}|${item.mealType || ""}|${item.mealName || ""}`;
+                if (!groups[key]) groups[key] = { day: item.day, mealType: item.mealType, mealName: item.mealName, items: [] };
+                groups[key].items.push(item);
+                return groups;
+              }, {})).map((group) => (
+                <div key={`${group.day}-${group.mealType}-${group.mealName}`} className="rounded-xl border border-gray-100 overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3">
+                    <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
+                    <p className="font-bold text-gray-900 mt-1">{group.mealName}</p>
+                  </div>
+                  <div className="px-4 py-3 flex flex-wrap gap-2">
+                    {group.items.map((item) => (
+                      <span key={item._id} className="px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold">
+                        {item.name}{item.quantity ? ` · ${item.quantity}` : ""}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mb-8">
           <p className="text-primary font-semibold text-sm">MealMate Grocery Store</p>
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-2">

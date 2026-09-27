@@ -3,6 +3,7 @@ const Cart = require("../../models/user/Cart");
 
 const DEFAULT_PRODUCTS = [
   ["Rice", "Grains", "1 kg", 70],
+  ["Toor Dal", "Pulses", "500 g", 85],
   ["Wheat Flour", "Grains", "1 kg", 55],
   ["Paneer", "Dairy", "200 g", 90],
   ["Milk", "Dairy", "1 litre", 60],
@@ -22,18 +23,22 @@ const DEFAULT_PRODUCTS = [
 ];
 
 async function ensureCatalog() {
-  const count = await StoreProduct.countDocuments();
-  if (count > 0) return;
-
-  await StoreProduct.insertMany(
-    DEFAULT_PRODUCTS.map(([name, category, unit, price]) => ({
-      name,
-      category,
-      unit,
-      price,
-      stock: 100,
-    }))
-  );
+  for (const [name, category, unit, price] of DEFAULT_PRODUCTS) {
+    await StoreProduct.updateOne(
+      { name },
+      {
+        $setOnInsert: {
+          name,
+          category,
+          unit,
+          price,
+          stock: 100,
+          isActive: true,
+        },
+      },
+      { upsert: true }
+    );
+  }
 }
 
 exports.getProducts = async (req, res) => {
