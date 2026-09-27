@@ -52,9 +52,13 @@ export default function Recipes() {
     if (!ingredients.trim()) { alert("Enter at least one ingredient."); return; }
     setGenerating(true);
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/ai/generate-recipe", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ ingredients, mealName }),
       });
       const data = await response.json();
