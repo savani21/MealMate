@@ -7,19 +7,10 @@ const ai = new GoogleGenAI({
 
 exports.createMealPlan = async (req, res) => {
   try {
-    const {
-      goal,
-      diet,
-      allergies,
-      ingredients,
-      duration,
-    } = req.body;
+    const { goal, diet, allergies, ingredients, duration } = req.body;
 
     if (!goal || !diet || !duration) {
-      return res.status(400).json({
-        success: false,
-        message: "Goal, diet and duration are required",
-      });
+      return res.status(400).json({ success: false, message: "Goal, diet and duration are required" });
     }
 
     const prompt = `
@@ -37,7 +28,6 @@ For every day provide:
 - Snack
 
 Return ONLY valid JSON in this exact structure:
-
 {
   "days": [
     {
@@ -57,13 +47,10 @@ Do not include explanations outside the JSON.
     const response = await ai.models.generateContent({
       model: "gemini-3.6-flash",
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
+      config: { responseMimeType: "application/json" },
     });
 
-    const aiText = response.text;
-    const generatedMeals = JSON.parse(aiText);
+    const generatedMeals = JSON.parse(response.text);
 
     const mealPlan = await MealPlan.create({
       user: req.user.id,
@@ -75,18 +62,10 @@ Do not include explanations outside the JSON.
       meals: generatedMeals.days,
     });
 
-    res.status(201).json({
-      success: true,
-      message: "AI meal plan generated successfully",
-      mealPlan,
-    });
+    res.status(201).json({ success: true, message: "AI meal plan generated successfully", mealPlan });
   } catch (err) {
     console.error("AI Meal Plan Error:", err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -94,72 +73,79 @@ exports.getMyMealPlans = async (req, res) => {
   try {
     const mealPlans = await MealPlan.find({
       user: req.user.id,
+      isArchived: false,
     }).sort({ createdAt: -1 });
 
-    res.status(200).json({
-      success: true,
-      mealPlans,
-    });
+    res.status(200).json({ success: true, mealPlans });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 exports.getMyMealPlanById = async (req, res) => {
   try {
-    const mealPlan = await MealPlan.findOne({
-      _id: req.params.id,
-      user: req.user.id,
-    });
+    const mealPlan = await MealPlan.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!mealPlan) {
-      return res.status(404).json({
-        success: false,
-        message: "Meal plan not found",
-      });
+      return res.status(404).json({ success: false, message: "Meal plan not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      mealPlan,
-    });
+    res.status(200).json({ success: true, mealPlan });
   } catch (err) {
     console.error("Get Meal Plan Error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+exports.archiveMyMealPlan = async (req, res) => {
+  try {
+    const mealPlan = await MealPlan.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id, isArchived: false },
+      { isArchived: true },
+      { new: true }
+    );
+
+    if (!mealPlan) {
+      return res.status(404).json({ success: false, message: "Active meal plan not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Meal plan archived successfully", mealPlan });
+  } catch (err) {
+    console.error("Archive Meal Plan Error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.restoreMyMealPlan = async (req, res) => {
+  try {
+    const mealPlan = await MealPlan.findOneAndUpdate(
+      { _id: req.params.id, user: req.user.id, isArchived: true },
+      { isArchived: false },
+      { new: true }
+    );
+
+    if (!mealPlan) {
+      return res.status(404).json({ success: false, message: "Archived meal plan not found" });
+    }
+
+    res.status(200).json({ success: true, message: "Meal plan restored successfully", mealPlan });
+  } catch (err) {
+    console.error("Restore Meal Plan Error:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
 exports.deleteMyMealPlan = async (req, res) => {
   try {
-    const mealPlan = await MealPlan.findOneAndDelete({
-      _id: req.params.id,
-      user: req.user.id,
-    });
+    const mealPlan = await MealPlan.findOneAndDelete({ _id: req.params.id, user: req.user.id });
 
     if (!mealPlan) {
-      return res.status(404).json({
-        success: false,
-        message: "Meal plan not found",
-      });
+      return res.status(404).json({ success: false, message: "Meal plan not found" });
     }
 
-    res.status(200).json({
-      success: true,
-      message: "Meal plan deleted successfully",
-    });
+    res.status(200).json({ success: true, message: "Meal plan deleted successfully" });
   } catch (err) {
     console.error("Delete Meal Plan Error:", err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
