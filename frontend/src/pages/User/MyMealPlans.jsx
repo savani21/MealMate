@@ -58,6 +58,24 @@ export default function MyMealPlans() {
     });
   };
 
+  const localDateKey = (date) => {
+    if (!date) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const getPlanTitle = (plan) => {
+    const goal = plan.goal?.toString().trim();
+    const diet = plan.diet?.toString().trim();
+
+    if (goal && diet) return `${goal} • ${diet}`;
+    if (goal) return goal;
+    if (diet) return `${diet} Meal Plan`;
+    return `${plan.duration}-Day Meal Plan`;
+  };
+
   const filteredMealPlans = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
@@ -66,8 +84,10 @@ export default function MyMealPlans() {
       const formattedDate = createdDate
         ? createdDate.toLocaleDateString().toLowerCase()
         : "";
+      const planTitle = getPlanTitle(plan).toLowerCase();
 
       const matchesSearch = !normalizedSearch || [
+        planTitle,
         `${plan.duration}-day meal plan`,
         plan.goal,
         plan.diet,
@@ -83,7 +103,7 @@ export default function MyMealPlans() {
 
       const matchesDate =
         !dateFilter ||
-        (createdDate && createdDate.toISOString().slice(0, 10) === dateFilter);
+        (createdDate && localDateKey(createdDate) === dateFilter);
 
       return matchesSearch && matchesDuration && matchesDiet && matchesDate;
     });
@@ -258,17 +278,17 @@ export default function MyMealPlans() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                      <h2 className="font-black text-lg text-gray-900">
-                        {plan.duration}-Day Meal Plan
+                      <h2 className="font-black text-lg text-gray-900 truncate">
+                        {getPlanTitle(plan)}
                       </h2>
-                      <span className="text-sm text-gray-500 flex items-center gap-1">
+                      <span className="text-sm text-gray-500 flex items-center gap-1 shrink-0">
                         <Clock className="w-4 h-4" />
                         {formatCreatedAt(plan.createdAt)}
                       </span>
                     </div>
 
                     <p className="text-sm text-gray-500 capitalize mt-1">
-                      {plan.goal} • {plan.diet}
+                      {plan.duration}-Day Plan
                     </p>
                   </div>
                 </div>
