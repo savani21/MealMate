@@ -5,6 +5,39 @@ const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
+const DIET_RULES = {
+  vegetarian: "No meat, chicken, fish, seafood, eggs, or gelatin. Dairy is allowed.",
+  vegan: "No meat, chicken, fish, seafood, eggs, dairy, or gelatin.",
+  "non-vegetarian": "Meat, chicken, fish, seafood and eggs are allowed when suitable.",
+  eggetarian: "No meat, chicken, fish, or seafood. Eggs and dairy are allowed.",
+};
+
+const DIET_FORBIDDEN = {
+  vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
+  vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
+  eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
+};
+
+function cleanList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function mealViolatesDiet(meal, diet) {
+  const forbidden = DIET_FORBIDDEN[diet];
+  if (!forbidden) return false;
+
+  return ["breakfast", "lunch", "snack", "dinner"].some((type) => {
+    const name = String(meal?.[type] || "");
+    const ingredients = Array.isArray(meal?.[type + "Ingredients"])
+      ? meal[type + "Ingredients"].map((item) => typeof item === "string" ? item : item?.name || "").join(" ")
+      : "";
+    return forbidden.test(name + " " + ingredients);
+  });
+}
+
 exports.createMealPlan = async (req, res) => {
   try {
     const {
@@ -12,6 +45,9 @@ exports.createMealPlan = async (req, res) => {
       diet,
       allergies,
       ingredients,
+      availableIngredients,
+      recommendedIngredients,
+      ingredientMode,
       duration,
     } = req.body;
 
@@ -22,58 +58,95 @@ exports.createMealPlan = async (req, res) => {
       });
     }
 
+    const available = cleanList(availableIngredients || ingredients);
+    const recommended = cleanList(recommendedIngredients);
+    const allowedPool = ingredientMode === "recommended"
+      ? [...new Set([...available, ...recommended])]
+      : available;
+
+    if (!available.length) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one available ingredient is required",
+      });
+    }
+
     const prompt = `
-Create a personalized ${duration}-day meal plan.
+Create a practical personalized ${duration}-day meal plan.
 
 User goal: ${goal}
 Diet type: ${diet}
+Diet restriction: ${DIET_RULES[diet] || "Follow the selected diet type exactly."}
 Food allergies: ${allergies || "None"}
-Available ingredients: ${ingredients || "No specific ingredients"}
 
-For every day provide:
-- Breakfast
-- Lunch
-- Dinner
-- Snack
+Ingredients the user ALREADY HAS in their pantry:
+${JSON.stringify(available)}
 
-Return ONLY valid JSON in this exact structure:
+Ingredients the user is willing to buy if needed:
+${JSON.stringify(recommended)}
 
+Allowed ingredient pool for this plan:
+${JSON.stringify(allowedPool)}
+
+Planning mode: ${ingredientMode === "recommended" ? "Available + Recommended Ingredients" : "Only Available Ingredients"}
+
+Rules:
+1. Every meal must have its own complete ingredient list.
+2. Use pantry ingredients first whenever practical.
+3. In Available + Recommended mode, use ingredients only from the allowed ingredient pool. Recommended ingredients are NOT owned by the user; if a recipe uses one and it is not in the pantry, it becomes a grocery item.
+4. In Only Available mode, use ONLY pantry ingredients.
+5. Never add an ingredient outside the allowed ingredient pool.
+6. Follow the diet restriction strictly. Do not use a forbidden ingredient even if it appears in the recommended list.
+7. Do not put the recipe name in its ingredient list. Use simple shopping names such as "rice", "tuver dal", "salt", "onion", "tomato", "paneer".
+8. Include basic ingredients such as salt only when the meal actually needs them.
+9. Keep ingredients specific to the meal. Do not create one global ingredient list.
+10. Quantities should be short and practical, such as "1 cup", "100 g", or "1 tsp".
+
+Return ONLY valid JSON in exactly this structure:
 {
   "days": [
     {
       "day": 1,
       "breakfast": "meal name",
+      "breakfastIngredients": [{"name": "ingredient", "quantity": "quantity"}],
       "lunch": "meal name",
+      "lunchIngredients": [{"name": "ingredient", "quantity": "quantity"}],
       "dinner": "meal name",
-      "snack": "meal name"
+      "dinnerIngredients": [{"name": "ingredient", "quantity": "quantity"}],
+      "snack": "meal name",
+      "snackIngredients": [{"name": "ingredient", "quantity": "quantity"}]
     }
   ]
 }
-
-Do not include markdown.
-Do not include explanations outside the JSON.
+Do not include markdown or explanations outside JSON.
 `;
 
     const response = await ai.models.generateContent({
-      model:"gemini-3.6-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
+      config: { responseMimeType: "application/json" },
     });
 
-    const aiText = response.text;
+    const generatedMeals = JSON.parse(response.text);
+    const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
 
-    const generatedMeals = JSON.parse(aiText);
+    if (days.some((day) => mealViolatesDiet(day, diet))) {
+      return res.status(422).json({
+        success: false,
+        message: `The AI returned a meal that does not match the selected ${diet} diet. Please generate the plan again.`,
+      });
+    }
 
     const mealPlan = await MealPlan.create({
       user: req.user.id,
       goal,
       diet,
       allergies: allergies || "",
-      ingredients: ingredients || "",
+      availableIngredients: available.join(", "),
+      recommendedIngredients: recommended.join(", "),
+      ingredients: allowedPool.join(", "),
       duration: Number(duration),
-      meals: generatedMeals.days,
+      meals: days,
     });
 
     res.status(201).json({
@@ -81,33 +154,17 @@ Do not include explanations outside the JSON.
       message: "AI meal plan generated successfully",
       mealPlan,
     });
-
   } catch (err) {
     console.error("AI Meal Plan Error:", err);
-
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
 
-
 exports.getMyMealPlans = async (req, res) => {
   try {
-    const mealPlans = await MealPlan.find({
-      user: req.user.id,
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      mealPlans,
-    });
-
+    const mealPlans = await MealPlan.find({ user: req.user.id }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, mealPlans });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
