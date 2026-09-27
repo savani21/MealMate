@@ -41,6 +41,15 @@ function getPlanDayForToday(plan, now = new Date()) {
   return plan.meals[difference] || null;
 }
 
+function getPlanDayNumber(plan, now = new Date()) {
+  if (!plan?.createdAt) return null;
+  const start = new Date(plan.createdAt);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const difference = Math.floor((today - startDay) / 86400000);
+  return difference >= 0 && difference < Number(plan.duration) ? difference + 1 : null;
+}
+
 function getMealStatus(mealKey, now = new Date()) {
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const start = MEAL_TIMES[mealKey].minutes;
@@ -62,6 +71,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
 
   const notificationStorageKey = `mealMateNotifications:${user?._id || user?.email || "guest"}`;
+  const deletedDynamicKey = `mealMateDeletedDynamicNotifications:${user?._id || user?.email || "guest"}`;
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
@@ -103,9 +113,13 @@ export default function Notifications() {
     if (loading) return;
 
     let stored = [];
+    let deletedDynamic = [];
+
     try {
       const parsed = JSON.parse(localStorage.getItem(notificationStorageKey) || "[]");
       stored = Array.isArray(parsed) ? parsed : [];
+      const deleted = JSON.parse(localStorage.getItem(deletedDynamicKey) || "[]");
+      deletedDynamic = Array.isArray(deleted) ? deleted : [];
     } catch (error) {
       console.error("Failed to read notifications:", error);
     }
@@ -137,7 +151,7 @@ export default function Notifications() {
         id: `plan-${todayPlan._id}-${todayKey}`,
         type: "meal",
         title: "Today's meal plan",
-        message: `Day ${todayPlan.meals.indexOf(todayMeals) + 1} of your ${todayPlan.duration}-day plan is ready.`,
+        message: `Day ${getPlanDayNumber(todayPlan, now)} of your ${todayPlan.duration}-day plan is ready.`,
         time: todayKey,
         read: false,
         dynamic: true,
@@ -155,16 +169,17 @@ export default function Notifications() {
       });
     }
 
-    const dynamicIds = new Set(dynamic.map((item) => item.id));
+    const visibleDynamic = dynamic.filter((item) => !deletedDynamic.includes(item.id));
+    const dynamicIds = new Set(visibleDynamic.map((item) => item.id));
     const retainedStored = stored.filter((item) => !item.dynamic || dynamicIds.has(item.id));
-    const merged = dynamic.map((item) => {
+    const merged = visibleDynamic.map((item) => {
       const existing = retainedStored.find((storedItem) => storedItem.id === item.id);
       return existing ? { ...item, read: existing.read } : item;
     });
 
     const otherStored = retainedStored.filter((item) => !dynamicIds.has(item.id));
     setNotifications([...merged, ...otherStored]);
-  }, [loading, todayPlan, todayMeals, now, notificationStorageKey]);
+  }, [loading, todayPlan, todayMeals, now, notificationStorageKey, deletedDynamicKey]);
 
   useEffect(() => {
     if (!loading) {
@@ -181,10 +196,23 @@ export default function Notifications() {
   };
 
   const deleteNotification = (id) => {
+    const notification = notifications.find((item) => item.id === id);
+    if (notification?.dynamic) {
+      const existing = JSON.parse(localStorage.getItem(deletedDynamicKey) || "[]");
+      if (!existing.includes(id)) {
+        localStorage.setItem(deletedDynamicKey, JSON.stringify([...existing, id]));
+      }
+    }
     setNotifications((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const clearAll = () => setNotifications([]);
+  const clearAll = () => {
+    const dynamicIds = notifications.filter((item) => item.dynamic).map((item) => item.id);
+    const existing = JSON.parse(localStorage.getItem(deletedDynamicKey) || "[]");
+    const merged = [...new Set([...existing, ...dynamicIds])];
+    localStorage.setItem(deletedDynamicKey, JSON.stringify(merged));
+    setNotifications([]);
+  };
 
   const getIcon = (type) => {
     if (type === "meal") return <CalendarDays className="w-5 h-5 text-primary" />;
@@ -216,9 +244,7 @@ export default function Notifications() {
           <div>
             <p className="text-primary text-sm font-semibold uppercase tracking-wide">Stay Updated</p>
             <h1 className="text-3xl font-black text-gray-900 mt-1">Your Notifications</h1>
-            <p className="text-gray-500 mt-2">
-              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "You're all caught up."}
-            </p>
+            <p className="text-gray-500 mt-2">{unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "You're all caught up."}</p>
           </div>
 
           {notifications.length > 0 && (
@@ -254,9 +280,7 @@ export default function Notifications() {
                         </div>
                         <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
                         <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> {notification.time}</p>
-                        {notification.action === "generate" && (
-                          <button onClick={() => setLocation("/meal-planner")} className="mt-3 text-sm font-semibold text-primary hover:underline">Generate Today's Meal</button>
-                        )}
+                        {notification.action === "generate" && <button onClick={() => setLocation("/meal-planner")} className="mt-3 text-sm font-semibold text-primary hover:underline">Generate Today's Meal</button>}
                       </div>
                       <div className="flex items-center gap-1">
                         {!notification.read && <button onClick={() => markAsRead(notification.id)} className="p-2 rounded-lg hover:bg-green-50" title="Mark as read"><Check className="w-4 h-4 text-primary" /></button>}
