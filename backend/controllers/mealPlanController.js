@@ -1,7 +1,4 @@
-const { GoogleGenAI } = require("@google/genai");
 const MealPlan = require("../models/MealPlan");
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const DIET_RULES = {
   vegetarian: "No meat, chicken, fish, seafood, eggs, or gelatin. Dairy is allowed.",
@@ -36,6 +33,44 @@ function mealViolatesDiet(meal, diet) {
       : "";
     return forbidden.test(name + " " + ingredients);
   });
+}
+
+async function generateWithOpenRouter(prompt) {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "http://localhost:5173",
+      "X-Title": "MealMate AI",
+    },
+    body: JSON.stringify({
+      model: "openrouter/free",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error?.message || `OpenRouter API request failed with status ${response.status}`
+    );
+  }
+
+  const text = data?.choices?.[0]?.message?.content;
+
+  if (!text) {
+    throw new Error("OpenRouter returned an empty AI response");
+  }
+
+  return JSON.parse(text);
 }
 
 exports.createMealPlan = async (req, res) => {
@@ -121,13 +156,7 @@ Return ONLY valid JSON in exactly this structure:
 Do not include markdown or explanations outside JSON.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: { responseMimeType: "application/json" },
-    });
-
-    const generatedMeals = JSON.parse(response.text);
+    const generatedMeals = await generateWithOpenRouter(prompt);
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
 
     if (days.some((day) => mealViolatesDiet(day, diet))) {
