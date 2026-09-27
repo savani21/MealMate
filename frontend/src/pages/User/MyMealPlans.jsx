@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Utensils, Clock, Search, ArrowDownUp } from "lucide-react";
+import { ArrowLeft, Sparkles, Utensils, Clock, Search, ArrowDownUp, Trash2 } from "lucide-react";
 
 export default function MyMealPlans() {
   const [, setLocation] = useLocation();
@@ -10,6 +10,7 @@ export default function MyMealPlans() {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState("newest");
   const [showSort, setShowSort] = useState(false);
+  const [deletingPlanId, setDeletingPlanId] = useState(null);
 
   useEffect(() => {
     fetchMealPlans();
@@ -41,6 +42,42 @@ export default function MyMealPlans() {
       alert("Unable to connect to server.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (event, plan) => {
+    event.stopPropagation();
+
+    const confirmed = window.confirm(
+      `Delete this meal plan?\n\n${getPlanTitle(plan)}\n${formatCreatedAt(plan.createdAt)}\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingPlanId(plan._id);
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`http://localhost:5000/api/meal-plans/${plan._id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Failed to delete meal plan");
+        return;
+      }
+
+      setMealPlans((currentPlans) =>
+        currentPlans.filter((currentPlan) => currentPlan._id !== plan._id)
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Unable to delete meal plan.");
+    } finally {
+      setDeletingPlanId(null);
     }
   };
 
@@ -263,33 +300,50 @@ export default function MyMealPlans() {
 
                 <div className="space-y-3">
                   {group.plans.map((plan) => (
-                    <button
+                    <div
                       key={plan._id}
-                      onClick={() => setLocation(`/meal-plans/${plan._id}`)}
-                      className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-primary/40 hover:shadow-md transition"
+                      className="w-full bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-primary/40 hover:shadow-md transition"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 shrink-0 rounded-xl bg-green-50 flex items-center justify-center">
-                          <Utensils className="w-5 h-5 text-primary" />
-                        </div>
+                        <button
+                          onClick={() => setLocation(`/meal-plans/${plan._id}`)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-11 h-11 shrink-0 rounded-xl bg-green-50 flex items-center justify-center">
+                              <Utensils className="w-5 h-5 text-primary" />
+                            </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                            <h2 className="font-black text-lg text-gray-900 truncate">
-                              {getPlanTitle(plan)}
-                            </h2>
-                            <span className="text-sm text-gray-500 flex items-center gap-1 shrink-0">
-                              <Clock className="w-4 h-4" />
-                              {formatCreatedAt(plan.createdAt)}
-                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                <h2 className="font-black text-lg text-gray-900 truncate">
+                                  {getPlanTitle(plan)}
+                                </h2>
+                                <span className="text-sm text-gray-500 flex items-center gap-1 shrink-0">
+                                  <Clock className="w-4 h-4" />
+                                  {formatCreatedAt(plan.createdAt)}
+                                </span>
+                              </div>
+
+                              <p className="text-sm text-gray-500 capitalize mt-1">
+                                {plan.duration}-Day Plan
+                              </p>
+                            </div>
                           </div>
+                        </button>
 
-                          <p className="text-sm text-gray-500 capitalize mt-1">
-                            {plan.duration}-Day Plan
-                          </p>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(event) => handleDelete(event, plan)}
+                          disabled={deletingPlanId === plan._id}
+                          title="Delete meal plan"
+                          aria-label={`Delete ${getPlanTitle(plan)}`}
+                          className="shrink-0 p-2.5 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               </section>
