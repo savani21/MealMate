@@ -83,12 +83,23 @@ export default function MyMealPlans() {
 
       const matchesDate =
         !dateFilter ||
-        (createdDate &&
-          createdDate.toISOString().slice(0, 10) === dateFilter);
+        (createdDate && createdDate.toISOString().slice(0, 10) === dateFilter);
 
       return matchesSearch && matchesDuration && matchesDiet && matchesDate;
     });
   }, [mealPlans, search, durationFilter, dietFilter, dateFilter]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setDateFilter("");
+    setDurationFilter("all");
+    setDietFilter("all");
+    setShowFilters(false);
+  };
+
+  const applyFilters = () => {
+    setShowFilters(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
@@ -185,17 +196,20 @@ export default function MyMealPlans() {
                   </select>
                 </label>
 
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setDateFilter("");
-                    setDurationFilter("all");
-                    setDietFilter("all");
-                  }}
-                  className="sm:col-span-3 text-sm font-semibold text-primary text-left"
-                >
-                  Clear filters
-                </button>
+                <div className="sm:col-span-3 flex gap-3 justify-end">
+                  <button
+                    onClick={clearFilters}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"
+                  >
+                    Clear Filters
+                  </button>
+                  <button
+                    onClick={applyFilters}
+                    className="px-5 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90"
+                  >
+                    Apply Filter
+                  </button>
+                </div>
               </div>
             )}
           </div>
