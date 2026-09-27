@@ -8,7 +8,7 @@ const {
   generateRecipe,
 } = require("../../controllers/user/aiController");
 
-router.post("/chat", auth, chatWithAI);
+router.post("/chat", chatWithAI);
 router.post("/generate-recipe", auth, generateRecipe);
 
 module.exports = router;
