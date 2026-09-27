@@ -30,7 +30,9 @@ function mealViolatesDiet(meal, diet) {
   return ["breakfast", "lunch", "snack", "dinner"].some((type) => {
     const name = String(meal?.[type] || "");
     const ingredients = Array.isArray(meal?.[type + "Ingredients"])
-      ? meal[type + "Ingredients"].map((item) => typeof item === "string" ? item : item?.name || "").join(" ")
+      ? meal[type + "Ingredients"]
+          .map((item) => typeof item === "string" ? item : item?.name || "")
+          .join(" ")
       : "";
     return forbidden.test(name + " " + ingredients);
   });
@@ -38,10 +40,6 @@ function mealViolatesDiet(meal, diet) {
 
 exports.createMealPlan = async (req, res) => {
   try {
-    const { goal, diet, allergies, ingredients, duration } = req.body;
-    if (!goal || !diet || !duration) return res.status(400).json({ success: false, message: "Goal, diet and duration are required" });
-
-    const prompt = `Create a personalized ${duration}-day meal plan.\n\nUser goal: ${goal}\nDiet type: ${diet}\nFood allergies: ${allergies || "None"}\nAvailable ingredients: ${ingredients || "No specific ingredients"}\n\nFor every day provide:\n- Breakfast\n- Lunch\n- Dinner\n- Snack\n\nReturn ONLY valid JSON in this exact structure:\n{\n  "days": [\n    {\n      "day": 1,\n      "breakfast": "meal name",\n      "lunch": "meal name",\n      "dinner": "meal name",\n      "snack": "meal name"\n    }\n  ]\n}\n\nDo not include markdown.\nDo not include explanations outside the JSON.`;
     const {
       goal,
       diet,
@@ -151,7 +149,11 @@ Do not include markdown or explanations outside JSON.
       meals: days,
     });
 
-    res.status(201).json({ success: true, message: "AI meal plan generated successfully", mealPlan });
+    res.status(201).json({
+      success: true,
+      message: "AI meal plan generated successfully",
+      mealPlan,
+    });
   } catch (err) {
     console.error("AI Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
