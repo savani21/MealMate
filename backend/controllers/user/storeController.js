@@ -3,6 +3,7 @@ const Cart = require("../../models/user/Cart");
 
 const DEFAULT_PRODUCTS = [
   ["Rice", "Grains", "1 kg", 70],
+  ["Toor Dal", "Pulses", "500 g", 85],
   ["Wheat Flour", "Grains", "1 kg", 55],
   ["Paneer", "Dairy", "200 g", 90],
   ["Milk", "Dairy", "1 litre", 60],
