@@ -1,34 +1,7 @@
-const ai = require("../../config/gemini");
+const { generateText } = require("../../config/openrouter");
 const Recipe = require("../../models/user/Recipe");
 
-const chatWithAI = async (req, res) => {
-  try {
-    const { message, history = [] } = req.body;
-
-    if (!message || !message.trim()) {
-      return res.status(400).json({ message: "Message is required" });
-    }
-
-    const contents = [];
-
-    history.forEach((msg) => {
-      if (!msg.text) return;
-      contents.push({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.text }],
-      });
-    });
-
-    contents.push({
-      role: "user",
-      parts: [{ text: message }],
-    });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.6-flash",
-      contents,
-      config: {
-        systemInstruction: `
+const aiSystemInstruction = `
 You are MealMate AI, a friendly food and meal assistant.
 
 You help users with:
@@ -40,21 +13,53 @@ You help users with:
 - Healthy food choices
 - Cooking ideas
 
-Remember the previous messages in the conversation and use them to give relevant follow-up answers.
+Remember previous messages in the conversation and use them for relevant follow-up answers.
 Keep responses simple, practical and friendly.
 If the user asks something unrelated to food or MealMate, politely explain that you specialize in MealMate assistance.
 Do not provide medical diagnosis.
-        `,
-      },
-    });
+`;
 
-    res.status(200).json({ reply: response.text });
+const handleAIError = (error, res, action) => {
+  console.error(`OpenRouter ${action} Error:`, error);
+
+  if (error.status === 401) {
+    return res.status(502).json({ message: "MealMate AI configuration is invalid." });
+  }
+
+  if (error.status === 429) {
+    return res.status(429).json({ message: "MealMate AI usage limit has been reached. Please try again later." });
+  }
+
+  if (error.status >= 500) {
+    return res.status(503).json({ message: "MealMate AI is temporarily unavailable. Please try again later." });
+  }
+
+  return res.status(500).json({ message: `Failed to ${action.toLowerCase()}.` });
+};
+
+const chatWithAI = async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ message: "Message is required" });
+    }
+
+    const messages = [
+      { role: "system", content: aiSystemInstruction },
+      ...history
+        .filter((msg) => msg.text)
+        .map((msg) => ({
+          role: msg.role === "user" ? "user" : "assistant",
+          content: msg.text,
+        })),
+      { role: "user", content: message },
+    ];
+
+    const reply = await generateText({ messages });
+    return res.status(200).json({ reply });
   } catch (error) {
-    console.error("Gemini AI Error:", error);
-    res.status(500).json({
-      message: "Failed to get AI response",
-      error: error.message,
-    });
+    return handleAIError(error, res, "get AI response");
   }
 };
 
@@ -90,13 +95,12 @@ Use exactly this structure:
 Do not invent medical claims. Keep the recipe realistic and easy to prepare.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    const raw = await generateText({
+      messages: [{ role: "user", content: prompt }],
+      json: true,
     });
 
-    const raw = response.text.trim();
-    const cleaned = raw.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+    const cleaned = raw.trim().replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
     const recipeData = JSON.parse(cleaned);
 
     const recipe = await Recipe.create({
@@ -110,20 +114,16 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       source: "ai",
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Recipe generated successfully",
       recipe,
     });
   } catch (error) {
-    console.error("Recipe Generation Error:", error);
-    res.status(500).json({
-      message: "Failed to generate recipe",
-      error: error.message,
-    });
+    if (error instanceof SyntaxError) {
+      return res.status(502).json({ message: "MealMate AI returned an invalid recipe response. Please try again." });
+    }
+    return handleAIError(error, res, "generate recipe");
   }
 };
 
-module.exports = {
-  chatWithAI,
-  generateRecipe,
-};
+module.exports = { chatWithAI, generateRecipe };
