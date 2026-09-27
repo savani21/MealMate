@@ -1,7 +1,6 @@
 const GroceryList = require("../../models/user/GroceryList");
 const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
-const ai = require("../../config/gemini");
 
 const DIET_FORBIDDEN = {
   vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
@@ -59,18 +58,41 @@ function removeAvailable(requiredIngredients, availableIngredients) {
 
 async function getAIIngredientsForMeals(mealNames) {
   if (!mealNames.length) return {};
+
   try {
     const prompt = `For each meal name below, return 4-8 main ingredients required to cook it.
 Meals: ${JSON.stringify(mealNames)}
 Return ONLY JSON in this exact shape:
 {"Meal Name":[{"name":"ingredient","quantity":"quantity"}]}
 Use simple shopping ingredient names. Include salt when it is normally required. Do not use the meal name as an ingredient.`;
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: prompt,
-      config: { responseMimeType: "application/json" },
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:5173",
+        "X-Title": "MealMate AI",
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+      }),
     });
-    return JSON.parse(response.text.trim());
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message || `OpenRouter API request failed with status ${response.status}`
+      );
+    }
+
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) throw new Error("OpenRouter returned an empty AI response");
+
+    return JSON.parse(text.trim());
   } catch (error) {
     console.error("AI ingredient lookup failed:", error.message);
     return {};
