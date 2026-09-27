@@ -29,9 +29,9 @@ export default function GroceryStore() {
       setLocation("/login");
       return;
     }
-    loadStore();
     loadCart();
     if (listId) loadRequestedGroceryList();
+    else loadStore(requestedIngredientsFromUrl);
   }, [listId]);
 
   const loadRequestedGroceryList = async () => {
@@ -42,7 +42,9 @@ export default function GroceryStore() {
       const data = await response.json();
       if (response.ok) {
         const list = (data.groceryLists || []).find((item) => item._id === listId);
-        setRequestedItems((list?.items || []).filter((item) => !item.checked));
+        const missingItems = (list?.items || []).filter((item) => !item.checked);
+        setRequestedItems(missingItems);
+        await loadStore([...new Set(missingItems.map((item) => item.name.toLowerCase()))]);
       }
     } catch (error) {
       console.error("Grocery context loading error:", error);
