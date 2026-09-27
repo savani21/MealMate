@@ -138,7 +138,7 @@ export default function Dashboard() {
 
         {user.role === "user" && (
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
-            <StatCard label="Meals Logged" value={statsLoading ? "..." : dashboardStats.mealsLogged} description="Meals in your active meal plans" />
+            <StatCard label="Meals Planned" value={statsLoading ? "..." : dashboardStats.mealsLogged} description="Meals in your active meal plans" />
             <StatCard label="Active Plans" value={statsLoading ? "..." : dashboardStats.activePlans} description="Your active meal plans" />
             <StatCard label="Notifications" value={statsLoading ? "..." : dashboardStats.notifications} description="Unread notifications" />
           </section>
