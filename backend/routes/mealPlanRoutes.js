@@ -6,19 +6,16 @@ const {
   createMealPlan,
   getMyMealPlans,
   getMyMealPlanById,
+  archiveMyMealPlan,
+  restoreMyMealPlan,
   deleteMyMealPlan,
 } = require("../controllers/mealPlanController");
 
-// Create a meal plan
 router.post("/", auth, createMealPlan);
-
-// Get logged-in user's meal plans
 router.get("/", auth, getMyMealPlans);
-
-// Get one meal plan belonging to the logged-in user
 router.get("/:id", auth, getMyMealPlanById);
-
-// Delete one meal plan belonging to the logged-in user
+router.patch("/:id/archive", auth, archiveMyMealPlan);
+router.patch("/:id/restore", auth, restoreMyMealPlan);
 router.delete("/:id", auth, deleteMyMealPlan);
 
 module.exports = router;
