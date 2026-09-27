@@ -21,7 +21,6 @@ export default function Recipes() {
   const [favorites, setFavorites] = useState([]);
   const [showGenerator, setShowGenerator] = useState(params.get("generate") === "1");
   const [ingredients, setIngredients] = useState(initialIngredients);
-  const [diet, setDiet] = useState("Any");
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => { fetchRecipes(); }, []);
@@ -56,7 +55,7 @@ export default function Recipes() {
       const response = await fetch("http://localhost:5000/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients, diet, mealName }),
+        body: JSON.stringify({ ingredients, mealName }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
@@ -84,7 +83,7 @@ export default function Recipes() {
     const matchesSearch = searchTerms.length === 0 || searchTerms.some((term) => searchableText.includes(term));
     return matchesSearch && (category === "All" || recipe.category === category);
   });
-  const categories = ["All", ...new Set(recipes.map((recipe) => recipe.category))];
+  const categories = ["All", ...new Set(recipes.map((recipe) => recipe.category).filter(Boolean))];
 
   const toggleFavorite = async (recipeId) => {
     try {
@@ -115,54 +114,86 @@ export default function Recipes() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <section className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Utensils className="w-4 h-4" /> MealMate Recipes</div>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">Discover Delicious Recipes</h1>
-          <p className="text-gray-500 mt-3">Find recipes or create one with AI from your ingredients.</p>
-          {!returnToMealPlan && <button onClick={() => setShowGenerator(true)} className="mt-5 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition"><Sparkles className="w-5 h-5" /> Generate Recipe with AI</button>}
-        </section>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><Utensils className="w-4 h-4" /> MealMate Recipes</div>
+            <h1 className="text-3xl font-black text-gray-900 mt-2">Recipes</h1>
+            <p className="text-gray-500 mt-1">Browse recipes or create one with AI.</p>
+          </div>
+          <button onClick={() => setShowGenerator(true)} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition">
+            <Sparkles className="w-5 h-5" /> Generate Recipe
+          </button>
+        </div>
 
         {showGenerator && (
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
-            <div className="flex items-center justify-between mb-5">
+          <div className="max-w-xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Generate Recipe{mealName ? ` for ${mealName}` : ""}</h2>
-                <p className="text-sm text-gray-500 mt-1">MealMate will create a recipe around the selected meal and ingredients.</p>
+                <h2 className="text-lg font-bold text-gray-900">Generate Recipe{mealName ? ` • ${mealName}` : ""}</h2>
+                <p className="text-sm text-gray-500 mt-1">Enter the ingredients you want to use.</p>
               </div>
-              <button onClick={() => setLocation(backDestination())} className="p-2 text-gray-400 hover:text-gray-700" title="Back"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowGenerator(false)} className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50" title="Close">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <textarea value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="Example: paneer, tomato, onion, spinach" rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-primary resize-none" />
-            <div className="mt-4"><label className="block text-sm font-semibold text-gray-700 mb-2">Diet</label><select value={diet} onChange={(e) => setDiet(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary"><option>Any</option><option>Vegetarian</option><option>Vegan</option><option>High Protein</option></select></div>
-            <button onClick={generateRecipe} disabled={generating} className="w-full mt-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition disabled:opacity-50">{generating ? "Generating Recipe..." : "Generate Recipe"}</button>
+            <textarea
+              value={ingredients}
+              onChange={(e) => setIngredients(e.target.value)}
+              placeholder="Example: paneer, tomato, onion, spinach"
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-primary resize-none"
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button onClick={() => setShowGenerator(false)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50">Cancel</button>
+              <button onClick={generateRecipe} disabled={generating} className="px-5 py-2.5 rounded-lg bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-50">
+                {generating ? "Generating..." : "Generate"}
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 mb-8 flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1"><Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search recipes or ingredients..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-primary" /></div>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary">{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input type="text" placeholder="Search recipes or ingredients..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary" />
+          </div>
+          <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary">
+            {categories.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
         </div>
 
-        {searchTerms.length > 0 && <div className="mb-6 flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-gray-600">Ingredients:</span>{searchTerms.map((term) => <span key={term} className="px-3 py-1 rounded-full bg-green-50 text-primary text-xs font-semibold">{term}</span>)}</div>}
+        {searchTerms.length > 0 && <div className="mb-5 flex flex-wrap items-center gap-2"><span className="text-sm font-semibold text-gray-600">Ingredients:</span>{searchTerms.map((term) => <span key={term} className="px-3 py-1 rounded-full bg-green-50 text-primary text-xs font-semibold">{term}</span>)}</div>}
 
-        {loading ? <div className="text-center py-20 text-gray-500">Loading recipes...</div> : filteredRecipes.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center"><ChefHat className="w-12 h-12 mx-auto text-gray-300" /><h2 className="text-xl font-bold text-gray-900 mt-4">No recipes found</h2><p className="text-gray-500 mt-2">Try another ingredient or generate a recipe with AI.</p></div>
+        {loading ? <div className="text-center py-16 text-gray-500">Loading recipes...</div> : filteredRecipes.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center"><ChefHat className="w-10 h-10 mx-auto text-gray-300" /><h2 className="text-lg font-bold text-gray-900 mt-3">No recipes found</h2><p className="text-gray-500 mt-1">Try another search or generate a recipe with AI.</p></div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{filteredRecipes.map((recipe) => <RecipeCard key={recipe._id} recipe={recipe} onClick={() => setLocation(`/recipes/${recipe._id}`)} isFavorite={favorites.includes(recipe._id)} onFavorite={() => toggleFavorite(recipe._id)} />)}</div>
+          <div className="space-y-2">
+            {filteredRecipes.map((recipe) => (
+              <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="w-full text-left bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-4 hover:border-primary/40 hover:shadow-md transition">
+                <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 shrink-0 rounded-lg bg-green-50 flex items-center justify-center overflow-hidden">
+                    {recipe.image ? <img src={recipe.image} alt="" className="w-full h-full object-cover" /> : <ChefHat className="w-5 h-5 text-primary" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                      <h2 className="font-bold text-gray-900 truncate">{recipe.name}</h2>
+                      <div className="flex items-center gap-3 text-xs text-gray-500 shrink-0">
+                        <span className="capitalize">{recipe.category || "Recipe"}</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" />{recipe.prepTime || "Easy"}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 truncate mt-1">{recipe.description || "View recipe details and ingredients"}</p>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe._id); }} className="p-2 shrink-0" title={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"}>
+                    <Heart className={`w-5 h-5 ${favorites.includes(recipe._id) ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"}`} />
+                  </button>
+                </div>
+              </button>
+            ))}
+          </div>
         )}
       </main>
     </div>
   );
-}
-
-function RecipeCard({ recipe, onClick, isFavorite, onFavorite }) {
-  return <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-    <div className="h-48 bg-green-50 flex items-center justify-center">{recipe.image ? <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover" /> : <ChefHat className="w-16 h-16 text-primary" />}</div>
-    <div className="p-6">
-      <div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wide text-primary">{recipe.category}</span><button onClick={(e) => { e.stopPropagation(); onFavorite(); }} className="p-1" title={isFavorite ? "Remove from favorites" : "Add to favorites"}><Heart className={`w-5 h-5 transition ${isFavorite ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"}`} /></button></div>
-      <h2 className="text-xl font-bold text-gray-900 mt-3">{recipe.name}</h2><p className="text-sm text-gray-500 mt-2 line-clamp-2">{recipe.description}</p>
-      <div className="flex items-center gap-2 text-sm text-gray-400 mt-4"><Clock className="w-4 h-4" />{recipe.prepTime || "Easy"}</div>
-      <button onClick={onClick} className="w-full mt-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition">View Recipe</button>
-    </div>
-  </div>;
 }
