@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Utensils, Clock, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, Sparkles, Utensils, Clock, Search, ArrowDownUp } from "lucide-react";
 
 export default function MyMealPlans() {
   const [, setLocation] = useLocation();
@@ -8,10 +8,8 @@ export default function MyMealPlans() {
   const [mealPlans, setMealPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [durationFilter, setDurationFilter] = useState("all");
-  const [dietFilter, setDietFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState("newest");
+  const [showSort, setShowSort] = useState(false);
 
   useEffect(() => {
     fetchMealPlans();
@@ -58,8 +56,18 @@ export default function MyMealPlans() {
     });
   };
 
-  const localDateKey = (date) => {
-    if (!date) return "";
+  const formatDateHeading = (createdAt) => {
+    if (!createdAt) return "Date unavailable";
+
+    return new Date(createdAt).toLocaleDateString([], {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
+  const getLocalDateKey = (date) => {
+    if (!date) return "unknown";
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
@@ -76,50 +84,62 @@ export default function MyMealPlans() {
     return `${plan.duration}-Day Meal Plan`;
   };
 
-  const filteredMealPlans = useMemo(() => {
+  const sortedMealPlans = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return mealPlans.filter((plan) => {
+    const matchingPlans = mealPlans.filter((plan) => {
+      if (!normalizedSearch) return true;
+
       const createdDate = plan.createdAt ? new Date(plan.createdAt) : null;
       const formattedDate = createdDate
         ? createdDate.toLocaleDateString().toLowerCase()
         : "";
-      const planTitle = getPlanTitle(plan).toLowerCase();
 
-      const matchesSearch = !normalizedSearch || [
-        planTitle,
+      return [
+        getPlanTitle(plan),
         `${plan.duration}-day meal plan`,
         plan.goal,
         plan.diet,
         formattedDate,
-        createdDate?.toLocaleString().toLowerCase(),
-      ].some((value) => value?.toString().includes(normalizedSearch));
-
-      const matchesDuration =
-        durationFilter === "all" || String(plan.duration) === durationFilter;
-
-      const matchesDiet =
-        dietFilter === "all" || String(plan.diet).toLowerCase() === dietFilter.toLowerCase();
-
-      const matchesDate =
-        !dateFilter ||
-        (createdDate && localDateKey(createdDate) === dateFilter);
-
-      return matchesSearch && matchesDuration && matchesDiet && matchesDate;
+        createdDate?.toLocaleString(),
+      ].some((value) => value?.toString().toLowerCase().includes(normalizedSearch));
     });
-  }, [mealPlans, search, durationFilter, dietFilter, dateFilter]);
 
-  const clearFilters = () => {
-    setSearch("");
-    setDateFilter("");
-    setDurationFilter("all");
-    setDietFilter("all");
-    setShowFilters(false);
-  };
+    return [...matchingPlans].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
 
-  const applyFilters = () => {
-    setShowFilters(false);
-  };
+      if (sortOrder === "oldest") return dateA - dateB;
+      if (sortOrder === "shortest") return Number(a.duration || 0) - Number(b.duration || 0);
+      if (sortOrder === "longest") return Number(b.duration || 0) - Number(a.duration || 0);
+
+      return dateB - dateA;
+    });
+  }, [mealPlans, search, sortOrder]);
+
+  const groupedMealPlans = useMemo(() => {
+    return sortedMealPlans.reduce((groups, plan) => {
+      const date = plan.createdAt ? new Date(plan.createdAt) : null;
+      const key = getLocalDateKey(date);
+
+      if (!groups[key]) {
+        groups[key] = {
+          label: formatDateHeading(plan.createdAt),
+          plans: [],
+        };
+      }
+
+      groups[key].plans.push(plan);
+      return groups;
+    }, {});
+  }, [sortedMealPlans]);
+
+  const sortLabel = {
+    newest: "Newest first",
+    oldest: "Oldest first",
+    shortest: "Shortest plan first",
+    longest: "Longest plan first",
+  }[sortOrder];
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
@@ -153,85 +173,52 @@ export default function MyMealPlans() {
         </div>
 
         {!loading && mealPlans.length > 0 && (
-          <div className="mb-6 space-y-3">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by goal, diet, date..."
-                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-
-              <button
-                onClick={() => setShowFilters((value) => !value)}
-                className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 hover:border-primary transition"
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-                Filter
-              </button>
+          <div className="mb-7 flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search by goal, diet, date..."
+                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:ring-2 focus:ring-primary/20"
+              />
             </div>
 
-            {showFilters && (
-              <div className="bg-white border border-gray-100 rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <label className="text-sm font-semibold text-gray-700">
-                  Date
-                  <input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(event) => setDateFilter(event.target.value)}
-                    className="mt-2 w-full px-3 py-2.5 rounded-lg border border-gray-200 font-normal"
-                  />
-                </label>
+            <div className="relative">
+              <button
+                onClick={() => setShowSort((value) => !value)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-gray-200 bg-white font-semibold text-gray-700 hover:border-primary transition"
+              >
+                <ArrowDownUp className="w-5 h-5" />
+                Sort: {sortLabel}
+              </button>
 
-                <label className="text-sm font-semibold text-gray-700">
-                  Duration
-                  <select
-                    value={durationFilter}
-                    onChange={(event) => setDurationFilter(event.target.value)}
-                    className="mt-2 w-full px-3 py-2.5 rounded-lg border border-gray-200 font-normal"
-                  >
-                    <option value="all">All durations</option>
-                    <option value="1">1 Day</option>
-                    <option value="3">3 Days</option>
-                    <option value="7">7 Days</option>
-                  </select>
-                </label>
-
-                <label className="text-sm font-semibold text-gray-700">
-                  Diet Type
-                  <select
-                    value={dietFilter}
-                    onChange={(event) => setDietFilter(event.target.value)}
-                    className="mt-2 w-full px-3 py-2.5 rounded-lg border border-gray-200 font-normal capitalize"
-                  >
-                    <option value="all">All diets</option>
-                    {[...new Set(mealPlans.map((plan) => plan.diet).filter(Boolean))].map((diet) => (
-                      <option key={diet} value={diet}>
-                        {diet}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <div className="sm:col-span-3 flex gap-3 justify-end">
-                  <button
-                    onClick={clearFilters}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                  >
-                    Clear Filters
-                  </button>
-                  <button
-                    onClick={applyFilters}
-                    className="px-5 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90"
-                  >
-                    Apply Filter
-                  </button>
+              {showSort && (
+                <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-gray-100 bg-white shadow-lg p-2">
+                  {[
+                    ["newest", "Newest first"],
+                    ["oldest", "Oldest first"],
+                    ["shortest", "Shortest plan first"],
+                    ["longest", "Longest plan first"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => {
+                        setSortOrder(value);
+                        setShowSort(false);
+                      }}
+                      className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition ${
+                        sortOrder === value
+                          ? "bg-green-50 text-primary font-semibold"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
@@ -241,7 +228,7 @@ export default function MyMealPlans() {
           </div>
         )}
 
-        {!loading && filteredMealPlans.length === 0 && (
+        {!loading && sortedMealPlans.length === 0 && (
           <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
             <Sparkles className="w-10 h-10 text-primary mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-900">
@@ -250,7 +237,7 @@ export default function MyMealPlans() {
             <p className="text-gray-500 mt-2">
               {mealPlans.length === 0
                 ? "Create your first personalized AI meal plan."
-                : "Try changing your search or filters."}
+                : "Try changing your search."}
             </p>
             {mealPlans.length === 0 && (
               <button
@@ -263,36 +250,49 @@ export default function MyMealPlans() {
           </div>
         )}
 
-        {!loading && filteredMealPlans.length > 0 && (
-          <div className="space-y-3">
-            {filteredMealPlans.map((plan) => (
-              <button
-                key={plan._id}
-                onClick={() => setLocation(`/meal-plans/${plan._id}`)}
-                className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-primary/40 hover:shadow-md transition"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 shrink-0 rounded-xl bg-green-50 flex items-center justify-center">
-                    <Utensils className="w-5 h-5 text-primary" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                      <h2 className="font-black text-lg text-gray-900 truncate">
-                        {getPlanTitle(plan)}
-                      </h2>
-                      <span className="text-sm text-gray-500 flex items-center gap-1 shrink-0">
-                        <Clock className="w-4 h-4" />
-                        {formatCreatedAt(plan.createdAt)}
-                      </span>
-                    </div>
-
-                    <p className="text-sm text-gray-500 capitalize mt-1">
-                      {plan.duration}-Day Plan
-                    </p>
-                  </div>
+        {!loading && sortedMealPlans.length > 0 && (
+          <div className="space-y-8">
+            {Object.entries(groupedMealPlans).map(([dateKey, group]) => (
+              <section key={dateKey}>
+                <div className="flex items-center gap-3 mb-3">
+                  <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide">
+                    {group.label}
+                  </h2>
+                  <div className="h-px flex-1 bg-gray-200" />
                 </div>
-              </button>
+
+                <div className="space-y-3">
+                  {group.plans.map((plan) => (
+                    <button
+                      key={plan._id}
+                      onClick={() => setLocation(`/meal-plans/${plan._id}`)}
+                      className="w-full text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-primary/40 hover:shadow-md transition"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 shrink-0 rounded-xl bg-green-50 flex items-center justify-center">
+                          <Utensils className="w-5 h-5 text-primary" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                            <h2 className="font-black text-lg text-gray-900 truncate">
+                              {getPlanTitle(plan)}
+                            </h2>
+                            <span className="text-sm text-gray-500 flex items-center gap-1 shrink-0">
+                              <Clock className="w-4 h-4" />
+                              {formatCreatedAt(plan.createdAt)}
+                            </span>
+                          </div>
+
+                          <p className="text-sm text-gray-500 capitalize mt-1">
+                            {plan.duration}-Day Plan
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}
