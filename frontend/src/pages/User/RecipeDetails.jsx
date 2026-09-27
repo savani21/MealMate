@@ -77,26 +77,133 @@ export default function RecipeDetails() {
   };
 
   const downloadImage = async () => {
-    if (!recipe.image) {
-      alert("No recipe image is available to download.");
-      return;
-    }
-
     try {
-      const response = await fetch(recipe.image);
-      if (!response.ok) throw new Error("Unable to download image");
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      // If the recipe has an actual image, download that image directly.
+      if (recipe.image) {
+        const response = await fetch(recipe.image);
+        if (!response.ok) throw new Error("Unable to download image");
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${recipe.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      // AI-generated recipes without an image still get a downloadable recipe card.
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas is not supported");
+
+      const width = 1200;
+      const padding = 70;
+      const contentWidth = width - padding * 2;
+      const lineHeight = 34;
+      const wrapText = (text, font) => {
+        ctx.font = font;
+        const words = String(text || "").split(/\s+/);
+        const lines = [];
+        let line = "";
+        words.forEach((word) => {
+          const test = line ? `${line} ${word}` : word;
+          if (ctx.measureText(test).width > contentWidth && line) {
+            lines.push(line);
+            line = word;
+          } else {
+            line = test;
+          }
+        });
+        if (line) lines.push(line);
+        return lines;
+      };
+
+      const sections = [];
+      let height = 150;
+
+      const titleLines = wrapText(recipe.name, "bold 42px Arial");
+      sections.push({ type: "title", lines: titleLines });
+      height += titleLines.length * 50 + 25;
+
+      const descriptionLines = wrapText(recipe.description || "MealMate recipe", "22px Arial");
+      sections.push({ type: "description", lines: descriptionLines });
+      height += descriptionLines.length * 32 + 35;
+
+      sections.push({ type: "heading", text: "Ingredients" });
+      height += 55;
+      (recipe.ingredients || []).forEach((item) => {
+        const lines = wrapText(`• ${item}`, "20px Arial");
+        sections.push({ type: "body", lines });
+        height += lines.length * lineHeight + 10;
+      });
+
+      sections.push({ type: "heading", text: "Instructions" });
+      height += 55;
+      (recipe.instructions || []).forEach((item, index) => {
+        const lines = wrapText(`${index + 1}. ${item}`, "20px Arial");
+        sections.push({ type: "body", lines });
+        height += lines.length * lineHeight + 10;
+      });
+
+      canvas.width = width;
+      canvas.height = Math.max(height + 70, 700);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, canvas.height);
+      ctx.fillStyle = "#16a34a";
+      ctx.fillRect(0, 0, width, 12);
+
+      let y = 70;
+      sections.forEach((section) => {
+        if (section.type === "title") {
+          ctx.fillStyle = "#111827";
+          ctx.font = "bold 42px Arial";
+          section.lines.forEach((line) => {
+            ctx.fillText(line, padding, y);
+            y += 50;
+          });
+          y += 15;
+        } else if (section.type === "description") {
+          ctx.fillStyle = "#6b7280";
+          ctx.font = "22px Arial";
+          section.lines.forEach((line) => {
+            ctx.fillText(line, padding, y);
+            y += 32;
+          });
+          y += 20;
+        } else if (section.type === "heading") {
+          ctx.fillStyle = "#16a34a";
+          ctx.font = "bold 28px Arial";
+          ctx.fillText(section.text, padding, y);
+          y += 42;
+        } else {
+          ctx.fillStyle = "#374151";
+          ctx.font = "20px Arial";
+          section.lines.forEach((line) => {
+            ctx.fillText(line, padding, y);
+            y += lineHeight;
+          });
+          y += 10;
+        }
+      });
+
+      ctx.fillStyle = "#9ca3af";
+      ctx.font = "16px Arial";
+      ctx.fillText("MealMate", padding, canvas.height - 28);
+
+      const dataUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      link.href = url;
-      link.download = `${recipe.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.jpg`;
+      link.href = dataUrl;
+      link.download = `${recipe.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.png`;
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Image download error:", error);
-      window.open(recipe.image, "_blank", "noopener,noreferrer");
+      alert("Unable to create the recipe image. Please try again.");
     }
   };
 
@@ -272,7 +379,7 @@ export default function RecipeDetails() {
             <button onClick={shareRecipe} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary transition">
               <Share2 className="w-4 h-4" /> Share
             </button>
-            <button onClick={downloadImage} disabled={!recipe.image} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition">
+            <button onClick={downloadImage} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary transition">
               <Download className="w-4 h-4" /> Image
             </button>
             <button onClick={downloadPdf} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary transition">
