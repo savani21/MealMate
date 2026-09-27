@@ -63,14 +63,11 @@ export default function RecipeDetails() {
     };
 
     try {
-      if (navigator.share) {
-        await navigator.share(shareData);
-      } else if (navigator.clipboard) {
+      if (navigator.share) await navigator.share(shareData);
+      else if (navigator.clipboard) {
         await navigator.clipboard.writeText(window.location.href);
         alert("Recipe link copied to clipboard.");
-      } else {
-        window.prompt("Copy this recipe link:", window.location.href);
-      }
+      } else window.prompt("Copy this recipe link:", window.location.href);
     } catch (error) {
       if (error?.name !== "AbortError") console.error("Share recipe error:", error);
     }
@@ -129,17 +126,14 @@ export default function RecipeDetails() {
         10,
         6
       );
-
       pdf.setFont("helvetica", "bold");
       addWrappedText("Ingredients", 14, 7);
       pdf.setFont("helvetica", "normal");
       (recipe.ingredients || []).forEach((item) => addWrappedText(`• ${item}`, 10, 5));
-
       pdf.setFont("helvetica", "bold");
       addWrappedText("Instructions", 14, 7);
       pdf.setFont("helvetica", "normal");
       (recipe.instructions || []).forEach((item, index) => addWrappedText(`${index + 1}. ${item}`, 10, 5));
-
       pdf.save(`${recipe.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.pdf`);
     } catch (error) {
       console.error("PDF download error:", error);
@@ -148,24 +142,19 @@ export default function RecipeDetails() {
   };
 
   const deleteRecipe = async () => {
-    const confirmed = window.confirm(
-      `Delete this recipe?\n\n${recipe.name}\n\nThis action cannot be undone.`
-    );
+    const confirmed = window.confirm(`Delete this recipe?\n\n${recipe.name}\n\nThis action cannot be undone.`);
     if (!confirmed) return;
 
     const token = localStorage.getItem("token");
     try {
       setDeleting(true);
-      const response = await fetch(
-        `http://localhost:5000/api/recipes/${encodeURIComponent(recipe._id)}`,
-        {
-          method: "DELETE",
-          headers: {
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            Accept: "application/json",
-          },
-        }
-      );
+      const response = await fetch(`http://localhost:5000/api/recipes/${encodeURIComponent(recipe._id)}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          Accept: "application/json",
+        },
+      });
       const text = await response.text();
       let data = {};
       try {
@@ -177,13 +166,7 @@ export default function RecipeDetails() {
         alert(data.message || `Unable to delete recipe (${response.status}).`);
         return;
       }
-      setLocation(
-        returnToMealPlan && planId
-          ? `/meal-plans/${planId}`
-          : returnToPlanner
-            ? "/meal-planner"
-            : "/recipes"
-      );
+      setLocation(returnToMealPlan && planId ? `/meal-plans/${planId}` : returnToPlanner ? "/meal-planner" : "/recipes");
     } catch (error) {
       console.error("Delete recipe error:", error);
       alert("Unable to connect to the server.");
@@ -193,11 +176,7 @@ export default function RecipeDetails() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f7faf7]">
-        <p className="text-gray-500">Loading recipe...</p>
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-[#f7faf7]"><p className="text-gray-500">Loading recipe...</p></div>;
   }
 
   if (!recipe) return null;
@@ -205,149 +184,83 @@ export default function RecipeDetails() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <header className="bg-white border-b border-gray-100">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="h-20 flex items-center justify-between">
-            <button
-              onClick={goBackToSource}
-              className="flex items-center gap-2 text-gray-600 hover:text-primary transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              {returnToMealPlan
-                ? "Back to Meal Plan"
-                : returnToPlanner
-                  ? "Back to Meal Planner"
-                  : "Back to Recipes"}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="h-14 flex items-center justify-between">
+            <button onClick={goBackToSource} className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition">
+              <ArrowLeft className="w-4 h-4" />
+              {returnToMealPlan ? "Back to Meal Plan" : returnToPlanner ? "Back to Meal Planner" : "Back to Recipes"}
             </button>
-
-            <div className="flex items-center gap-2">
-              <ChefHat className="w-6 h-6 text-primary" />
-              <span className="text-xl font-black text-gray-900">
-                Meal<span className="text-primary">Mate</span>
-              </span>
+            <div className="flex items-center gap-1.5">
+              <ChefHat className="w-5 h-5 text-primary" />
+              <span className="font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Compact recipe header */}
-        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-6">
-          <div className="flex flex-col md:flex-row gap-5 md:items-center">
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-5">
+        <section className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="p-4 flex gap-4 items-start">
             {recipe.image ? (
-              <img
-                src={recipe.image}
-                alt={recipe.name}
-                className="w-full md:w-36 h-32 object-cover rounded-xl shrink-0"
-              />
+              <img src={recipe.image} alt={recipe.name} className="w-24 h-20 object-cover rounded-lg shrink-0" />
             ) : (
-              <div className="w-full md:w-36 h-32 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                <ChefHat className="w-12 h-12 text-primary" />
+              <div className="w-24 h-20 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                <ChefHat className="w-8 h-8 text-primary" />
               </div>
             )}
 
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap gap-2 mb-2">
-                <span className="px-2.5 py-1 rounded-full bg-green-50 text-primary text-xs font-semibold">
-                  {recipe.category || "Other"}
-                </span>
-                <span className="px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">
-                  {recipe.diet || "Any"}
-                </span>
+              <div className="flex flex-wrap gap-1.5 mb-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-green-50 text-primary text-[11px] font-semibold">{recipe.category || "Other"}</span>
+                <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[11px] font-semibold">{recipe.diet || "Any"}</span>
               </div>
-
-              <h1 className="text-2xl md:text-3xl font-black text-gray-900 leading-tight">
-                {recipe.name}
-              </h1>
-              <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                {recipe.description || "A delicious MealMate recipe."}
-              </p>
-
-              <div className="flex items-center gap-2 text-sm text-gray-500 mt-3">
-                <Clock className="w-4 h-4 text-primary" />
-                <span>{recipe.prepTime || "Preparation time not specified"}</span>
+              <h1 className="text-xl md:text-2xl font-black text-gray-900 leading-tight">{recipe.name}</h1>
+              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{recipe.description || "A delicious MealMate recipe."}</p>
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+                <Clock className="w-3.5 h-3.5 text-primary" />
+                {recipe.prepTime || "Preparation time not specified"}
               </div>
             </div>
           </div>
 
-          <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap gap-2">
-            <button
-              onClick={shareRecipe}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary transition"
-            >
-              <Share2 className="w-4 h-4" /> Share
-            </button>
-            <button
-              onClick={downloadImage}
-              disabled={!recipe.image}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              <Download className="w-4 h-4" /> Image
-            </button>
-            <button
-              onClick={downloadPdf}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-sm hover:border-primary hover:text-primary transition"
-            >
-              <FileText className="w-4 h-4" /> PDF
-            </button>
-            <button
-              onClick={deleteRecipe}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-100 bg-red-50 text-red-600 font-semibold text-sm hover:bg-red-100 disabled:opacity-50 transition"
-            >
-              <Trash2 className="w-4 h-4" /> {deleting ? "Deleting..." : "Delete"}
-            </button>
-          </div>
-        </section>
-
-        {/* Ingredients */}
-        <section className="mt-5 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-6">
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
-              <Utensils className="w-4 h-4 text-primary" />
-            </div>
-            <h2 className="text-xl font-black text-gray-900">Ingredients</h2>
+          <div className="px-4 pb-4 flex flex-wrap gap-1.5">
+            <button onClick={shareRecipe} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-xs hover:border-primary hover:text-primary transition"><Share2 className="w-3.5 h-3.5" />Share</button>
+            <button onClick={downloadImage} disabled={!recipe.image} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-xs hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition"><Download className="w-3.5 h-3.5" />Image</button>
+            <button onClick={downloadPdf} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 font-semibold text-xs hover:border-primary hover:text-primary transition"><FileText className="w-3.5 h-3.5" />PDF</button>
+            <button onClick={deleteRecipe} disabled={deleting} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-100 bg-red-50 text-red-600 font-semibold text-xs hover:bg-red-100 disabled:opacity-50 transition"><Trash2 className="w-3.5 h-3.5" />{deleting ? "Deleting..." : "Delete"}</button>
           </div>
 
-          {recipe.ingredients?.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {recipe.ingredients.map((ingredient, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 rounded-lg bg-gray-50 px-3.5 py-2.5 text-sm text-gray-700"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  {ingredient}
+          <div className="border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Utensils className="w-4 h-4 text-primary" />
+                <h2 className="font-black text-gray-900">Ingredients</h2>
+              </div>
+              {recipe.ingredients?.length > 0 ? (
+                <div className="space-y-1.5">
+                  {recipe.ingredients.map((ingredient, index) => (
+                    <div key={index} className="flex items-center gap-2 rounded-md bg-gray-50 px-2.5 py-2 text-xs text-gray-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />{ingredient}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : <p className="text-xs text-gray-500">No ingredients available.</p>}
             </div>
-          ) : (
-            <p className="text-gray-500">No ingredients available.</p>
-          )}
-        </section>
 
-        {/* Instructions */}
-        <section className="mt-5 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 md:p-6">
-          <h2 className="text-xl font-black text-gray-900 mb-5">Instructions</h2>
-
-          {recipe.instructions?.length > 0 ? (
-            <div className="space-y-3">
-              {recipe.instructions.map((instruction, index) => (
-                <div
-                  key={index}
-                  className="flex gap-3 rounded-lg bg-gray-50 p-3.5"
-                >
-                  <div className="w-7 h-7 shrink-0 rounded-full bg-green-50 text-primary flex items-center justify-center text-sm font-bold">
-                    {index + 1}
-                  </div>
-                  <p className="text-sm text-gray-700 leading-relaxed pt-0.5">
-                    {instruction}
-                  </p>
+            <div className="p-4">
+              <h2 className="font-black text-gray-900 mb-3">Instructions</h2>
+              {recipe.instructions?.length > 0 ? (
+                <div className="space-y-2">
+                  {recipe.instructions.map((instruction, index) => (
+                    <div key={index} className="flex gap-2.5">
+                      <div className="w-6 h-6 shrink-0 rounded-full bg-green-50 text-primary flex items-center justify-center text-[11px] font-bold">{index + 1}</div>
+                      <p className="text-xs text-gray-700 leading-relaxed pt-0.5">{instruction}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : <p className="text-xs text-gray-500">No instructions available.</p>}
             </div>
-          ) : (
-            <p className="text-gray-500">No instructions available.</p>
-          )}
+          </div>
         </section>
       </main>
     </div>
