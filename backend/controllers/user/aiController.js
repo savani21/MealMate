@@ -108,6 +108,7 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       instructions: recipeData.instructions || [],
       prepTime: recipeData.prepTime || "",
       source: "ai",
+      createdBy: req.user.id,
     });
 
     res.status(201).json({

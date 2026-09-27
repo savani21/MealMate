@@ -1,0 +1,9 @@
+/* Keep every page header aligned to the browser window edges.
+   Page content containers remain unchanged. */
+header > div.max-w-6xl,
+header > div.max-w-7xl {
+  width: 100% !important;
+  max-width: none !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}

@@ -5,15 +5,17 @@ const auth = require("../middleware/auth");
 const {
   createMealPlan,
   getMyMealPlans,
+  getMyMealPlanById,
+  archiveMyMealPlan,
+  restoreMyMealPlan,
+  deleteMyMealPlan,
 } = require("../controllers/mealPlanController");
 
-
-// Create a meal plan
 router.post("/", auth, createMealPlan);
-
-
-// Get logged-in user's meal plans
 router.get("/", auth, getMyMealPlans);
-
+router.get("/:id", auth, getMyMealPlanById);
+router.patch("/:id/archive", auth, archiveMyMealPlan);
+router.patch("/:id/restore", auth, restoreMyMealPlan);
+router.delete("/:id", auth, deleteMyMealPlan);
 
 module.exports = router;
