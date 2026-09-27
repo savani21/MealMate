@@ -27,6 +27,7 @@ import AdminMealPlans from "@/pages/Admin/MealPlans";
 import AdminAnalytics from "@/pages/Admin/Analytics";
 import AdminAIFeatures from "@/pages/Admin/AIFeatures";
 import AdminSecurity from "@/pages/Admin/Security";
+import "@/navbar-layout.css";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +64,7 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={ queryClient }>
+    <QueryClientProvider clientName={ queryClient }>
       <AuthProvider>
         <TooltipProvider>
           <Router />
