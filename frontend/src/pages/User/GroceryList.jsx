@@ -1,11 +1,23 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, ShoppingBasket, Check, Sparkles, ShoppingCart } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  RefreshCw,
+  ShoppingBasket,
+  ShoppingCart,
+  Sparkles,
+  Utensils,
+} from "lucide-react";
+
+const API = "http://localhost:5000";
 
 export default function GroceryList() {
   const [, setLocation] = useLocation();
   const [groceryLists, setGroceryLists] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshingId, setRefreshingId] = useState(null);
 
   useEffect(() => {
     fetchGroceryLists();
@@ -19,7 +31,7 @@ export default function GroceryList() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/user/grocery", {
+      const response = await fetch(`${API}/api/user/grocery`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -40,44 +52,113 @@ export default function GroceryList() {
 
   const regenerateList = async (list) => {
     if (!list?.mealPlan?._id) return;
+
     try {
-      const response = await fetch(`http://localhost:5000/api/user/grocery`, {
+      setRefreshingId(list._id);
+
+      const response = await fetch(`${API}/api/user/grocery`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ mealPlanId: list.mealPlan._id }),
       });
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Unable to refresh grocery list");
-      setGroceryLists((previous) => previous.map((current) => current._id === list._id ? data.groceryList : current));
+
+      setGroceryLists((previous) =>
+        previous.map((current) => (current._id === list._id ? data.groceryList : current))
+      );
     } catch (error) {
       alert(error.message || "Unable to refresh grocery list");
+    } finally {
+      setRefreshingId(null);
     }
   };
 
-  const toggleItem = (listIndex, itemIndex) => {
+  const toggleItem = async (list, item) => {
+    const checked = !item.checked;
+
     setGroceryLists((previous) =>
-      previous.map((list, i) => {
-        if (i !== listIndex) return list;
-        return {
-          ...list,
-          items: list.items.map((item, j) =>
-            j === itemIndex ? { ...item, checked: !item.checked } : item
-          ),
-        };
-      })
+      previous.map((current) =>
+        current._id !== list._id
+          ? current
+          : {
+              ...current,
+              items: current.items.map((entry) =>
+                entry._id === item._id ? { ...entry, checked } : entry
+              ),
+            }
+      )
     );
+
+    try {
+      const response = await fetch(
+        `${API}/api/user/grocery/${list._id}/items/${item._id}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ checked }),
+        }
+      );
+
+      if (!response.ok) throw new Error("Unable to save item status");
+    } catch (error) {
+      setGroceryLists((previous) =>
+        previous.map((current) =>
+          current._id !== list._id
+            ? current
+            : {
+                ...current,
+                items: current.items.map((entry) =>
+                  entry._id === item._id ? { ...entry, checked: item.checked } : entry
+                ),
+              }
+        )
+      );
+      alert(error.message);
+    }
   };
 
   const shopMissingItems = (list) => {
     const missing = list.items.filter((item) => !item.checked);
+
     if (!missing.length) {
       alert("All items in this grocery list are already checked.");
       return;
     }
 
-    // Pass the grocery-list id so the store can preserve Day -> Meal -> Recipe context.
     setLocation(`/grocery-store?listId=${encodeURIComponent(list._id)}`);
   };
+
+  const groupByDay = (items) =>
+    items.reduce((groups, item) => {
+      const day = item.day || 1;
+      if (!groups[day]) groups[day] = [];
+      groups[day].push(item);
+      return groups;
+    }, {});
+
+  const groupByRecipe = (items) =>
+    items.reduce((groups, item) => {
+      const key = `${item.mealType || "Meal"}|${item.mealName || "Recipe"}`;
+
+      if (!groups[key]) {
+        groups[key] = {
+          mealType: item.mealType || "Meal",
+          mealName: item.mealName || "Recipe",
+          items: [],
+        };
+      }
+
+      groups[key].items.push(item);
+      return groups;
+    }, {});
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
@@ -91,6 +172,7 @@ export default function GroceryList() {
               <ArrowLeft className="w-5 h-5" />
               Back to Dashboard
             </button>
+
             <div className="flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-primary" />
               <span className="text-xl font-black text-gray-900">
@@ -107,17 +189,30 @@ export default function GroceryList() {
             <ShoppingBasket className="w-4 h-4" />
             Smart Grocery List
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">My Grocery List</h1>
-          <p className="text-gray-500 mt-3">Keep track of the ingredients you need for your meal plans.</p>
+
+          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">
+            My Grocery List
+          </h1>
+
+          <p className="text-gray-500 mt-3">
+            Your missing ingredients, organized recipe by recipe.
+          </p>
         </div>
 
-        {loading && <div className="text-center py-16 text-gray-500">Loading your grocery lists...</div>}
+        {loading && (
+          <div className="text-center py-16 text-gray-500">
+            Loading your grocery lists...
+          </div>
+        )}
 
         {!loading && groceryLists.length === 0 && (
           <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
             <ShoppingBasket className="w-12 h-12 text-primary mx-auto mb-4" />
             <h2 className="text-xl font-bold text-gray-900">No grocery lists yet</h2>
-            <p className="text-gray-500 mt-2">Create a grocery list from your meal plan.</p>
+            <p className="text-gray-500 mt-2">
+              Create a grocery list from your meal plan.
+            </p>
+
             <button
               onClick={() => setLocation("/my-meal-plans")}
               className="mt-6 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90"
@@ -129,55 +224,136 @@ export default function GroceryList() {
 
         {!loading && groceryLists.length > 0 && (
           <div className="space-y-8">
-            {groceryLists.map((list, listIndex) => {
+            {groceryLists.map((list) => {
               const missingCount = list.items.filter((item) => !item.checked).length;
+              const days = groupByDay(list.items);
 
               return (
-                <section key={list._id} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8">
-                  <div className="flex items-center justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-                        <ShoppingBasket className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h2 className="text-xl font-black text-gray-900">Grocery List</h2>
-                        <p className="text-sm text-gray-500">{list.items.length} items</p>
-                      </div>
+                <section
+                  key={list._id}
+                  className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                    <div>
+                      <h2 className="text-xl font-black text-gray-900">
+                        Meal Plan Grocery List
+                      </h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {missingCount} ingredients to buy · {list.items.length} total
+                      </p>
                     </div>
 
-                    {missingCount > 0 && (
+                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => shopMissingItems(list)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90"
+                        onClick={() => regenerateList(list)}
+                        disabled={refreshingId === list._id}
+                        className="inline-flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:border-green-200 hover:text-primary disabled:opacity-50"
                       >
-                        <ShoppingCart className="w-4 h-4" />
-                        Shop Missing Items
+                        <RefreshCw
+                          className={`w-4 h-4 ${refreshingId === list._id ? "animate-spin" : ""}`}
+                        />
+                        Refresh
                       </button>
-                    )}
+
+                      {missingCount > 0 && (
+                        <button
+                          onClick={() => shopMissingItems(list)}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90"
+                        >
+                          <ShoppingCart className="w-4 h-4" />
+                          Shop Missing
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {list.items.map((item, itemIndex) => (
-                      <button
-                        key={itemIndex}
-                        onClick={() => toggleItem(listIndex, itemIndex)}
-                        className={`flex items-center gap-4 p-4 rounded-xl border text-left transition ${
-                          item.checked
-                            ? "bg-green-50 border-green-100"
-                            : "bg-white border-gray-100 hover:border-green-200"
-                        }`}
-                      >
-                        <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${item.checked ? "bg-primary border-primary text-white" : "border-gray-300"}`}>
-                          {item.checked && <Check className="w-4 h-4" />}
+                  <div className="space-y-8">
+                    {Object.entries(days).map(([day, dayItems]) => {
+                      const recipes = groupByRecipe(dayItems);
+
+                      return (
+                        <div key={day}>
+                          <div className="flex items-center gap-2 mb-4">
+                            <CalendarDays className="w-5 h-5 text-primary" />
+                            <h3 className="text-lg font-black text-gray-900">
+                              Day {day}
+                            </h3>
+                          </div>
+
+                          <div className="space-y-4">
+                            {Object.values(recipes).map((recipe) => (
+                              <div
+                                key={`${day}-${recipe.mealType}-${recipe.mealName}`}
+                                className="rounded-2xl border border-gray-100 overflow-hidden"
+                              >
+                                <div className="px-5 py-4 bg-gray-50 flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center">
+                                    <Utensils className="w-5 h-5 text-primary" />
+                                  </div>
+
+                                  <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                                      {recipe.mealType}
+                                    </p>
+                                    <h4 className="font-black text-gray-900 mt-0.5">
+                                      {recipe.mealName}
+                                    </h4>
+                                  </div>
+                                </div>
+
+                                <div className="divide-y divide-gray-100">
+                                  {recipe.items.map((item) => (
+                                    <button
+                                      key={item._id}
+                                      onClick={() => toggleItem(list, item)}
+                                      className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-gray-50 transition"
+                                    >
+                                      <div
+                                        className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${
+                                          item.checked
+                                            ? "bg-primary border-primary text-white"
+                                            : "border-gray-300 bg-white"
+                                        }`}
+                                      >
+                                        {item.checked && <Check className="w-4 h-4" />}
+                                      </div>
+
+                                      <div className="flex-1">
+                                        <p
+                                          className={`font-semibold ${
+                                            item.checked
+                                              ? "line-through text-gray-400"
+                                              : "text-gray-900"
+                                          }`}
+                                        >
+                                          {item.name}
+                                        </p>
+
+                                        {item.quantity && (
+                                          <p className="text-xs text-gray-500 mt-1">
+                                            Needed: {item.quantity}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      <span
+                                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                          item.checked
+                                            ? "bg-green-50 text-green-600"
+                                            : "bg-amber-50 text-amber-700"
+                                        }`}
+                                      >
+                                        {item.checked ? "Have it" : "Need to buy"}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <div>
-                          <p className={`font-semibold ${item.checked ? "line-through text-gray-400" : "text-gray-900"}`}>
-                            {item.name}
-                          </p>
-                          {item.quantity && <p className="text-xs text-gray-500 mt-1">{item.quantity}</p>}
-                        </div>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
               );
