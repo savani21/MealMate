@@ -39,8 +39,10 @@ export default function MealPlanner() {
       const token = localStorage.getItem("token");
       if (!token) { alert("Please login again."); setLocation("/login"); return; }
       let finalIngredients = available;
+      let recommendedToUse = [];
       if (ingredientMode === "recommended") {
         const recommended = await getRecommendedIngredients();
+        recommendedToUse = recommended;
         finalIngredients = [...new Set([...available, ...recommended])];
       }
       const response = await fetch("http://localhost:5000/api/meal-plans", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ goal, diet, ingredients: finalIngredients.join(", "), duration: Number(duration) }) });

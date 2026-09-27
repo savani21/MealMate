@@ -42,10 +42,10 @@ const mealPlanSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    availableIngredients: { type: String, default: "" },
+    recommendedIngredients: { type: String, default: "" },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("MealPlan", mealPlanSchema);

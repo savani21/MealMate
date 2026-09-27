@@ -38,6 +38,22 @@ export default function GroceryList() {
     }
   };
 
+  const regenerateList = async (list) => {
+    if (!list?.mealPlan?._id) return;
+    try {
+      const response = await fetch(`http://localhost:5000/api/user/grocery`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ mealPlanId: list.mealPlan._id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to refresh grocery list");
+      setGroceryLists((previous) => previous.map((current) => current._id === list._id ? data.groceryList : current));
+    } catch (error) {
+      alert(error.message || "Unable to refresh grocery list");
+    }
+  };
+
   const toggleItem = (listIndex, itemIndex) => {
     setGroceryLists((previous) =>
       previous.map((list, i) => {
@@ -53,18 +69,14 @@ export default function GroceryList() {
   };
 
   const shopMissingItems = (list) => {
-    const missing = list.items
-      .filter((item) => !item.checked)
-      .map((item) => item.name)
-      .filter(Boolean)
-      .join(",");
-
-    if (!missing) {
+    const missing = list.items.filter((item) => !item.checked);
+    if (!missing.length) {
       alert("All items in this grocery list are already checked.");
       return;
     }
 
-    setLocation(`/grocery-store?ingredients=${encodeURIComponent(missing)}`);
+    // Pass the grocery-list id so the store can preserve Day -> Meal -> Recipe context.
+    setLocation(`/grocery-store?listId=${encodeURIComponent(list._id)}`);
   };
 
   return (
