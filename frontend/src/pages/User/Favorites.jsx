@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChefHat, Heart, Trash2, Search, ArrowRight, Clock3 } from "lucide-react";
+import { ChefHat, Heart, Search, ArrowRight, Clock3 } from "lucide-react";
 import { useLocation } from "wouter";
 
 export default function Favorites() {
@@ -7,147 +7,13 @@ export default function Favorites() {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
   useEffect(() => { fetchFavorites(); }, []);
-
-  const fetchFavorites = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) { setLocation("/login"); return; }
-      const response = await fetch("http://localhost:5000/api/favorites", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to load favorites");
-      setFavorites(data.favorites || []);
-    } catch (error) {
-      console.error("Favorites error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeFavorite = async (recipeId) => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/favorites/${recipeId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to remove favorite");
-      setFavorites((prev) => prev.filter((recipe) => recipe._id !== recipeId));
-    } catch (error) {
-      console.error("Remove favorite error:", error);
-    }
-  };
-
-  const filteredFavorites = favorites.filter((recipe) =>
-    `${recipe.name || ""} ${recipe.category || ""}`.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div className="min-h-screen bg-[#f7faf7]">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="w-full h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
-              <ChefHat className="w-5 h-5 text-primary" />
-            </span>
-            <span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
-          </button>
-          <nav className="hidden lg:flex items-center gap-1">
-            <NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} />
-            <NavLink label="Meal Planner" onClick={() => setLocation("/meal-planner")} />
-            <NavLink label="Meal Plans" onClick={() => setLocation("/my-meal-plans")} />
-            <NavLink label="Recipes" onClick={() => setLocation("/recipes")} />
-            <NavLink label="Favorites" active />
-            <NavLink label="Notifications" onClick={() => setLocation("/notifications")} />
-            <NavLink label="Profile" onClick={() => setLocation("/profile")} />
-          </nav>
-          <div className="lg:hidden w-10" />
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-7 mb-7">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0">
-                <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900">My Favorite Recipes</h1>
-                <p className="text-sm text-gray-500 mt-1">{favorites.length} saved {favorites.length === 1 ? "recipe" : "recipes"} ready to cook.</p>
-              </div>
-            </div>
-            {favorites.length > 0 && (
-              <div className="relative w-full md:w-72">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search favorites..." className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-              </div>
-            )}
-          </div>
-        </section>
-
-        {loading ? (
-          <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center text-gray-500">Loading your favorites...</div>
-        ) : favorites.length === 0 ? (
-          <EmptyFavorites onBrowse={() => setLocation("/recipes")} />
-        ) : filteredFavorites.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
-            <Search className="w-10 h-10 mx-auto text-gray-300" />
-            <h2 className="font-bold text-gray-900 mt-4">No matching favorites</h2>
-            <p className="text-sm text-gray-500 mt-1">Try another recipe name or category.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filteredFavorites.map((recipe) => (
-              <article key={recipe._id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                <div className="h-40 bg-green-50 relative overflow-hidden flex items-center justify-center">
-                  {recipe.image ? (
-                    <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
-                  ) : (
-                    <ChefHat className="w-12 h-12 text-primary/70" />
-                  )}
-                  <button onClick={() => removeFavorite(recipe._id)} className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/95 shadow-sm flex items-center justify-center hover:bg-red-50 transition" title="Remove from favorites" aria-label={`Remove ${recipe.name} from favorites`}>
-                    <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-                  </button>
-                </div>
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h2 className="text-lg font-bold text-gray-900 truncate">{recipe.name}</h2>
-                      <div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-primary">
-                        <span>{recipe.category || "Recipe"}</span>
-                        {recipe.prepTime && <><span className="text-gray-300">•</span><span className="inline-flex items-center gap-1 text-gray-500"><Clock3 className="w-3.5 h-3.5" />{recipe.prepTime}</span></>}
-                      </div>
-                    </div>
-                    <Heart className="w-5 h-5 text-red-500 fill-red-500 shrink-0" />
-                  </div>
-                  <p className="text-sm text-gray-500 mt-3 line-clamp-2 min-h-[40px]">{recipe.description || "A delicious recipe saved to your MealMate favorites."}</p>
-                  <button onClick={() => setLocation(`/recipes/${recipe._id}`)} className="w-full mt-4 h-10 rounded-xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition">View Recipe <ArrowRight className="w-4 h-4" /></button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
+  const fetchFavorites = async () => { try { const token = localStorage.getItem("token"); if (!token) { setLocation("/login"); return; } const response = await fetch("http://localhost:5000/api/favorites", { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Failed to load favorites"); setFavorites(data.favorites || []); } catch (error) { console.error("Favorites error:", error); } finally { setLoading(false); } };
+  const removeFavorite = async (recipeId) => { try { const token = localStorage.getItem("token"); const response = await fetch(`http://localhost:5000/api/favorites/${recipeId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) throw new Error(data.message || "Failed to remove favorite"); setFavorites((prev) => prev.filter((recipe) => recipe._id !== recipeId)); } catch (error) { console.error("Remove favorite error:", error); } };
+  const filteredFavorites = favorites.filter((recipe) => `${recipe.name || ""} ${recipe.category || ""}`.toLowerCase().includes(search.toLowerCase()));
+  return (<div className="min-h-screen bg-[#f7faf7]"><header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100"><div className="w-full h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between"><button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary" /></span><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></button><nav className="hidden lg:flex items-center gap-1"><NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} /><NavLink label="Meal Planner" onClick={() => setLocation("/meal-planner")} /><NavLink label="Meal Plans" onClick={() => setLocation("/my-meal-plans")} /><NavLink label="Recipes" onClick={() => setLocation("/recipes")} /></nav><div className="lg:hidden w-10" /></div></header>
+  <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-7 mb-7"><div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5"><div className="flex items-center gap-4"><div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center shrink-0"><Heart className="w-6 h-6 text-red-500 fill-red-500" /></div><div><h1 className="text-2xl md:text-3xl font-black text-gray-900">My Favorite Recipes</h1><p className="text-sm text-gray-500 mt-1">{favorites.length} saved {favorites.length === 1 ? "recipe" : "recipes"} ready to cook.</p></div></div>{favorites.length > 0 && <div className="relative w-full md:w-72"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search favorites..." className="w-full h-11 pl-10 pr-4 rounded-xl border border-gray-200 bg-gray-50 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>}</div></section>
+  {loading ? <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center text-gray-500">Loading your favorites...</div> : favorites.length === 0 ? <EmptyFavorites onBrowse={() => setLocation("/recipes")} /> : filteredFavorites.length === 0 ? <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center"><Search className="w-10 h-10 mx-auto text-gray-300" /><h2 className="font-bold text-gray-900 mt-4">No matching favorites</h2><p className="text-sm text-gray-500 mt-1">Try another recipe name or category.</p></div> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">{filteredFavorites.map((recipe) => <article key={recipe._id} className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"><div className="h-40 bg-green-50 relative overflow-hidden flex items-center justify-center">{recipe.image ? <img src={recipe.image} alt={recipe.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" /> : <ChefHat className="w-12 h-12 text-primary/70" />}<button onClick={() => removeFavorite(recipe._id)} className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/95 shadow-sm flex items-center justify-center hover:bg-red-50 transition" title="Remove from favorites" aria-label={`Remove ${recipe.name} from favorites`}><Heart className="w-4 h-4 text-red-500 fill-red-500" /></button></div><div className="p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="text-lg font-bold text-gray-900 truncate">{recipe.name}</h2><div className="flex items-center gap-2 mt-1.5 text-xs font-semibold text-primary"><span>{recipe.category || "Recipe"}</span>{recipe.prepTime && <><span className="text-gray-300">•</span><span className="inline-flex items-center gap-1 text-gray-500"><Clock3 className="w-3.5 h-3.5" />{recipe.prepTime}</span></>}</div></div><Heart className="w-5 h-5 text-red-500 fill-red-500 shrink-0" /></div><p className="text-sm text-gray-500 mt-3 line-clamp-2 min-h-[40px]">{recipe.description || "A delicious recipe saved to your MealMate favorites."}</p><button onClick={() => setLocation(`/recipes/${recipe._id}`)} className="w-full mt-4 h-10 rounded-xl bg-primary text-white text-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition">View Recipe <ArrowRight className="w-4 h-4" /></button></div></article>)}</div>}</main></div>);
 }
-
-function NavLink({ label, onClick, active = false }) {
-  return <button onClick={onClick} className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${active ? "bg-green-50 text-primary" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>{label}</button>;
-}
-
-function EmptyFavorites({ onBrowse }) {
-  return (
-    <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 md:p-16 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-red-50 mx-auto flex items-center justify-center"><Heart className="w-8 h-8 text-red-400" /></div>
-      <h2 className="text-xl font-bold text-gray-900 mt-5">No favorite recipes yet</h2>
-      <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">Save recipes you love and they will appear here for quick access.</p>
-      <button onClick={onBrowse} className="mt-6 px-5 h-11 rounded-xl bg-primary text-white font-semibold inline-flex items-center gap-2 hover:opacity-90 transition">Browse Recipes <ArrowRight className="w-4 h-4" /></button>
-    </div>
-  );
-}
+function NavLink({ label, onClick, active = false }) { return <button onClick={onClick} className={`px-3 py-2 rounded-lg text-sm font-semibold transition ${active ? "bg-green-50 text-primary" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"}`}>{label}</button>; }
+function EmptyFavorites({ onBrowse }) { return <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-12 md:p-16 text-center"><div className="w-16 h-16 rounded-2xl bg-red-50 mx-auto flex items-center justify-center"><Heart className="w-8 h-8 text-red-400" /></div><h2 className="text-xl font-bold text-gray-900 mt-5">No favorite recipes yet</h2><p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">Save recipes you love and they will appear here for quick access.</p><button onClick={onBrowse} className="mt-6 px-5 h-11 rounded-xl bg-primary text-white font-semibold inline-flex items-center gap-2 hover:opacity-90 transition">Browse Recipes <ArrowRight className="w-4 h-4" /></button></div>; }
