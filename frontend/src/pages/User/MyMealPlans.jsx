@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { ArrowLeft, Sparkles, Utensils } from "lucide-react";
+import { ArrowLeft, Sparkles, Utensils, Clock } from "lucide-react";
 
 export default function MyMealPlans() {
   const [, setLocation] = useLocation();
@@ -46,15 +46,41 @@ export default function MyMealPlans() {
     }
   };
 
+  // The API returns newest plans first. If a user creates multiple
+  // plans on the same calendar date, keep only the newest one.
+  const visibleMealPlans = mealPlans.reduce((uniquePlans, plan) => {
+    const planDate = new Date(plan.createdAt).toLocaleDateString();
+
+    const alreadyShown = uniquePlans.some(
+      (existingPlan) =>
+        new Date(existingPlan.createdAt).toLocaleDateString() === planDate
+    );
+
+    if (!alreadyShown) {
+      uniquePlans.push(plan);
+    }
+
+    return uniquePlans;
+  }, []);
+
+  const formatCreatedAt = (createdAt) => {
+    if (!createdAt) return "Creation time unavailable";
+
+    return new Date(createdAt).toLocaleString([], {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#f7faf7]">
 
-      {/* Header */}
       <header className="bg-white border-b border-gray-100">
         <div className="w-full px-4 sm:px-6 lg:px-8">
-
           <div className="h-20 flex items-center justify-between">
-
             <button
               onClick={() => setLocation("/dashboard")}
               className="flex items-center gap-2 text-gray-600 hover:text-primary transition"
@@ -65,46 +91,32 @@ export default function MyMealPlans() {
 
             <div className="flex items-center gap-2">
               <Sparkles className="w-6 h-6 text-primary" />
-
               <span className="text-xl font-black text-gray-900">
                 Meal<span className="text-primary">Mate</span>
               </span>
             </div>
-
           </div>
-
         </div>
       </header>
 
-
-      {/* Main */}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-
         <div className="mb-8">
-
           <h1 className="text-3xl font-black text-gray-900">
             My Meal Plans
           </h1>
-
           <p className="text-gray-500 mt-2">
-            View your previously generated AI meal plans.
+            Your latest meal plan created each day is shown here.
           </p>
-
         </div>
 
-
-        {/* Loading */}
         {loading && (
           <div className="text-center py-16 text-gray-500">
             Loading your meal plans...
           </div>
         )}
 
-
-        {/* Empty */}
-        {!loading && mealPlans.length === 0 && (
+        {!loading && visibleMealPlans.length === 0 && (
           <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center">
-
             <Sparkles className="w-10 h-10 text-primary mx-auto mb-4" />
 
             <h2 className="text-xl font-bold text-gray-900">
@@ -121,31 +133,22 @@ export default function MyMealPlans() {
             >
               Create Meal Plan
             </button>
-
           </div>
         )}
 
-
-        {/* Plans */}
-        {!loading && mealPlans.length > 0 && (
-
+        {!loading && visibleMealPlans.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {mealPlans.map((plan) => (
-
+            {visibleMealPlans.map((plan) => (
               <div
                 key={plan._id}
                 className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6"
               >
-
                 <div className="flex items-center gap-4">
-
                   <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
                     <Utensils className="w-6 h-6 text-primary" />
                   </div>
 
                   <div>
-
                     <h2 className="font-black text-lg text-gray-900">
                       {plan.duration}-Day Meal Plan
                     </h2>
@@ -153,56 +156,41 @@ export default function MyMealPlans() {
                     <p className="text-sm text-gray-500 capitalize">
                       {plan.goal} • {plan.diet}
                     </p>
-
                   </div>
-
                 </div>
 
-
                 <div className="mt-5 grid grid-cols-2 gap-3">
-
                   <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-500">
-                      Goal
-                    </p>
-
+                    <p className="text-xs text-gray-500">Goal</p>
                     <p className="font-semibold text-gray-900 capitalize">
                       {plan.goal}
                     </p>
                   </div>
 
                   <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-xs text-gray-500">
-                      Diet
-                    </p>
-
+                    <p className="text-xs text-gray-500">Diet</p>
                     <p className="font-semibold text-gray-900 capitalize">
                       {plan.diet}
                     </p>
                   </div>
-
                 </div>
 
+                <div className="mt-3 flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl px-3 py-2.5">
+                  <Clock className="w-4 h-4" />
+                  <span>Created: {formatCreatedAt(plan.createdAt)}</span>
+                </div>
 
                 <button
-                  onClick={() =>
-                    setLocation(`/meal-plans/${plan._id}`)
-                  }
+                  onClick={() => setLocation(`/meal-plans/${plan._id}`)}
                   className="w-full mt-5 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"
                 >
                   View Meal Plan
                 </button>
-
               </div>
-
             ))}
-
           </div>
-
         )}
-
       </main>
-
     </div>
   );
 }
