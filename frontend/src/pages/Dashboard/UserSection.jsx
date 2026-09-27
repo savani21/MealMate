@@ -8,6 +8,9 @@ import {
   Sparkles,
   ClipboardList,
   Clock,
+  MessageCircle,
+  Utensils,
+  CheckCircle2,
 } from "lucide-react";
 
 import { useLocation } from "wouter";
@@ -22,13 +25,6 @@ const MEAL_TIMES = {
 
 const mealOrder = ["breakfast", "lunch", "snack", "dinner"];
 
-function localDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function getPlanDayForToday(plan, now = new Date()) {
   if (!plan?.createdAt || !Array.isArray(plan.meals)) return null;
 
@@ -38,7 +34,6 @@ function getPlanDayForToday(plan, now = new Date()) {
   const difference = Math.floor((today - startDay) / 86400000);
 
   if (difference < 0 || difference >= Number(plan.duration)) return null;
-
   return plan.meals[difference] || null;
 }
 
@@ -77,7 +72,6 @@ export default function UserSection() {
         });
 
         if (!response.ok) throw new Error("Failed to load meal plans");
-
         const data = await response.json();
         setMealPlans(data.mealPlans || []);
       } catch (error) {
@@ -91,11 +85,9 @@ export default function UserSection() {
   }, [user]);
 
   const todayPlan = useMemo(() => {
-    const matchingPlans = mealPlans
+    return mealPlans
       .filter((plan) => !plan.isArchived && getPlanDayForToday(plan, now))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-    return matchingPlans[0] || null;
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
   }, [mealPlans, now]);
 
   const todayMeals = useMemo(() => {
@@ -109,95 +101,120 @@ export default function UserSection() {
     month: "short",
   });
 
+  const completedMealCount = todayMeals
+    ? mealOrder.filter((mealKey) => getMealStatus(mealKey, now) === "past").length
+    : 0;
+
+  const currentMeal = mealOrder.find((mealKey) => getMealStatus(mealKey, now) === "current");
+  const nextMeal = mealOrder.find((mealKey) => getMealStatus(mealKey, now) === "upcoming");
+
   return (
     <div className="space-y-8">
-      <section className="bg-green-50 border border-green-100 rounded-3xl p-8 md:p-10">
-        <p className="text-primary font-semibold text-sm uppercase tracking-wide">
-          Welcome to MealMate
-        </p>
-        <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-2">
-          Eat better.
-          <br />
-          <span className="text-primary">Live healthier.</span>
-        </h1>
-        <p className="text-gray-600 mt-4 max-w-xl">
-          Welcome back, {user?.name || "User"}! Plan your meals, manage your saved plans
-          and organize your groceries.
-        </p>
-      </section>
-
-      <section>
-        <div className="mb-5">
-          <p className="text-primary font-semibold text-sm uppercase tracking-wide">Your MealMate</p>
-          <h2 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">What would you like to do?</h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          <ActionCard icon={<CalendarDays className="w-6 h-6 text-primary" />} title="Meal Planner" description="Create a personalized meal plan." onClick={() => setLocation("/meal-planner")} />
-          <ActionCard icon={<ClipboardList className="w-6 h-6 text-primary" />} title="My Meal Plans" description="View your saved meal plans." onClick={() => setLocation("/my-meal-plans")} />
-          <ActionCard icon={<ShoppingBasket className="w-6 h-6 text-primary" />} title="Grocery List" description="View and manage your grocery list." onClick={() => setLocation("/user/grocery")} />
-          <ActionCard icon={<Heart className="w-6 h-6 text-primary" />} title="Favorites" description="View your saved favorite recipes." onClick={() => setLocation("/favorites")} />
-        </div>
-      </section>
-
-      <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-7 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-              <Sparkles className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">MealMate AI</p>
-              <h2 className="text-xl font-black text-gray-900 mt-1">Need a meal idea?</h2>
-              <p className="text-sm text-gray-500 mt-1">Get personalized recipe recommendations based on your preferences.</p>
-            </div>
-          </div>
-          <button onClick={() => setLocation("/recipes")} className="flex items-center justify-center gap-2 bg-primary text-white px-5 py-3 rounded-xl font-semibold hover:opacity-90 transition whitespace-nowrap">
-            <ChefHat className="w-5 h-5" /> Find Recipes
-          </button>
-        </div>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-5">
+      {/* Today's meal plan comes first */}
+      <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-green-50 border-b border-green-100 px-7 py-6 md:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <p className="text-primary font-semibold text-sm uppercase tracking-wide">Today's Plan</p>
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">Your Meals Today</h2>
-            <p className="text-sm text-gray-500 mt-1">{todayLabel} • Healthy routine</p>
+            <p className="text-primary font-bold text-sm uppercase tracking-wide">Today's Meal Plan</p>
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">Your healthy routine for today</h1>
+            <p className="text-sm text-gray-600 mt-1">{todayLabel}</p>
           </div>
-          <button onClick={() => setLocation("/my-meal-plans")} className="hidden sm:flex items-center gap-1 text-primary font-semibold text-sm hover:gap-2 transition-all">
-            View Plan <ArrowRight className="w-4 h-4" />
-          </button>
+          {todayPlan && (
+            <button
+              onClick={() => setLocation(`/meal-plans/${todayPlan._id}`)}
+              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition"
+            >
+              View Today's Plan <ArrowRight className="w-4 h-4" />
+            </button>
+          )}
         </div>
 
         {loadingMeals ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-500">Loading today's meals...</div>
+          <div className="p-10 text-center text-gray-500">Loading today's meals...</div>
         ) : !todayPlan ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center">
-            <CalendarDays className="w-9 h-9 text-primary mx-auto" />
-            <h3 className="font-bold text-gray-900 mt-3">No meal planned for today</h3>
-            <p className="text-sm text-gray-500 mt-1">Generate a 1, 3 or 7-day plan to build your daily routine.</p>
-            <button onClick={() => setLocation("/meal-planner")} className="mt-4 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold">Generate Today's Meal</button>
+          <div className="p-10 text-center">
+            <CalendarDays className="w-10 h-10 text-primary mx-auto" />
+            <h2 className="font-bold text-gray-900 mt-3">No meal planned for today</h2>
+            <p className="text-sm text-gray-500 mt-1">Create a 1, 3 or 7-day plan to start today's routine.</p>
+            <button onClick={() => setLocation("/meal-planner")} className="mt-5 px-5 py-2.5 rounded-xl bg-primary text-white font-semibold">
+              Generate Today's Meal
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mealOrder.map((mealKey) => {
-              const mealInfo = MEAL_TIMES[mealKey];
-              const status = getMealStatus(mealKey, now);
-              const mealName = todayMeals?.[mealKey] || "Meal not available";
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 md:p-7">
+              {mealOrder.map((mealKey) => {
+                const mealInfo = MEAL_TIMES[mealKey];
+                return (
+                  <MealCard
+                    key={mealKey}
+                    type={mealInfo.label}
+                    time={mealInfo.time}
+                    meal={todayMeals?.[mealKey] || "Meal not available"}
+                    status={getMealStatus(mealKey, now)}
+                  />
+                );
+              })}
+            </div>
 
-              return (
-                <MealCard
-                  key={mealKey}
-                  type={mealInfo.label}
-                  time={mealInfo.time}
-                  meal={mealName}
-                  status={status}
-                />
-              );
-            })}
-          </div>
+            <div className="px-6 pb-6 md:px-7 md:pb-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <RoutineStat icon={<CheckCircle2 className="w-5 h-5" />} value={`${completedMealCount}/4`} label="Meals completed by time" />
+              <RoutineStat icon={<Clock className="w-5 h-5" />} value={currentMeal ? MEAL_TIMES[currentMeal].label : nextMeal ? MEAL_TIMES[nextMeal].label : "Complete"} label={currentMeal ? "Meal happening now" : nextMeal ? "Next meal" : "Today's routine"} />
+              <RoutineStat icon={<Utensils className="w-5 h-5" />} value={`${todayPlan.duration} day`} label="Current plan" />
+            </div>
+          </>
         )}
+      </section>
+
+      {/* Quick actions */}
+      <section>
+        <div className="mb-5">
+          <p className="text-primary font-semibold text-sm uppercase tracking-wide">Quick Access</p>
+          <h2 className="text-2xl font-black text-gray-900 mt-1">Manage your meals</h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <ActionCard icon={<CalendarDays className="w-6 h-6 text-primary" />} title="Meal Planner" description="Create a new personalized plan." onClick={() => setLocation("/meal-planner")} />
+          <ActionCard icon={<ClipboardList className="w-6 h-6 text-primary" />} title="My Meal Plans" description="Compare and manage saved plans." onClick={() => setLocation("/my-meal-plans")} />
+          <ActionCard icon={<ShoppingBasket className="w-6 h-6 text-primary" />} title="Grocery List" description="Manage ingredients to purchase." onClick={() => setLocation("/user/grocery")} />
+          <ActionCard icon={<Heart className="w-6 h-6 text-primary" />} title="Favorites" description="Open your saved recipes." onClick={() => setLocation("/favorites")} />
+        </div>
+      </section>
+
+      {/* Discover section */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <FeaturePanel
+          icon={<ChefHat className="w-6 h-6 text-primary" />}
+          label="Recipes"
+          title="Find something delicious"
+          description="Browse recipes or generate one for a meal from your plan."
+          button="Explore Recipes"
+          onClick={() => setLocation("/recipes")}
+        />
+        <FeaturePanel
+          icon={<MessageCircle className="w-6 h-6 text-primary" />}
+          label="MealMate AI"
+          title="Ask your meal assistant"
+          description="Get help with meal ideas, ingredients and healthy food choices."
+          button="Open Assistant"
+          onClick={() => setLocation("/dashboard")}
+        />
+      </section>
+
+      {/* Personalization */}
+      <section className="bg-green-50 border border-green-100 rounded-3xl p-7 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
+        <div className="flex items-start gap-4">
+          <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-primary">Keep your routine updated</p>
+            <h2 className="text-xl font-black text-gray-900 mt-1">Need a different plan?</h2>
+            <p className="text-sm text-gray-600 mt-1">Create another plan whenever your goals, ingredients or preferences change.</p>
+          </div>
+        </div>
+        <button onClick={() => setLocation("/meal-planner")} className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white border border-green-200 text-gray-800 font-semibold hover:border-primary transition whitespace-nowrap">
+          Create New Plan <ArrowRight className="w-4 h-4" />
+        </button>
       </section>
     </div>
   );
@@ -211,6 +228,36 @@ function ActionCard({ icon, title, description, onClick }) {
       <p className="text-sm text-gray-500 mt-2">{description}</p>
       <div className="flex items-center gap-1 text-primary text-sm font-semibold mt-4 group-hover:gap-2 transition-all">Open <ArrowRight className="w-4 h-4" /></div>
     </button>
+  );
+}
+
+function FeaturePanel({ icon, label, title, description, button, onClick }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-between gap-5">
+      <div className="flex items-start gap-4">
+        <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center shrink-0">{icon}</div>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wide text-primary">{label}</p>
+          <h3 className="font-black text-lg text-gray-900 mt-1">{title}</h3>
+          <p className="text-sm text-gray-500 mt-1">{description}</p>
+        </div>
+      </div>
+      <button onClick={onClick} className="shrink-0 flex items-center gap-1 text-primary font-semibold text-sm hover:gap-2 transition-all">
+        {button} <ArrowRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+function RoutineStat({ icon, value, label }) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 flex items-center gap-3">
+      <div className="text-primary">{icon}</div>
+      <div className="min-w-0">
+        <p className="font-bold text-gray-900 truncate">{value}</p>
+        <p className="text-xs text-gray-500 truncate">{label}</p>
+      </div>
+    </div>
   );
 }
 
@@ -228,9 +275,7 @@ function MealCard({ type, time, meal, status }) {
           <p className="text-xs font-bold uppercase tracking-wide text-primary">{type}</p>
           <span className={`text-xs font-semibold ${isHighlighted ? "text-primary" : "text-gray-400"}`}>{statusLabel}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
-          <Clock className="w-3.5 h-3.5" /> {time}
-        </div>
+        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2"><Clock className="w-3.5 h-3.5" /> {time}</div>
         <h3 className="text-base font-bold text-gray-900 mt-2">{meal}</h3>
       </div>
     </div>
