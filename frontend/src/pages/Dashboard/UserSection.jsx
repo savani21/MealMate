@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   ChefHat,
-  ShoppingBasket,
   Heart,
   ArrowRight,
   Sparkles,
@@ -11,6 +10,9 @@ import {
   MessageCircle,
   Utensils,
   CheckCircle2,
+  Activity,
+  Flame,
+  Star,
 } from "lucide-react";
 
 import { useLocation } from "wouter";
@@ -49,6 +51,24 @@ function getMealStatus(mealKey, now = new Date()) {
   return "past";
 }
 
+function getLocalDateKey(date) {
+  const d = new Date(date);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getPlanDates(plan) {
+  if (!plan?.createdAt || !Number(plan.duration)) return [];
+  const start = new Date(plan.createdAt);
+  const dates = [];
+
+  for (let index = 0; index < Number(plan.duration); index += 1) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+    dates.push(getLocalDateKey(date));
+  }
+
+  return dates;
+}
+
 export default function UserSection() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
@@ -84,11 +104,16 @@ export default function UserSection() {
     loadTodayMeals();
   }, [user]);
 
+  const activeMealPlans = useMemo(
+    () => mealPlans.filter((plan) => !plan.isArchived),
+    [mealPlans]
+  );
+
   const todayPlan = useMemo(() => {
-    return mealPlans
-      .filter((plan) => !plan.isArchived && getPlanDayForToday(plan, now))
+    return activeMealPlans
+      .filter((plan) => getPlanDayForToday(plan, now))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
-  }, [mealPlans, now]);
+  }, [activeMealPlans, now]);
 
   const todayMeals = useMemo(() => {
     if (!todayPlan) return null;
@@ -108,9 +133,60 @@ export default function UserSection() {
   const currentMeal = mealOrder.find((mealKey) => getMealStatus(mealKey, now) === "current");
   const nextMeal = mealOrder.find((mealKey) => getMealStatus(mealKey, now) === "upcoming");
 
+  const weeklySummary = useMemo(() => {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(today);
+    const day = weekStart.getDay();
+    weekStart.setDate(weekStart.getDate() - day);
+
+    const weekKeys = new Set();
+    let plannedMeals = 0;
+
+    activeMealPlans.forEach((plan) => {
+      const planDates = getPlanDates(plan);
+      planDates.forEach((dateKey) => {
+        const date = new Date(`${dateKey}T00:00:00`);
+        const diff = Math.floor((date - weekStart) / 86400000);
+        if (diff >= 0 && diff < 7) {
+          weekKeys.add(dateKey);
+          const planDayIndex = planDates.indexOf(dateKey);
+          const dayMeals = Array.isArray(plan.meals) ? plan.meals[planDayIndex] : null;
+          if (dayMeals) {
+            plannedMeals += mealOrder.filter(
+              (mealKey) => typeof dayMeals[mealKey] === "string" && dayMeals[mealKey].trim()
+            ).length;
+          }
+        }
+      });
+    });
+
+    return {
+      plannedDays: weekKeys.size,
+      plannedMeals,
+      activePlans: activeMealPlans.length,
+    };
+  }, [activeMealPlans, now]);
+
+  const recentActivity = useMemo(() => {
+    return [...activeMealPlans]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 4)
+      .map((plan) => ({
+        title: `Created ${plan.duration}-day meal plan`,
+        date: new Date(plan.createdAt).toLocaleDateString([], {
+          day: "numeric",
+          month: "short",
+        }),
+        time: new Date(plan.createdAt).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        id: plan._id,
+      }));
+  }, [activeMealPlans]);
+
   return (
     <div className="space-y-8">
-      {/* Today's meal plan comes first */}
       <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="bg-green-50 border-b border-green-100 px-7 py-6 md:px-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -119,10 +195,7 @@ export default function UserSection() {
             <p className="text-sm text-gray-600 mt-1">{todayLabel}</p>
           </div>
           {todayPlan && (
-            <button
-              onClick={() => setLocation(`/meal-plans/${todayPlan._id}`)}
-              className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition"
-            >
+            <button onClick={() => setLocation(`/meal-plans/${todayPlan._id}`)} className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition">
               View Today's Plan <ArrowRight className="w-4 h-4" />
             </button>
           )}
@@ -144,18 +217,9 @@ export default function UserSection() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 md:p-7">
               {mealOrder.map((mealKey) => {
                 const mealInfo = MEAL_TIMES[mealKey];
-                return (
-                  <MealCard
-                    key={mealKey}
-                    type={mealInfo.label}
-                    time={mealInfo.time}
-                    meal={todayMeals?.[mealKey] || "Meal not available"}
-                    status={getMealStatus(mealKey, now)}
-                  />
-                );
+                return <MealCard key={mealKey} type={mealInfo.label} time={mealInfo.time} meal={todayMeals?.[mealKey] || "Meal not available"} status={getMealStatus(mealKey, now)} />;
               })}
             </div>
-
             <div className="px-6 pb-6 md:px-7 md:pb-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <RoutineStat icon={<CheckCircle2 className="w-5 h-5" />} value={`${completedMealCount}/4`} label="Meals completed by time" />
               <RoutineStat icon={<Clock className="w-5 h-5" />} value={currentMeal ? MEAL_TIMES[currentMeal].label : nextMeal ? MEAL_TIMES[nextMeal].label : "Complete"} label={currentMeal ? "Meal happening now" : nextMeal ? "Next meal" : "Today's routine"} />
@@ -165,119 +229,95 @@ export default function UserSection() {
         )}
       </section>
 
-      {/* Quick actions */}
       <section>
         <div className="mb-5">
           <p className="text-primary font-semibold text-sm uppercase tracking-wide">Quick Access</p>
           <h2 className="text-2xl font-black text-gray-900 mt-1">Manage your meals</h2>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <ActionCard icon={<CalendarDays className="w-6 h-6 text-primary" />} title="Meal Planner" description="Create a new personalized plan." onClick={() => setLocation("/meal-planner")} />
           <ActionCard icon={<ClipboardList className="w-6 h-6 text-primary" />} title="My Meal Plans" description="Compare and manage saved plans." onClick={() => setLocation("/my-meal-plans")} />
-          <ActionCard icon={<ShoppingBasket className="w-6 h-6 text-primary" />} title="Grocery List" description="Manage ingredients to purchase." onClick={() => setLocation("/user/grocery")} />
           <ActionCard icon={<Heart className="w-6 h-6 text-primary" />} title="Favorites" description="Open your saved recipes." onClick={() => setLocation("/favorites")} />
+          <ActionCard icon={<ChefHat className="w-6 h-6 text-primary" />} title="Recipes" description="Browse and generate recipes." onClick={() => setLocation("/recipes")} />
         </div>
       </section>
 
-      {/* Discover section */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <FeaturePanel
-          icon={<ChefHat className="w-6 h-6 text-primary" />}
-          label="Recipes"
-          title="Find something delicious"
-          description="Browse recipes or generate one for a meal from your plan."
-          button="Explore Recipes"
-          onClick={() => setLocation("/recipes")}
-        />
-        <FeaturePanel
-          icon={<MessageCircle className="w-6 h-6 text-primary" />}
-          label="MealMate AI"
-          title="Ask your meal assistant"
-          description="Get help with meal ideas, ingredients and healthy food choices."
-          button="Open Assistant"
-          onClick={() => setLocation("/dashboard")}
-        />
+      <section>
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-primary font-semibold text-sm uppercase tracking-wide">This Week</p>
+            <h2 className="text-2xl font-black text-gray-900 mt-1">Your meal activity</h2>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <SummaryCard icon={<CalendarDays className="w-5 h-5" />} value={`${weeklySummary.plannedDays}/7`} label="Days with meals planned" />
+          <SummaryCard icon={<Utensils className="w-5 h-5" />} value={weeklySummary.plannedMeals} label="Meals planned this week" />
+          <SummaryCard icon={<Flame className="w-5 h-5" />} value={weeklySummary.activePlans} label="Active meal plans" />
+        </div>
       </section>
 
-      {/* Personalization */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <FeaturePanel icon={<Star className="w-6 h-6 text-primary" />} label="Favorites" title="Your saved recipes" description="Jump back to recipes you have saved for quick access." button="View Favorites" onClick={() => setLocation("/favorites")} />
+        <FeaturePanel icon={<MessageCircle className="w-6 h-6 text-primary" />} label="MealMate AI" title="Ask your meal assistant" description="Get help with meal ideas, ingredients and healthy food choices." button="Open Assistant" onClick={() => window.dispatchEvent(new Event("open-mealmate-assistant"))} />
+      </section>
+
+      <section className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-primary font-semibold text-sm uppercase tracking-wide">Recent Activity</p>
+            <h2 className="text-xl font-black text-gray-900 mt-1">Your latest meal planning</h2>
+          </div>
+          <Activity className="w-5 h-5 text-gray-300" />
+        </div>
+        {recentActivity.length === 0 ? (
+          <div className="p-7 text-sm text-gray-500">Your recent meal-plan activity will appear here.</div>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {recentActivity.map((activity) => (
+              <button key={activity.id} onClick={() => setLocation(`/meal-plans/${activity.id}`)} className="w-full px-6 py-4 flex items-center gap-4 text-left hover:bg-gray-50 transition">
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center shrink-0"><ClipboardList className="w-5 h-5 text-primary" /></div>
+                <div className="min-w-0 flex-1"><p className="font-semibold text-gray-900">{activity.title}</p><p className="text-xs text-gray-500 mt-1">{activity.date} at {activity.time}</p></div>
+                <ArrowRight className="w-4 h-4 text-gray-300" />
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="bg-green-50 border border-green-100 rounded-3xl p-7 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-5">
         <div className="flex items-start gap-4">
-          <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0">
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div>
+          <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center shrink-0"><Sparkles className="w-5 h-5 text-primary" /></div>
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-primary">Keep your routine updated</p>
             <h2 className="text-xl font-black text-gray-900 mt-1">Need a different plan?</h2>
             <p className="text-sm text-gray-600 mt-1">Create another plan whenever your goals, ingredients or preferences change.</p>
           </div>
         </div>
-        <button onClick={() => setLocation("/meal-planner")} className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white border border-green-200 text-gray-800 font-semibold hover:border-primary transition whitespace-nowrap">
-          Create New Plan <ArrowRight className="w-4 h-4" />
-        </button>
+        <button onClick={() => setLocation("/meal-planner")} className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white border border-green-200 text-gray-800 font-semibold hover:border-primary transition whitespace-nowrap">Create New Plan <ArrowRight className="w-4 h-4" /></button>
       </section>
     </div>
   );
 }
 
 function ActionCard({ icon, title, description, onClick }) {
-  return (
-    <button onClick={onClick} className="text-left bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-      <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mb-5">{icon}</div>
-      <h3 className="font-bold text-lg text-gray-900">{title}</h3>
-      <p className="text-sm text-gray-500 mt-2">{description}</p>
-      <div className="flex items-center gap-1 text-primary text-sm font-semibold mt-4 group-hover:gap-2 transition-all">Open <ArrowRight className="w-4 h-4" /></div>
-    </button>
-  );
+  return <button onClick={onClick} className="text-left bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group"><div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mb-5">{icon}</div><h3 className="font-bold text-lg text-gray-900">{title}</h3><p className="text-sm text-gray-500 mt-2">{description}</p><div className="flex items-center gap-1 text-primary text-sm font-semibold mt-4 group-hover:gap-2 transition-all">Open <ArrowRight className="w-4 h-4" /></div></button>;
 }
 
 function FeaturePanel({ icon, label, title, description, button, onClick }) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-between gap-5">
-      <div className="flex items-start gap-4">
-        <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center shrink-0">{icon}</div>
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-primary">{label}</p>
-          <h3 className="font-black text-lg text-gray-900 mt-1">{title}</h3>
-          <p className="text-sm text-gray-500 mt-1">{description}</p>
-        </div>
-      </div>
-      <button onClick={onClick} className="shrink-0 flex items-center gap-1 text-primary font-semibold text-sm hover:gap-2 transition-all">
-        {button} <ArrowRight className="w-4 h-4" />
-      </button>
-    </div>
-  );
+  return <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-between gap-5"><div className="flex items-start gap-4"><div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center shrink-0">{icon}</div><div><p className="text-xs font-bold uppercase tracking-wide text-primary">{label}</p><h3 className="font-black text-lg text-gray-900 mt-1">{title}</h3><p className="text-sm text-gray-500 mt-1">{description}</p></div></div><button onClick={onClick} className="shrink-0 flex items-center gap-1 text-primary font-semibold text-sm hover:gap-2 transition-all">{button} <ArrowRight className="w-4 h-4" /></button></div>;
+}
+
+function SummaryCard({ icon, value, label }) {
+  return <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm"><div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-primary">{icon}</div><p className="text-2xl font-black text-gray-900 mt-4">{value}</p><p className="text-sm text-gray-500 mt-1">{label}</p></div>;
 }
 
 function RoutineStat({ icon, value, label }) {
-  return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 flex items-center gap-3">
-      <div className="text-primary">{icon}</div>
-      <div className="min-w-0">
-        <p className="font-bold text-gray-900 truncate">{value}</p>
-        <p className="text-xs text-gray-500 truncate">{label}</p>
-      </div>
-    </div>
-  );
+  return <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 flex items-center gap-3"><div className="text-primary">{icon}</div><div className="min-w-0"><p className="font-bold text-gray-900 truncate">{value}</p><p className="text-xs text-gray-500 truncate">{label}</p></div></div>;
 }
 
 function MealCard({ type, time, meal, status }) {
   const isHighlighted = status === "current" || status === "upcoming";
   const statusLabel = status === "current" ? "Now" : status === "upcoming" ? "Up next" : "Completed";
 
-  return (
-    <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-all ${isHighlighted ? "border-primary ring-2 ring-primary/10 shadow-md" : "border-gray-100"}`}>
-      <div className={`h-20 flex items-center justify-center ${isHighlighted ? "bg-green-50" : "bg-gray-50"}`}>
-        <ChefHat className={`w-8 h-8 ${isHighlighted ? "text-primary" : "text-gray-300"}`} />
-      </div>
-      <div className="p-5">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-primary">{type}</p>
-          <span className={`text-xs font-semibold ${isHighlighted ? "text-primary" : "text-gray-400"}`}>{statusLabel}</span>
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2"><Clock className="w-3.5 h-3.5" /> {time}</div>
-        <h3 className="text-base font-bold text-gray-900 mt-2">{meal}</h3>
-      </div>
-    </div>
-  );
+  return <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm transition-all ${isHighlighted ? "border-primary ring-2 ring-primary/10 shadow-md" : "border-gray-100"}`}><div className={`h-20 flex items-center justify-center ${isHighlighted ? "bg-green-50" : "bg-gray-50"}`}><ChefHat className={`w-8 h-8 ${isHighlighted ? "text-primary" : "text-gray-300"}`} /></div><div className="p-5"><div className="flex items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wide text-primary">{type}</p><span className={`text-xs font-semibold ${isHighlighted ? "text-primary" : "text-gray-400"}`}>{statusLabel}</span></div><div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2"><Clock className="w-3.5 h-3.5" /> {time}</div><h3 className="text-base font-bold text-gray-900 mt-2">{meal}</h3></div></div>;
 }
