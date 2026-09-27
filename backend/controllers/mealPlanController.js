@@ -135,3 +135,31 @@ exports.getMyMealPlanById = async (req, res) => {
     });
   }
 };
+
+exports.deleteMyMealPlan = async (req, res) => {
+  try {
+    const mealPlan = await MealPlan.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal plan not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Meal plan deleted successfully",
+    });
+  } catch (err) {
+    console.error("Delete Meal Plan Error:", err);
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
