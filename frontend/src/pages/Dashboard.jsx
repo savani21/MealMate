@@ -160,7 +160,6 @@ export default function Dashboard() {
 
           <div className="p-4">
             <p className="text-xs font-bold uppercase tracking-wider text-gray-400 px-3 mb-3">Menu</p>
-            <MenuItem icon={<Home className="w-5 h-5" />} label="Dashboard" active onClick={() => goTo("/dashboard")} />
             <MenuItem icon={<User className="w-5 h-5" />} label="Profile" onClick={() => goTo("/profile")} />
 
             {user.role === "user" && (
