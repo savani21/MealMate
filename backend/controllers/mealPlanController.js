@@ -55,7 +55,7 @@ Do not include explanations outside the JSON.
 `;
 
     const response = await ai.models.generateContent({
-      model:"gemini-3.6-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -63,7 +63,6 @@ Do not include explanations outside the JSON.
     });
 
     const aiText = response.text;
-
     const generatedMeals = JSON.parse(aiText);
 
     const mealPlan = await MealPlan.create({
@@ -81,7 +80,6 @@ Do not include explanations outside the JSON.
       message: "AI meal plan generated successfully",
       mealPlan,
     });
-
   } catch (err) {
     console.error("AI Meal Plan Error:", err);
 
@@ -91,7 +89,6 @@ Do not include explanations outside the JSON.
     });
   }
 };
-
 
 exports.getMyMealPlans = async (req, res) => {
   try {
@@ -103,8 +100,35 @@ exports.getMyMealPlans = async (req, res) => {
       success: true,
       mealPlans,
     });
-
   } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
+exports.getMyMealPlanById = async (req, res) => {
+  try {
+    const mealPlan = await MealPlan.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal plan not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      mealPlan,
+    });
+  } catch (err) {
+    console.error("Get Meal Plan Error:", err);
+
     res.status(500).json({
       success: false,
       message: err.message,
