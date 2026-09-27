@@ -1,24 +1,16 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
 
-// GET all recipes
 const getRecipes = async (req, res) => {
   try {
     const recipes = await Recipe.find().sort({ createdAt: -1 });
-
-    res.status(200).json({
-      recipes,
-    });
+    res.status(200).json({ recipes });
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      message: "Failed to get recipes",
-    });
+    res.status(500).json({ message: "Failed to get recipes" });
   }
 };
 
-// GET recipes liked by the most users + their ingredients
 const getRecommendedRecipes = async (req, res) => {
   try {
     const users = await User.find({}, { favorites: 1 }).lean();
@@ -60,14 +52,10 @@ const getRecommendedRecipes = async (req, res) => {
     res.status(200).json({ recipes, ingredients });
   } catch (error) {
     console.error("RECOMMENDED RECIPES ERROR:", error);
-
-    res.status(500).json({
-      message: "Failed to get recommended recipes",
-    });
+    res.status(500).json({ message: "Failed to get recommended recipes" });
   }
 };
 
-// GET single recipe
 const getRecipeById = async (req, res) => {
   try {
     const recipe = await Recipe.findById(req.params.id);
@@ -76,24 +64,13 @@ const getRecipeById = async (req, res) => {
       return res.status(404).json({ message: "Recipe not found" });
     }
 
-    const canDelete = Boolean(
-      recipe.createdBy && recipe.createdBy.toString() === req.user.id.toString()
-    );
-
-    res.status(200).json({
-      recipe,
-      canDelete,
-    });
+    res.status(200).json({ recipe });
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      message: "Failed to get recipe",
-    });
+    res.status(500).json({ message: "Failed to get recipe" });
   }
 };
 
-// CREATE recipe
 const createRecipe = async (req, res) => {
   try {
     const recipe = new Recipe({
@@ -116,15 +93,10 @@ const createRecipe = async (req, res) => {
     });
   } catch (error) {
     console.error("CREATE RECIPE ERROR:", error);
-
-    res.status(500).json({
-      message: "Failed to create recipe",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Failed to create recipe", error: error.message });
   }
 };
 
-// DELETE only the logged-in user's own recipe
 const deleteRecipe = async (req, res) => {
   try {
     const recipe = await Recipe.findOneAndDelete({
@@ -141,10 +113,7 @@ const deleteRecipe = async (req, res) => {
     res.status(200).json({ message: "Recipe deleted successfully" });
   } catch (error) {
     console.error(error);
-
-    res.status(500).json({
-      message: "Failed to delete recipe",
-    });
+    res.status(500).json({ message: "Failed to delete recipe" });
   }
 };
 
