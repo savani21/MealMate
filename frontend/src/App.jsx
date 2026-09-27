@@ -64,7 +64,7 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider clientName={ queryClient }>
+    <QueryClientProvider client={ queryClient }>
       <AuthProvider>
         <TooltipProvider>
           <Router />
