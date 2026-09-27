@@ -37,6 +37,11 @@ const mealPlanSchema = new mongoose.Schema(
       type: Array,
       default: [],
     },
+
+    isArchived: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
