@@ -23,18 +23,22 @@ const DEFAULT_PRODUCTS = [
 ];
 
 async function ensureCatalog() {
-  const count = await StoreProduct.countDocuments();
-  if (count > 0) return;
-
-  await StoreProduct.insertMany(
-    DEFAULT_PRODUCTS.map(([name, category, unit, price]) => ({
-      name,
-      category,
-      unit,
-      price,
-      stock: 100,
-    }))
-  );
+  for (const [name, category, unit, price] of DEFAULT_PRODUCTS) {
+    await StoreProduct.updateOne(
+      { name },
+      {
+        $setOnInsert: {
+          name,
+          category,
+          unit,
+          price,
+          stock: 100,
+          isActive: true,
+        },
+      },
+      { upsert: true }
+    );
+  }
 }
 
 exports.getProducts = async (req, res) => {
