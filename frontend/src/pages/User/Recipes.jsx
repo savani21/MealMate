@@ -127,28 +127,37 @@ export default function Recipes() {
         </div>
 
         {showGenerator && (
-          <div className="max-w-xl mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Generate Recipe{mealName ? ` • ${mealName}` : ""}</h2>
-                <p className="text-sm text-gray-500 mt-1">Enter the ingredients you want to use.</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 px-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowGenerator(false); }}>
+            <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-100 shadow-xl p-4">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                    <h2 className="text-base font-bold text-gray-900">Generate Recipe</h2>
+                  </div>
+                  {mealName && <p className="text-xs text-primary font-semibold mt-1 truncate">{mealName}</p>}
+                </div>
+                <button onClick={() => setShowGenerator(false)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50" title="Close">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button onClick={() => setShowGenerator(false)} className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50" title="Close">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <textarea
-              value={ingredients}
-              onChange={(e) => setIngredients(e.target.value)}
-              placeholder="Example: paneer, tomato, onion, spinach"
-              rows={3}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-primary resize-none"
-            />
-            <div className="flex justify-end gap-3 mt-4">
-              <button onClick={() => setShowGenerator(false)} className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50">Cancel</button>
-              <button onClick={generateRecipe} disabled={generating} className="px-5 py-2.5 rounded-lg bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-50">
-                {generating ? "Generating..." : "Generate"}
-              </button>
+
+              <label className="text-xs font-semibold text-gray-600">Ingredients</label>
+              <textarea
+                value={ingredients}
+                onChange={(e) => setIngredients(e.target.value)}
+                placeholder="Paneer, tomato, onion..."
+                rows={2}
+                autoFocus
+                className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
+              />
+
+              <div className="flex justify-end gap-2 mt-3">
+                <button onClick={() => setShowGenerator(false)} className="px-3.5 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 font-semibold hover:bg-gray-50">Cancel</button>
+                <button onClick={generateRecipe} disabled={generating} className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
+                  {generating ? "Generating..." : "Generate"}
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -185,9 +194,9 @@ export default function Recipes() {
                     </div>
                     <p className="text-sm text-gray-500 truncate mt-1">{recipe.description || "View recipe details and ingredients"}</p>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe._id); }} className="p-2 shrink-0" title={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"}>
+                  <span onClick={(e) => { e.stopPropagation(); toggleFavorite(recipe._id); }} className="p-2 shrink-0 cursor-pointer" title={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"}>
                     <Heart className={`w-5 h-5 ${favorites.includes(recipe._id) ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"}`} />
-                  </button>
+                  </span>
                 </div>
               </button>
             ))}
