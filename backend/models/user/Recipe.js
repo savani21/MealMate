@@ -48,6 +48,14 @@ const recipeSchema = new mongoose.Schema(
       enum: ["manual", "ai"],
       default: "manual",
     },
+
+    // Set for recipes created by a logged-in user. Existing shared/admin
+    // recipes can remain without this field and cannot be deleted by users.
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   {
     timestamps: true,
