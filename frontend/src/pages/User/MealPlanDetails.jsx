@@ -17,7 +17,7 @@ export default function MealPlanDetails() {
   useEffect(() => {
     fetchMealPlan();
     fetchRecipes();
-  }, []);
+  }, [params?.id]);
 
   const fetchMealPlan = async () => {
     try {
@@ -27,25 +27,21 @@ export default function MealPlanDetails() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/meal-plans", {
+      const response = await fetch(`http://localhost:5000/api/meal-plans/${params.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
 
       if (!response.ok) {
         alert(data.message || "Failed to load meal plan");
-        return;
-      }
-
-      const selectedPlan = data.mealPlans.find((item) => item._id === params.id);
-      if (!selectedPlan) {
-        alert("Meal plan not found");
         setLocation("/my-meal-plans");
         return;
       }
 
+      const selectedPlan = data.mealPlan;
       setPlan(selectedPlan);
-      if (selectedPlan.meals?.length) {
+
+      if (selectedPlan?.meals?.length) {
         setSelectedDay(String(selectedPlan.meals[0].day));
         setSelectedMealType("breakfast");
       }
@@ -81,10 +77,7 @@ export default function MealPlanDetails() {
     );
   };
 
-  const openRecipe = (mealName) => {
-    const recipe = findRecipe(mealName);
-    if (recipe) setLocation(`/recipes/${recipe._id}?return=meal-plan&planId=${plan._id}`);
-  };
+  const selectedRecipe = findRecipe(selectedMealName);
 
   const generateRecipe = () => {
     if (!selectedMealName) {
@@ -96,12 +89,16 @@ export default function MealPlanDetails() {
       generate: "1",
       meal: selectedMealName,
       ingredients: plan.ingredients || "",
-      diet: plan.diet || "",
       return: "meal-plan",
       planId: plan._id,
     });
 
     setLocation(`/recipes?${query.toString()}`);
+  };
+
+  const openExistingRecipe = () => {
+    if (!selectedRecipe) return;
+    setLocation(`/recipes/${selectedRecipe._id}?return=meal-plan&planId=${plan._id}`);
   };
 
   const generateGroceryList = async () => {
@@ -185,10 +182,10 @@ export default function MealPlanDetails() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <MealCard title="Breakfast" meal={day.breakfast} recipe={findRecipe(day.breakfast)} onRecipe={() => openRecipe(day.breakfast)} />
-                <MealCard title="Lunch" meal={day.lunch} recipe={findRecipe(day.lunch)} onRecipe={() => openRecipe(day.lunch)} />
-                <MealCard title="Snack" meal={day.snack} recipe={findRecipe(day.snack)} onRecipe={() => openRecipe(day.snack)} />
-                <MealCard title="Dinner" meal={day.dinner} recipe={findRecipe(day.dinner)} onRecipe={() => openRecipe(day.dinner)} />
+                <MealCard title="Breakfast" meal={day.breakfast} />
+                <MealCard title="Lunch" meal={day.lunch} />
+                <MealCard title="Snack" meal={day.snack} />
+                <MealCard title="Dinner" meal={day.dinner} />
               </div>
             </div>
           ))}
@@ -210,39 +207,29 @@ export default function MealPlanDetails() {
         </div>
 
         {showRecipeSelector && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="w-full max-w-lg bg-white rounded-3xl shadow-xl p-6">
-              <div className="flex items-center justify-between mb-6">
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowRecipeSelector(false); }}>
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+              <div className="flex items-center justify-between mb-5">
                 <div>
-                  <h2 className="text-xl font-black text-gray-900">Generate Recipe</h2>
-                  <p className="text-sm text-gray-500 mt-1">Select the day and meal you want to generate.</p>
+                  <h2 className="text-lg font-black text-gray-900">Recipe for a Meal</h2>
+                  <p className="text-xs text-gray-500 mt-1">Choose a day and meal.</p>
                 </div>
-                <button onClick={() => setShowRecipeSelector(false)} className="p-2 text-gray-400 hover:text-gray-700" aria-label="Close">
+                <button onClick={() => setShowRecipeSelector(false)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50" aria-label="Close">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <label className="block text-sm font-semibold text-gray-700">
                   Day
-                  <select
-                    value={selectedDay}
-                    onChange={(event) => setSelectedDay(event.target.value)}
-                    className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary"
-                  >
-                    {plan.meals.map((day) => (
-                      <option key={day.day} value={day.day}>Day {day.day}</option>
-                    ))}
+                  <select value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary">
+                    {plan.meals.map((day) => <option key={day.day} value={day.day}>Day {day.day}</option>)}
                   </select>
                 </label>
 
                 <label className="block text-sm font-semibold text-gray-700">
                   Meal
-                  <select
-                    value={selectedMealType}
-                    onChange={(event) => setSelectedMealType(event.target.value)}
-                    className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white outline-none focus:border-primary"
-                  >
+                  <select value={selectedMealType} onChange={(event) => setSelectedMealType(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary">
                     <option value="breakfast">Breakfast — {selectedDayPlan?.breakfast || "Not available"}</option>
                     <option value="lunch">Lunch — {selectedDayPlan?.lunch || "Not available"}</option>
                     <option value="snack">Snack — {selectedDayPlan?.snack || "Not available"}</option>
@@ -250,18 +237,28 @@ export default function MealPlanDetails() {
                   </select>
                 </label>
 
-                <div className="rounded-xl bg-green-50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">Selected meal</p>
-                  <p className="font-bold text-gray-900 mt-1">{selectedMealName || "Select a meal"}</p>
+                <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide font-bold text-primary">Selected meal</p>
+                  <p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{selectedMealName || "Select a meal"}</p>
                 </div>
 
-                <button
-                  onClick={generateRecipe}
-                  disabled={!selectedMealName}
-                  className="w-full py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition disabled:opacity-50"
-                >
-                  Generate Recipe for This Meal
-                </button>
+                {selectedRecipe ? (
+                  <div className="rounded-lg border border-green-100 bg-green-50/60 px-3 py-3">
+                    <p className="text-xs font-semibold text-primary">Existing recipe available</p>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={openExistingRecipe} className="flex-1 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-semibold hover:border-primary hover:text-primary transition">
+                        View Recipe
+                      </button>
+                      <button onClick={generateRecipe} className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition">
+                        Generate New
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={generateRecipe} disabled={!selectedMealName} className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:opacity-90 transition disabled:opacity-50">
+                    Generate Recipe
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -285,17 +282,11 @@ function InfoCard({ title, value }) {
   );
 }
 
-function MealCard({ title, meal, recipe, onRecipe }) {
+function MealCard({ title, meal }) {
   return (
     <div className="border border-gray-100 rounded-2xl p-5">
       <p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p>
       <p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p>
-
-      {recipe && (
-        <button onClick={onRecipe} className="mt-4 w-full py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm font-semibold hover:border-primary hover:text-primary transition">
-          View Existing Recipe
-        </button>
-      )}
     </div>
   );
 }
