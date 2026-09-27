@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Sparkles, Utensils, ShoppingBasket, X } from "lucide-react";
+import { Sparkles, Utensils, ShoppingBasket, X } from "lucide-react";
 
 export default function MealPlanDetails() {
   const [, setLocation] = useLocation();
@@ -114,14 +114,24 @@ export default function MealPlanDetails() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="bg-white border-b border-gray-100">
-        <div className="w-full px-4 sm:px-6 lg:px-8"><div className="h-20 flex items-center justify-between">
-          <button onClick={() => setLocation("/my-meal-plans")} className="flex items-center gap-2 text-gray-600 hover:text-primary transition"><ArrowLeft className="w-5 h-5" />Back to My Meal Plans</button>
-          <div className="flex items-center gap-2"><Sparkles className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div>
-        </div></div>
+      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="h-20 flex items-center justify-between gap-6">
+            <div className="flex items-center gap-2 shrink-0"><Sparkles className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div>
+            <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto text-sm font-semibold">
+              <NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} />
+              <NavLink label="Meal Plans" active onClick={() => setLocation("/my-meal-plans")} />
+              <NavLink label="Recipes" onClick={() => setLocation("/recipes")} />
+              <NavLink label="Favorites" onClick={() => setLocation("/favorites")} />
+              <NavLink label="Notifications" onClick={() => setLocation("/notifications")} />
+              <NavLink label="Profile" onClick={() => setLocation("/profile")} />
+            </nav>
+          </div>
+        </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-6 flex items-center gap-2 text-sm text-gray-500"><button onClick={() => setLocation("/my-meal-plans")} className="hover:text-primary transition">Meal Plans</button><span>/</span><span className="text-gray-900 font-semibold">{plan.duration}-Day Plan</span></div>
         <section className="text-center mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Sparkles className="w-4 h-4" /> AI Generated Plan</div>
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">Your {plan.duration}-Day Meal Plan</h1>
@@ -164,5 +174,6 @@ export default function MealPlanDetails() {
   );
 }
 
+function NavLink({ label, active, onClick }) { return <button onClick={onClick} className={`px-3 py-2 rounded-lg whitespace-nowrap transition ${active ? "bg-green-50 text-primary" : "text-gray-600 hover:bg-gray-50 hover:text-primary"}`}>{label}</button>; }
 function InfoCard({ title, value }) { return <div className="bg-white rounded-2xl border border-gray-100 p-5"><p className="text-sm text-gray-500">{title}</p><p className="text-lg font-bold text-gray-900 capitalize mt-1">{value}</p></div>; }
 function MealCard({ title, meal }) { return <div className="border border-gray-100 rounded-2xl p-5"><p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p><p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p></div>; }
