@@ -39,22 +39,24 @@ function mealViolatesDiet(meal, diet) {
 }
 
 async function generateWithOpenRouter(prompt) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+
+  // OpenRouter requires a Bearer API key. When the local .env has not been
+  // configured yet, the meal planner uses the deterministic local generator
+  // below instead of crashing with "Missing Authentication header".
+  if (!apiKey) return null;
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
       "HTTP-Referer": "http://localhost:5173",
       "X-Title": "MealMate AI",
     },
     body: JSON.stringify({
       model: "openrouter/free",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+      messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     }),
   });
@@ -63,17 +65,123 @@ async function generateWithOpenRouter(prompt) {
 
   if (!response.ok) {
     throw new Error(
-      data?.error?.message || `OpenRouter API request failed with status ${response.status}`
+      data?.error?.message ||
+        `OpenRouter API request failed with status ${response.status}`
     );
   }
 
   const text = data?.choices?.[0]?.message?.content;
-
-  if (!text) {
-    throw new Error("OpenRouter returned an empty AI response");
-  }
+  if (!text) throw new Error("OpenRouter returned an empty AI response");
 
   return JSON.parse(text);
+}
+
+function makeIngredient(name, quantity) {
+  return { name, quantity };
+}
+
+function pickIngredients(pool, keywords, count = 3) {
+  const lower = pool.map((item) => item.toLowerCase());
+  const picked = [];
+
+  keywords.forEach((keyword) => {
+    const index = lower.findIndex(
+      (item) => item.includes(keyword) && !picked.includes(pool[index])
+    );
+    if (index >= 0) picked.push(pool[index]);
+  });
+
+  for (const item of pool) {
+    if (picked.length >= count) break;
+    if (!picked.includes(item)) picked.push(item);
+  }
+
+  return picked.slice(0, Math.max(1, count)).map((name) =>
+    makeIngredient(name, "as needed")
+  );
+}
+
+function localMeal(name, pool, keywords, count = 3) {
+  return {
+    name,
+    ingredients: pickIngredients(pool, keywords, count),
+  };
+}
+
+function generateLocalMealPlan({ duration, diet, allowedPool }) {
+  const pool = allowedPool.filter(
+    (item) => !DIET_FORBIDDEN[diet]?.test(item)
+  );
+
+  if (!pool.length) {
+    throw new Error(
+      `No allowed ingredients are available for the selected ${diet} diet.`
+    );
+  }
+
+  const lower = pool.map((item) => item.toLowerCase());
+  const has = (term) => lower.some((item) => item.includes(term));
+
+  const breakfast = has("oat")
+    ? localMeal("Oatmeal Bowl", pool, ["oat", "milk", "banana", "salt"])
+    : has("bread")
+      ? localMeal("Healthy Bread Sandwich", pool, ["bread", "tomato", "onion", "paneer"])
+      : has("banana") && has("milk")
+        ? localMeal("Banana Milk Smoothie", pool, ["banana", "milk"])
+        : localMeal("Healthy Ingredient Bowl", pool, ["fruit", "milk", "oat", "bread"]);
+
+  const lunch = has("rice") && has("dal")
+    ? localMeal("Dal Rice", pool, ["rice", "dal", "tomato", "onion"])
+    : has("rice")
+      ? localMeal("Vegetable Rice Bowl", pool, ["rice", "vegetable", "onion", "tomato"])
+      : has("roti") || has("atta") || has("wheat")
+        ? localMeal("Roti with Mixed Vegetables", pool, ["roti", "atta", "wheat", "vegetable", "tomato"])
+        : has("paneer")
+          ? localMeal("Paneer Stir-Fry", pool, ["paneer", "capsicum", "onion", "tomato"])
+          : localMeal("Mixed Ingredient Bowl", pool, ["vegetable", "onion", "tomato"]);
+
+  const dinner = has("paneer")
+    ? localMeal("Paneer and Vegetable Stir-Fry", pool, ["paneer", "capsicum", "onion", "tomato"])
+    : has("rice") && has("dal")
+      ? localMeal("Simple Khichdi", pool, ["rice", "dal", "salt", "turmeric"])
+      : has("bread")
+        ? localMeal("Light Vegetable Sandwich", pool, ["bread", "tomato", "onion", "vegetable"])
+        : localMeal("Simple Dinner Bowl", pool, ["vegetable", "rice", "dal", "paneer"]);
+
+  const snack = has("banana")
+    ? localMeal("Banana Snack", pool, ["banana", "milk", "oat"])
+    : has("fruit")
+      ? localMeal("Fresh Fruit Snack", pool, ["fruit"])
+      : has("bread")
+        ? localMeal("Light Toast", pool, ["bread"])
+        : localMeal("Simple Snack", pool, pool.slice(0, 2), 2);
+
+  const templates = [breakfast, lunch, dinner, snack];
+  const days = [];
+
+  for (let day = 1; day <= Number(duration); day += 1) {
+    const offset = (day - 1) % templates.length;
+    const get = (index) => templates[(index + offset) % templates.length];
+
+    const b = get(0);
+    const l = get(1);
+    const d = get(2);
+    const s = get(3);
+
+    days.push({
+      day,
+      breakfast: b.name,
+      breakfastIngredients: b.ingredients,
+      lunch: l.name,
+      lunchIngredients: l.ingredients,
+      dinner: d.name,
+      dinnerIngredients: d.ingredients,
+      snack: s.name,
+      snackIngredients: s.ingredients,
+    });
+  }
+
+  return { days };
 }
 
 exports.createMealPlan = async (req, res) => {
@@ -131,14 +239,13 @@ Planning mode: ${ingredientMode === "recommended" ? "Available + Recommended Ing
 Rules:
 1. Every meal must have its own complete ingredient list.
 2. Use pantry ingredients first whenever practical.
-3. In Available + Recommended mode, use ingredients only from the allowed ingredient pool. Recommended ingredients are NOT owned by the user; if a recipe uses one and it is not in the pantry, it becomes a grocery item.
+3. In Available + Recommended mode, use ingredients only from the allowed ingredient pool.
 4. In Only Available mode, use ONLY pantry ingredients.
 5. Never add an ingredient outside the allowed ingredient pool.
-6. Follow the diet restriction strictly. Do not use a forbidden ingredient even if it appears in the recommended list.
-7. Do not put the recipe name in its ingredient list. Use simple shopping names such as "rice", "tuver dal", "salt", "onion", "tomato", "paneer".
-8. Include basic ingredients such as salt only when the meal actually needs them.
-9. Keep ingredients specific to the meal. Do not create one global ingredient list.
-10. Quantities should be short and practical, such as "1 cup", "100 g", or "1 tsp".
+6. Follow the diet restriction strictly.
+7. Do not put the recipe name in its ingredient list.
+8. Keep ingredients specific to the meal.
+9. Quantities should be short and practical.
 
 Return ONLY valid JSON in exactly this structure:
 {
@@ -159,20 +266,31 @@ Return ONLY valid JSON in exactly this structure:
 Do not include markdown or explanations outside JSON.
 `;
 
-    const generatedMeals = await generateWithOpenRouter(prompt);
+    let generatedMeals = await generateWithOpenRouter(prompt);
+    let generatedBy = "openrouter";
+
+    if (!generatedMeals) {
+      generatedMeals = generateLocalMealPlan({
+        duration,
+        diet,
+        allowedPool,
+      });
+      generatedBy = "local-fallback";
+    }
+
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
 
     if (!days.length) {
       return res.status(422).json({
         success: false,
-        message: "AI did not return a valid meal plan. Please try again.",
+        message: "Meal plan generation returned no valid days. Please try again.",
       });
     }
 
     if (days.some((day) => mealViolatesDiet(day, diet))) {
       return res.status(422).json({
         success: false,
-        message: `The AI returned a meal that does not match the selected ${diet} diet. Please generate the plan again.`,
+        message: `The generated meal plan does not match the selected ${diet} diet. Please generate the plan again.`,
       });
     }
 
@@ -188,12 +306,9 @@ Do not include markdown or explanations outside JSON.
       meals: days,
     });
 
-    // Always create the grocery list immediately after a meal plan is generated.
-    // This keeps Meal Plan -> Grocery List as one complete workflow.
     try {
       await upsertGroceryListForMealPlan(mealPlan);
     } catch (groceryError) {
-      // Do not leave a meal plan without a grocery list.
       await MealPlan.deleteOne({ _id: mealPlan._id, user: req.user.id });
       throw new Error(
         `Meal plan was generated, but the grocery list could not be created: ${groceryError.message}`
@@ -202,11 +317,15 @@ Do not include markdown or explanations outside JSON.
 
     res.status(201).json({
       success: true,
-      message: "AI meal plan generated successfully",
+      message:
+        generatedBy === "openrouter"
+          ? "AI meal plan generated successfully"
+          : "Meal plan generated successfully",
+      generatedBy,
       mealPlan,
     });
   } catch (err) {
-    console.error("AI Meal Plan Error:", err);
+    console.error("Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -226,8 +345,16 @@ exports.getMyMealPlans = async (req, res) => {
 
 exports.getMyMealPlanById = async (req, res) => {
   try {
-    const mealPlan = await MealPlan.findOne({ _id: req.params.id, user: req.user.id });
-    if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found" });
+    const mealPlan = await MealPlan.findOne({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal plan not found",
+      });
+    }
     res.status(200).json({ success: true, mealPlan });
   } catch (err) {
     console.error("Get Meal Plan Error:", err);
@@ -242,8 +369,17 @@ exports.archiveMyMealPlan = async (req, res) => {
       { isArchived: true },
       { new: true }
     );
-    if (!mealPlan) return res.status(404).json({ success: false, message: "Active meal plan not found" });
-    res.status(200).json({ success: true, message: "Meal plan archived successfully", mealPlan });
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Active meal plan not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Meal plan archived successfully",
+      mealPlan,
+    });
   } catch (err) {
     console.error("Archive Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -257,8 +393,17 @@ exports.restoreMyMealPlan = async (req, res) => {
       { isArchived: false },
       { new: true }
     );
-    if (!mealPlan) return res.status(404).json({ success: false, message: "Archived meal plan not found" });
-    res.status(200).json({ success: true, message: "Meal plan restored successfully", mealPlan });
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Archived meal plan not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Meal plan restored successfully",
+      mealPlan,
+    });
   } catch (err) {
     console.error("Restore Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
@@ -267,9 +412,20 @@ exports.restoreMyMealPlan = async (req, res) => {
 
 exports.deleteMyMealPlan = async (req, res) => {
   try {
-    const mealPlan = await MealPlan.findOneAndDelete({ _id: req.params.id, user: req.user.id });
-    if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found" });
-    res.status(200).json({ success: true, message: "Meal plan deleted successfully" });
+    const mealPlan = await MealPlan.findOneAndDelete({
+      _id: req.params.id,
+      user: req.user.id,
+    });
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal plan not found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Meal plan deleted successfully",
+    });
   } catch (err) {
     console.error("Delete Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
