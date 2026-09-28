@@ -1,35 +1,58 @@
-const ai = require("../../config/gemini");
 const Recipe = require("../../models/user/Recipe");
+
+async function generateWithOpenRouter(messages, responseFormat) {
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:5173",
+        "X-Title": "MealMate AI",
+      },
+      body: JSON.stringify({
+        model: "openrouter/free",
+        messages,
+        ...(responseFormat
+          ? { response_format: responseFormat }
+          : {}),
+      }),
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error?.message ||
+        `OpenRouter request failed with status ${response.status}`
+    );
+  }
+
+  const content = data?.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("OpenRouter returned an empty AI response");
+  }
+
+  return content;
+}
 
 const chatWithAI = async (req, res) => {
   try {
     const { message, history = [] } = req.body;
 
     if (!message || !message.trim()) {
-      return res.status(400).json({ message: "Message is required" });
+      return res.status(400).json({
+        message: "Message is required",
+      });
     }
 
-    const contents = [];
-
-    history.forEach((msg) => {
-      if (!msg.text) return;
-      contents.push({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.text }],
-      });
-    });
-
-    contents.push({
-      role: "user",
-      parts: [{ text: message }],
-    });
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.6-flash",
-      contents,
-      config: {
-        systemInstruction: `
-You are MealMate AI, a friendly food and meal assistant.
+    const messages = [
+      {
+        role: "system",
+        content: `You are MealMate AI, a friendly food and meal assistant.
 
 You help users with:
 - Recipes
@@ -40,17 +63,33 @@ You help users with:
 - Healthy food choices
 - Cooking ideas
 
-Remember the previous messages in the conversation and use them to give relevant follow-up answers.
+Remember previous messages and use them to give relevant follow-up answers.
 Keep responses simple, practical and friendly.
 If the user asks something unrelated to food or MealMate, politely explain that you specialize in MealMate assistance.
-Do not provide medical diagnosis.
-        `,
+Do not provide medical diagnosis.`,
       },
+    ];
+
+    history.forEach((msg) => {
+      if (!msg.text) return;
+
+      messages.push({
+        role: msg.role === "user" ? "user" : "assistant",
+        content: msg.text,
+      });
     });
 
-    res.status(200).json({ reply: response.text });
+    messages.push({
+      role: "user",
+      content: message,
+    });
+
+    const reply = await generateWithOpenRouter(messages);
+
+    res.status(200).json({ reply });
   } catch (error) {
-    console.error("Gemini AI Error:", error);
+    console.error("OpenRouter AI Error:", error);
+
     res.status(500).json({
       message: "Failed to get AI response",
       error: error.message,
@@ -60,10 +99,17 @@ Do not provide medical diagnosis.
 
 const generateRecipe = async (req, res) => {
   try {
-    const { ingredients, diet = "Any", category = "Other", mealName = "" } = req.body;
+    const {
+      ingredients,
+      diet = "Any",
+      category = "Other",
+      mealName = "",
+    } = req.body;
 
     if (!ingredients || !ingredients.trim()) {
-      return res.status(400).json({ message: "Ingredients are required" });
+      return res.status(400).json({
+        message: "Ingredients are required",
+      });
     }
 
     const mealInstruction = mealName.trim()
@@ -77,6 +123,7 @@ Category: ${category}.
 ${mealInstruction}
 
 Return ONLY valid JSON. Do not use markdown or code fences.
+
 Use exactly this structure:
 {
   "name": "Recipe name",
@@ -87,17 +134,24 @@ Use exactly this structure:
   "instructions": ["step 1", "step 2"],
   "prepTime": "30 minutes"
 }
-Do not invent medical claims. Keep the recipe realistic and easy to prepare.
+
+Do not invent medical claims.
+Keep the recipe realistic and easy to prepare.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
+    const raw = await generateWithOpenRouter(
+      [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      {
+        type: "json_object",
+      }
+    );
 
-    const raw = response.text.trim();
-    const cleaned = raw.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
-    const recipeData = JSON.parse(cleaned);
+    const recipeData = JSON.parse(raw);
 
     const recipe = await Recipe.create({
       name: recipeData.name,
@@ -117,6 +171,7 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
     });
   } catch (error) {
     console.error("Recipe Generation Error:", error);
+
     res.status(500).json({
       message: "Failed to generate recipe",
       error: error.message,
