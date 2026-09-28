@@ -1,4 +1,7 @@
 const MealPlan = require("../models/MealPlan");
+const {
+  upsertGroceryListForMealPlan,
+} = require("./user/groceryController");
 
 const DIET_RULES = {
   vegetarian: "No meat, chicken, fish, seafood, eggs, or gelatin. Dairy is allowed.",
@@ -159,6 +162,13 @@ Do not include markdown or explanations outside JSON.
     const generatedMeals = await generateWithOpenRouter(prompt);
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
 
+    if (!days.length) {
+      return res.status(422).json({
+        success: false,
+        message: "AI did not return a valid meal plan. Please try again.",
+      });
+    }
+
     if (days.some((day) => mealViolatesDiet(day, diet))) {
       return res.status(422).json({
         success: false,
@@ -177,6 +187,18 @@ Do not include markdown or explanations outside JSON.
       duration: Number(duration),
       meals: days,
     });
+
+    // Always create the grocery list immediately after a meal plan is generated.
+    // This keeps Meal Plan -> Grocery List as one complete workflow.
+    try {
+      await upsertGroceryListForMealPlan(mealPlan);
+    } catch (groceryError) {
+      // Do not leave a meal plan without a grocery list.
+      await MealPlan.deleteOne({ _id: mealPlan._id, user: req.user.id });
+      throw new Error(
+        `Meal plan was generated, but the grocery list could not be created: ${groceryError.message}`
+      );
+    }
 
     res.status(201).json({
       success: true,
