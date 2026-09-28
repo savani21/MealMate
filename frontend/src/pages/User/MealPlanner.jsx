@@ -45,7 +45,26 @@ export default function MealPlanner() {
         recommendedToUse = recommended;
         finalIngredients = [...new Set([...available, ...recommended])];
       }
-      const response = await fetch("http://localhost:5000/api/meal-plans", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ goal, diet, ingredients: finalIngredients.join(", "), duration: Number(duration) }) });
+      const response = await fetch("http://localhost:5000/api/meal-plans", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          goal,
+          diet,
+          duration: Number(duration),
+
+          // Keep pantry ingredients separate from ingredients that may be bought.
+          availableIngredients: available.join(", "),
+          recommendedIngredients: recommendedToUse.join(", "),
+          ingredientMode,
+
+          // Backward-compatible field for older backend code.
+          ingredients: available.join(", "),
+        }),
+      });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate meal plan"); return; }
       if (!data.mealPlan?._id) { alert("Meal plan was generated but no plan ID was returned."); return; }
