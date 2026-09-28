@@ -1,8 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
-import { ArrowLeft, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Trash2,
+  Receipt,
+  X,
+  Printer,
+  Clock,
+  History,
+} from "lucide-react";
 
 const API = "http://localhost:5000";
+
+function maskEmail(email) {
+  if (!email) return "";
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  const visible = local.slice(0, 2);
+  const masked = "*".repeat(Math.max(local.length - 2, 3));
+  return `${visible}${masked}@${domain}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "--";
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 export default function GroceryStore() {
   const [, setLocation] = useLocation();
@@ -15,167 +43,58 @@ export default function GroceryStore() {
     .filter(Boolean);
 
   const [requestedItems, setRequestedItems] = useState([]);
-
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({ items: [] });
   const [searchText, setSearchText] = useState("");
   const [loading, setLoading] = useState(true);
   const [cartOpen, setCartOpen] = useState(false);
+  const [cartNotice, setCartNotice] = useState("");
+  const [lastAddedProduct, setLastAddedProduct] = useState("");
+
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   const token = localStorage.getItem("token");
+  const authHeaders = () => ({ Authorization: `Bearer ${token}` });
 
   useEffect(() => {
     if (!token) {
       setLocation("/login");
       return;
     }
-
     loadCart();
-
-    if (listId) {
-      loadRequestedGroceryList();
-    } else {
-      loadLatestGroceryListOrLegacyIngredients();
-    }
+    if (listId) loadRequestedGroceryList();
+    else loadStore(requestedIngredientsFromUrl);
   }, [listId]);
-
-  const loadLatestGroceryListOrLegacyIngredients = async () => {
-    try {
-      setLoading(true);
-
-      const response = await fetch(API + "/api/user/grocery", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load grocery list");
-      }
-
-      const latestList = (data.groceryLists || [])[0];
-
-      if (latestList) {
-        const missingItems = (latestList.items || []).filter((item) => !item.checked);
-        setRequestedItems(missingItems);
-
-        const ingredientNames = [
-          ...new Set(
-            missingItems
-              .map((item) => String(item.name || "").trim().toLowerCase())
-              .filter(Boolean)
-          ),
-        ];
-
-        await loadStore(ingredientNames);
-        return;
-      }
-
-      await loadStore([]);
-    } catch (error) {
-      console.error("Legacy grocery context loading error:", error);
-      await loadStore([]);
-    }
-  };
 
   const loadRequestedGroceryList = async () => {
     try {
-      setLoading(true);
-
-      const response = await fetch(`${API}/api/user/grocery`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const response = await fetch(`${API}/api/user/grocery`, { headers: authHeaders() });
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load grocery list");
+      if (response.ok) {
+        const list = (data.groceryLists || []).find((item) => item._id === listId);
+        const missingItems = (list?.items || []).filter((item) => !item.checked);
+        setRequestedItems(missingItems);
+        await loadStore([...new Set(missingItems.map((item) => String(item.name || "").trim().toLowerCase()).filter(Boolean))]);
       }
-
-      const list = (data.groceryLists || []).find(
-        (item) => item._id === listId
-      );
-
-      if (!list) {
-        throw new Error("Grocery list not found");
-      }
-
-      const missingItems = (list.items || []).filter(
-        (item) => !item.checked
-      );
-
-      setRequestedItems(missingItems);
-
-      const ingredientNames = [
-        ...new Set(
-          missingItems
-            .map((item) => String(item.name || "").trim().toLowerCase())
-            .filter(Boolean)
-        ),
-      ];
-
-      // Pass the freshly loaded ingredient names directly.
-      // Do not wait for React state to update before searching the store.
-      await loadStore(ingredientNames);
     } catch (error) {
       console.error("Grocery context loading error:", error);
-      setLoading(false);
-      alert(error.message || "Unable to load grocery list");
     }
   };
 
-  const requestedIngredients = requestedItems.length
-    ? [
-        ...new Set(
-          requestedItems
-            .map((item) => String(item.name || "").trim().toLowerCase())
-            .filter(Boolean)
-        ),
-      ]
-    : [];
-
-  const matchingProducts = useMemo(() => {
-    return products.filter((product) => {
-      const productName = String(product.name || "").toLowerCase();
-      return requestedIngredients.some((ingredient) => {
-        const name = String(ingredient || "").toLowerCase();
-        return productName.includes(name) || name.includes(productName);
-      });
-    });
-  }, [products, requestedIngredients]);
-
-  const addAllMissing = async () => {
-    for (const product of matchingProducts) {
-      await addToCart(product._id);
-    }
-  };
-
-  const loadStore = async (ingredientNames = []) => {
+  const loadStore = async () => {
     try {
-      const names = [
-        ...new Set(
-          (ingredientNames || [])
-            .map((item) => String(item || "").trim().toLowerCase())
-            .filter(Boolean)
-        ),
-      ];
-
-      const response = await fetch(
-        `${API}/api/store/products${names.length ? `?search=${encodeURIComponent(names.join(","))}` : ""}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
+      const response = await fetch(`${API}/api/store/products`, {
+        headers: authHeaders(),
+      });
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load store products");
-      }
-
-      setProducts(data.products || []);
+      if (response.ok) setProducts(data.products || []);
     } catch (error) {
       console.error("Store loading error:", error);
-      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -184,7 +103,7 @@ export default function GroceryStore() {
   const loadCart = async () => {
     try {
       const response = await fetch(`${API}/api/store/cart`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: authHeaders(),
       });
       const data = await response.json();
       if (response.ok) setCart(data.cart || { items: [] });
@@ -196,15 +115,25 @@ export default function GroceryStore() {
   const addToCart = async (productId) => {
     const response = await fetch(`${API}/api/store/cart`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({ productId, quantity: 1 }),
     });
     const data = await response.json();
-    if (response.ok) setCart(data.cart);
-    else alert(data.message || "Unable to add item");
+    if (response.ok) {
+      setCart(data.cart);
+      const added = data.cart?.items?.find(
+        (item) => item.product?._id === productId
+      );
+      setLastAddedProduct(added?.product?.name || "Item");
+      setCartNotice("Added to cart");
+      window.clearTimeout(window.__mealMateCartNoticeTimer);
+      window.__mealMateCartNoticeTimer = window.setTimeout(
+        () => setCartNotice(""),
+        2200
+      );
+    } else {
+      alert(data.message || "Unable to add item");
+    }
   };
 
   const updateQuantity = async (productId, quantity) => {
@@ -212,10 +141,7 @@ export default function GroceryStore() {
 
     const response = await fetch(`${API}/api/store/cart/${productId}`, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify({ quantity }),
     });
     const data = await response.json();
@@ -225,19 +151,137 @@ export default function GroceryStore() {
   const removeFromCart = async (productId) => {
     const response = await fetch(`${API}/api/store/cart/${productId}`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: authHeaders(),
     });
     const data = await response.json();
     if (response.ok) setCart(data.cart);
   };
 
+  const placeOrder = async () => {
+    if (!cart.items?.length) return;
+
+    try {
+      setPlacingOrder(true);
+
+      const response = await fetch(`${API}/api/store/checkout`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Failed to place order");
+        return;
+      }
+
+      setCart({ items: [] });
+      setCartOpen(false);
+      setReceipt({ order: data.order, user: data.user });
+    } catch (error) {
+      console.error(error);
+      alert("Unable to connect to server.");
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
+
+  const openOrders = async () => {
+    setOrdersOpen(true);
+    setOrdersLoading(true);
+
+    try {
+      const response = await fetch(`${API}/api/store/orders`, {
+        headers: authHeaders(),
+      });
+      const data = await response.json();
+      if (response.ok) setOrders(data.orders || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  const openReceiptForOrder = async (orderId) => {
+    try {
+      const response = await fetch(`${API}/api/store/orders/${orderId}`, {
+        headers: authHeaders(),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOrdersOpen(false);
+        setReceipt({ order: data.order, user: data.user });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const requestedIngredients = useMemo(() => {
+    if (requestedItems.length) {
+      return [...new Set(requestedItems.map((item) => item.name.toLowerCase()))];
+    }
+    return requestedIngredientsFromUrl;
+  }, [requestedItems, requestedIngredientsFromUrl.join(",")]);
+
+  const requestedGroups = useMemo(() => {
+    const groups = new Map();
+    requestedItems.forEach((item) => {
+      const key = `${item.day || ""}|${item.mealType || ""}|${item.mealName || ""}`;
+      if (!groups.has(key)) {
+        groups.set(key, { day: item.day, mealType: item.mealType, mealName: item.mealName, items: [] });
+      }
+      groups.get(key).items.push(item);
+    });
+    return [...groups.values()].sort((a, b) => (a.day || 0) - (b.day || 0));
+  }, [requestedItems]);
+
   const visibleProducts = useMemo(() => {
     const value = searchText.trim().toLowerCase();
-    if (!value) return products;
-    return products.filter((product) =>
-      `${product.name} ${product.category}`.toLowerCase().includes(value)
+    const filtered = value
+      ? products.filter((product) =>
+          `${product.name} ${product.category}`.toLowerCase().includes(value)
+        )
+      : products;
+
+    // Put products that directly satisfy a missing ingredient first.
+    return [...filtered].sort((a, b) => {
+      const aMatch = requestedIngredients.some((ingredient) =>
+        a.name.toLowerCase().includes(ingredient) || ingredient.includes(a.name.toLowerCase())
+      );
+      const bMatch = requestedIngredients.some((ingredient) =>
+        b.name.toLowerCase().includes(ingredient) || ingredient.includes(b.name.toLowerCase())
+      );
+      if (aMatch !== bMatch) return aMatch ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [products, searchText, requestedIngredients.join(",")]);
+
+  const isRequestedProduct = (product) =>
+    requestedIngredients.some((ingredient) =>
+      product.name.toLowerCase().includes(ingredient) || ingredient.includes(product.name.toLowerCase())
     );
-  }, [products, searchText]);
+
+  const matchedRequestedProducts = useMemo(
+    () => products.filter(isRequestedProduct),
+    [products, requestedIngredients.join(",")]
+  );
+
+  const unmatchedRequestedIngredients = requestedIngredients.filter(
+    (ingredient) =>
+      !products.some(
+        (product) =>
+          product.name.toLowerCase().includes(ingredient) ||
+          ingredient.includes(product.name.toLowerCase())
+      )
+  );
+
+  const addAllRequested = async () => {
+    if (!matchedRequestedProducts.length) return;
+    for (const product of matchedRequestedProducts) {
+      await addToCart(product._id);
+    }
+  };
 
   const cartCount = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
   const cartTotal = cart.items?.reduce(
@@ -257,53 +301,32 @@ export default function GroceryStore() {
             Grocery List
           </button>
 
-          <button
-            onClick={() => setCartOpen(true)}
-            className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-800"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            Cart
-            {cartCount > 0 && (
-              <span className="min-w-6 h-6 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={openOrders}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-800"
+            >
+              <History className="w-5 h-5" />
+              <span className="hidden sm:inline">My Orders</span>
+            </button>
+
+            <button
+              onClick={() => setCartOpen(true)}
+              className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-800"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Cart
+              {cartCount > 0 && (
+                <span className="min-w-6 h-6 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {requestedItems.length > 0 && (
-          <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
-            <div className="mb-4">
-              <p className="font-bold text-gray-900">Ingredients you need to buy</p>
-              <p className="text-sm text-gray-500 mt-1">Grouped by the meal that needs each ingredient.</p>
-            </div>
-            <div className="space-y-3">
-              {Object.values(requestedItems.reduce((groups, item) => {
-                const key = `${item.day || ""}|${item.mealType || ""}|${item.mealName || ""}`;
-                if (!groups[key]) groups[key] = { day: item.day, mealType: item.mealType, mealName: item.mealName, items: [] };
-                groups[key].items.push(item);
-                return groups;
-              }, {})).map((group) => (
-                <div key={`${group.day}-${group.mealType}-${group.mealName}`} className="rounded-xl border border-gray-100 overflow-hidden">
-                  <div className="bg-gray-50 px-4 py-3">
-                    <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
-                    <p className="font-bold text-gray-900 mt-1">{group.mealName}</p>
-                  </div>
-                  <div className="px-4 py-3 flex flex-wrap gap-2">
-                    {group.items.map((item) => (
-                      <span key={item._id} className="px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100 text-xs font-semibold">
-                        {item.name}{item.quantity ? ` · ${item.quantity}` : ""}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div className="mb-8">
           <p className="text-primary font-semibold text-sm">MealMate Grocery Store</p>
           <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-2">
@@ -316,48 +339,47 @@ export default function GroceryStore() {
 
         {requestedIngredients.length > 0 && (
           <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div>
-                <p className="font-bold text-gray-900">Missing ingredients from your meal plan</p>
-                <p className="text-sm text-gray-500 mt-1">Matching products are shown first. Add only what you still need.</p>
+                <p className="font-bold text-gray-900">Ingredients you need to buy</p>
+                <p className="text-sm text-gray-500 mt-1">Only missing ingredients are shown, organized by the meal that needs them.</p>
               </div>
-              {matchingProducts.length > 0 && (
-                <button
-                  onClick={addAllMissing}
-                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90"
-                >
-                  <ShoppingCart className="w-4 h-4" />
-                  Add All Missing ({matchingProducts.length})
+              {matchedRequestedProducts.length > 0 && (
+                <button onClick={addAllRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition">
+                  <ShoppingCart className="w-4 h-4" /> Add All Missing ({matchedRequestedProducts.length})
                 </button>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2 mt-3">
-              {requestedIngredients.map((ingredient) => {
-                const available = matchingProducts.some((product) => {
-                  const productName = String(product.name || "").toLowerCase();
-                  return productName.includes(ingredient) || ingredient.includes(productName);
-                });
-                return (
-                  <span
-                    key={ingredient}
-                    className={`px-3 py-1.5 rounded-full text-sm font-semibold capitalize ${available ? "bg-green-50 text-primary" : "bg-amber-50 text-amber-700"}`}
-                  >
-                    {ingredient}{!available ? " (Not In Store)" : ""}
-                  </span>
-                );
-              })}
-            </div>
+            {requestedGroups.length > 0 ? (
+              <div className="space-y-3">
+                {requestedGroups.map((group) => (
+                  <div key={`${group.day}-${group.mealType}-${group.mealName}`} className="rounded-xl border border-gray-100 overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
+                      <p className="font-bold text-gray-900 mt-1">{group.mealName}</p>
+                    </div>
+                    <div className="px-4 py-3 flex flex-wrap gap-2">
+                      {group.items.map((item) => {
+                        const matched = products.some((product) => product.name.toLowerCase().includes(item.name.toLowerCase()) || item.name.toLowerCase().includes(product.name.toLowerCase()));
+                        return (
+                          <span key={item._id} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${matched ? "bg-green-50 text-green-700 border border-green-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>
+                            {item.name}{item.quantity ? ` · ${item.quantity}` : ""}{!matched ? " (Not in store)" : ""}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {requestedIngredients.map((ingredient) => <span key={ingredient} className="px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-xs font-semibold capitalize">{ingredient}</span>)}
+              </div>
+            )}
 
-            {requestedIngredients.some((ingredient) =>
-              !matchingProducts.some((product) => {
-                const productName = String(product.name || "").toLowerCase();
-                return productName.includes(ingredient) || ingredient.includes(productName);
-              })
-            ) && (
-              <p className="text-xs text-amber-700 mt-3">
-                Some requested ingredients are not in the catalog. Use the search below to look for an alternative.
-              </p>
+            {unmatchedRequestedIngredients.length > 0 && (
+              <p className="text-xs text-amber-600 mt-4">Some required ingredients are not currently in the store catalog. Use the search box below for alternatives.</p>
             )}
           </div>
         )}
@@ -378,11 +400,20 @@ export default function GroceryStore() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {visibleProducts.map((product) => (
-              <div key={product._id} className="bg-white rounded-2xl border border-green-100 p-5">
+              <div
+                key={product._id}
+                className={`bg-white rounded-2xl border p-5 transition ${
+                  isRequestedProduct(product)
+                    ? "border-primary/30 ring-1 ring-primary/10"
+                    : "border-gray-100"
+                }`}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-primary font-semibold uppercase">{product.category}</p>
-                  {matchingProducts.some((item) => item._id === product._id) && (
-                    <span className="px-2 py-1 rounded-full bg-green-50 text-primary text-xs font-semibold">Needed</span>
+                  {isRequestedProduct(product) && (
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-green-50 text-primary">
+                      Needed
+                    </span>
                   )}
                 </div>
                 <h2 className="text-lg font-bold text-gray-900 mt-2">{product.name}</h2>
@@ -399,6 +430,37 @@ export default function GroceryStore() {
           </div>
         )}
       </main>
+
+      {/* ================= CART DRAWER ================= */}
+      {cartCount > 0 && (
+        <div className="fixed bottom-24 right-5 z-40 w-[min(380px,calc(100vw-2rem))]">
+          {cartNotice && (
+            <div className="mb-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-lg">
+              ✓ {lastAddedProduct} {cartNotice}
+            </div>
+          )}
+
+          <div className="rounded-2xl bg-white border border-gray-200 shadow-2xl p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-500">
+                  Your cart
+                </p>
+                <p className="text-lg font-black text-gray-900">
+                  {cartCount} {cartCount === 1 ? "item" : "items"} · ₹{cartTotal}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setCartOpen(true)}
+                className="shrink-0 px-5 py-2.5 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"
+              >
+                View Cart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cartOpen && (
         <div className="fixed inset-0 z-50 bg-black/30 flex justify-end" onClick={() => setCartOpen(false)}>
@@ -444,16 +506,132 @@ export default function GroceryStore() {
                 </div>
 
                 <button
-                  className="w-full py-3 rounded-xl bg-primary text-white font-bold"
-                  onClick={() => alert("Checkout can be connected when the payment/order module is added.")}
+                  className="w-full py-3 rounded-xl bg-primary text-white font-bold disabled:opacity-60"
+                  disabled={placingOrder}
+                  onClick={placeOrder}
                 >
-                  Proceed to Checkout
+                  {placingOrder ? "Placing Order..." : "Proceed to Checkout"}
                 </button>
               </div>
             )}
           </aside>
         </div>
       )}
+
+      {/* ================= ORDER HISTORY DRAWER ================= */}
+      {ordersOpen && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex justify-end" onClick={() => setOrdersOpen(false)}>
+          <aside className="w-full max-w-md bg-white h-full p-6 overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-gray-900">My Orders</h2>
+              <button onClick={() => setOrdersOpen(false)} className="text-gray-500">Close</button>
+            </div>
+
+            {ordersLoading ? (
+              <p className="text-gray-500 py-10 text-center">Loading orders...</p>
+            ) : orders.length === 0 ? (
+              <p className="text-gray-500 py-10 text-center">You haven't placed any orders yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {orders.map((order) => (
+                  <button
+                    key={order._id}
+                    onClick={() => openReceiptForOrder(order._id)}
+                    className="w-full text-left border border-gray-100 rounded-2xl p-4 hover:border-primary/40 transition"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-gray-900">{order.orderId}</p>
+                      <p className="font-bold text-primary">₹{order.totalAmount}</p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">{formatDateTime(order.createdAt)}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
+
+      {/* ================= RECEIPT MODAL ================= */}
+      {receipt && (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" id="receipt-print-area">
+            <div className="bg-primary text-white p-6 text-center">
+              <Receipt className="w-8 h-8 mx-auto mb-2" />
+              <h2 className="text-xl font-black">Order Placed!</h2>
+              <p className="text-white/80 text-sm mt-1">Your grocery order is confirmed</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="border-b border-dashed border-gray-200 pb-4 space-y-1.5 text-sm">
+                <Row label="Order ID" value={receipt.order.orderId} />
+                <Row label="Date & Time" value={formatDateTime(receipt.order.createdAt)} />
+                <Row label="Name" value={receipt.user?.name} />
+                <Row label="Email" value={maskEmail(receipt.user?.email)} />
+                <Row
+                  label="Delivery Time"
+                  value={
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" />
+                      {formatDateTime(receipt.order.deliveryTime)}
+                    </span>
+                  }
+                />
+              </div>
+
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {receipt.order.items.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <span className="text-gray-700">
+                      {item.name} <span className="text-gray-400">× {item.quantity}</span>
+                    </span>
+                    <span className="font-semibold text-gray-900">₹{item.price * item.quantity}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-dashed border-gray-200 pt-4 flex items-center justify-between">
+                <span className="font-bold text-gray-700">Total Paid</span>
+                <span className="text-2xl font-black text-gray-900">₹{receipt.order.totalAmount}</span>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  onClick={() => window.print()}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </button>
+                <button
+                  onClick={() => setReceipt(null)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:opacity-90 transition"
+                >
+                  <X className="w-4 h-4" />
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #receipt-print-area, #receipt-print-area * { visibility: visible; }
+          #receipt-print-area { position: fixed; top: 0; left: 0; width: 100%; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function Row({ label, value }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-gray-400">{label}</span>
+      <span className="font-semibold text-gray-800">{value || "--"}</span>
     </div>
   );
 }
