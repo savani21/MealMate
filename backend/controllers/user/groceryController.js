@@ -247,7 +247,7 @@ async function upsertGroceryListForMealPlan(mealPlan) {
       },
     },
     {
-      new: true,
+      returnDocument: "after",
       upsert: true,
       setDefaultsOnInsert: true,
     }
@@ -297,32 +297,40 @@ exports.createGroceryList = async (req, res) => {
 
 exports.getMyGroceryLists = async (req, res) => {
   try {
-    // Repair/complete the workflow automatically:
-    // every active meal plan should have a corresponding grocery list.
     const mealPlans = await MealPlan.find({
       user: req.user.id,
       isArchived: false,
-    }).sort({ createdAt: -1 });
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    for (const mealPlan of mealPlans) {
-      await upsertGroceryListForMealPlan(mealPlan);
-    }
-
-    const lists = await GroceryList.find({
+    const existingLists = await GroceryList.find({
       user: req.user.id,
+      mealPlan: { $in: mealPlans.map((mealPlan) => mealPlan._id) },
     })
       .populate("mealPlan")
       .sort({ createdAt: -1 });
 
-    const refreshed = [];
+    const existingByMealPlan = new Map(
+      existingLists
+        .filter((list) => list.mealPlan)
+        .map((list) => [String(list.mealPlan._id), list])
+    );
 
-    for (const list of lists) {
-      if (!list.mealPlan) continue;
+    // Only repair active meal plans that do not have a grocery list yet.
+    // Existing lists are returned as-is, avoiding a full AI/database rebuild
+    // every time the Grocery List page opens.
+    for (const mealPlan of mealPlans) {
+      if (existingByMealPlan.has(String(mealPlan._id))) continue;
 
-      // Active meal plans were already rebuilt above. Preserve checked state
-      // from the stored list without triggering another AI ingredient lookup.
-      refreshed.push(list);
+      const created = await upsertGroceryListForMealPlan(mealPlan);
+      await created.populate("mealPlan");
+      existingByMealPlan.set(String(mealPlan._id), created);
     }
+
+    const refreshed = mealPlans
+      .map((mealPlan) => existingByMealPlan.get(String(mealPlan._id)))
+      .filter(Boolean);
 
     res.status(200).json({
       success: true,
@@ -337,7 +345,6 @@ exports.getMyGroceryLists = async (req, res) => {
     });
   }
 };
-
 exports.updateGroceryItem = async (req, res) => {
   try {
     const { checked } = req.body;

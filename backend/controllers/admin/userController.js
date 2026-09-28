@@ -81,7 +81,7 @@ const updateUserRole = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { role },
-      { new: true }
+      { returnDocument: "after" }
     ).select("-password");
 
     if (!user) {

@@ -367,7 +367,7 @@ exports.archiveMyMealPlan = async (req, res) => {
     const mealPlan = await MealPlan.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id, isArchived: false },
       { isArchived: true },
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!mealPlan) {
       return res.status(404).json({
@@ -391,7 +391,7 @@ exports.restoreMyMealPlan = async (req, res) => {
     const mealPlan = await MealPlan.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id, isArchived: true },
       { isArchived: false },
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!mealPlan) {
       return res.status(404).json({
