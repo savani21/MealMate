@@ -39,44 +39,6 @@ export default function GroceryStore() {
     }
   }, [listId]);
 
-  const loadLatestGroceryListOrLegacyIngredients = async () => {
-    try {
-      setLoading(true);
-
-      const response = await fetch(API + "/api/user/grocery", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load grocery list");
-      }
-
-      const latestList = (data.groceryLists || [])[0];
-
-      if (latestList) {
-        const missingItems = (latestList.items || []).filter((item) => !item.checked);
-        setRequestedItems(missingItems);
-
-        const ingredientNames = [
-          ...new Set(
-            missingItems
-              .map((item) => String(item.name || "").trim().toLowerCase())
-              .filter(Boolean)
-          ),
-        ];
-
-        await loadStore(ingredientNames);
-        return;
-      }
-
-      await loadStore([]);
-    } catch (error) {
-      console.error("Legacy grocery context loading error:", error);
-      await loadStore([]);
-    }
-  };
-
   const loadRequestedGroceryList = async () => {
     try {
       setLoading(true);
