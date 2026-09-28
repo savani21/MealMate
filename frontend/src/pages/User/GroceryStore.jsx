@@ -29,99 +29,43 @@ export default function GroceryStore() {
       setLocation("/login");
       return;
     }
-
     loadCart();
-
-    if (listId) {
-      loadRequestedGroceryList();
-    } else {
-      loadStore(requestedIngredientsFromUrl);
-    }
+    if (listId) loadRequestedGroceryList();
+    else loadStore(requestedIngredientsFromUrl);
   }, [listId]);
 
   const loadRequestedGroceryList = async () => {
     try {
-      setLoading(true);
-
       const response = await fetch(`${API}/api/user/grocery`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load grocery list");
+      if (response.ok) {
+        const list = (data.groceryLists || []).find((item) => item._id === listId);
+        const missingItems = (list?.items || []).filter((item) => !item.checked);
+        setRequestedItems(missingItems);
+        await loadStore([...new Set(missingItems.map((item) => item.name.toLowerCase()))]);
       }
-
-      const list = (data.groceryLists || []).find(
-        (item) => item._id === listId
-      );
-
-      if (!list) {
-        throw new Error("Grocery list not found");
-      }
-
-      const missingItems = (list.items || []).filter(
-        (item) => !item.checked
-      );
-
-      setRequestedItems(missingItems);
-
-      const ingredientNames = [
-        ...new Set(
-          missingItems
-            .map((item) => String(item.name || "").trim().toLowerCase())
-            .filter(Boolean)
-        ),
-      ];
-
-      // Pass the freshly loaded ingredient names directly.
-      // Do not wait for React state to update before searching the store.
-      await loadStore(ingredientNames);
     } catch (error) {
       console.error("Grocery context loading error:", error);
-      setLoading(false);
-      alert(error.message || "Unable to load grocery list");
     }
   };
 
   const requestedIngredients = requestedItems.length
-    ? [
-        ...new Set(
-          requestedItems
-            .map((item) => String(item.name || "").trim().toLowerCase())
-            .filter(Boolean)
-        ),
-      ]
+    ? [...new Set(requestedItems.map((item) => item.name.toLowerCase()))]
     : requestedIngredientsFromUrl;
 
   const loadStore = async (ingredientNames = []) => {
     try {
-      const names = [
-        ...new Set(
-          (ingredientNames || [])
-            .map((item) => String(item || "").trim().toLowerCase())
-            .filter(Boolean)
-        ),
-      ];
-
+      const names = [...new Set((ingredientNames || []).map((item) => String(item).trim().toLowerCase()).filter(Boolean))];
       const response = await fetch(
         `${API}/api/store/products${names.length ? `?search=${encodeURIComponent(names.join(","))}` : ""}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load store products");
-      }
-
-      setProducts(data.products || []);
+      if (response.ok) setProducts(data.products || []);
     } catch (error) {
       console.error("Store loading error:", error);
-      setProducts([]);
     } finally {
       setLoading(false);
     }
