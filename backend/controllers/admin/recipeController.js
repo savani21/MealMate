@@ -49,7 +49,7 @@ const updateRecipe = async (req, res) => {
     const recipe = await Recipe.findByIdAndUpdate(
       req.params.id,
       { name, description, category, diet, ingredients, instructions, prepTime, image },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!recipe) {
