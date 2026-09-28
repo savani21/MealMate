@@ -29,43 +29,115 @@ export default function GroceryStore() {
       setLocation("/login");
       return;
     }
+
     loadCart();
-    if (listId) loadRequestedGroceryList();
-    else loadStore(requestedIngredientsFromUrl);
+
+    if (listId) {
+      loadRequestedGroceryList();
+    } else {
+      loadStore(requestedIngredientsFromUrl);
+    }
   }, [listId]);
 
   const loadRequestedGroceryList = async () => {
     try {
+      setLoading(true);
+
       const response = await fetch(`${API}/api/user/grocery`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       const data = await response.json();
-      if (response.ok) {
-        const list = (data.groceryLists || []).find((item) => item._id === listId);
-        const missingItems = (list?.items || []).filter((item) => !item.checked);
-        setRequestedItems(missingItems);
-        await loadStore([...new Set(missingItems.map((item) => item.name.toLowerCase()))]);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load grocery list");
       }
+
+      const list = (data.groceryLists || []).find(
+        (item) => item._id === listId
+      );
+
+      if (!list) {
+        throw new Error("Grocery list not found");
+      }
+
+      const missingItems = (list.items || []).filter(
+        (item) => !item.checked
+      );
+
+      setRequestedItems(missingItems);
+
+      const ingredientNames = [
+        ...new Set(
+          missingItems
+            .map((item) => String(item.name || "").trim().toLowerCase())
+            .filter(Boolean)
+        ),
+      ];
+
+      // Pass the freshly loaded ingredient names directly.
+      // Do not wait for React state to update before searching the store.
+      await loadStore(ingredientNames);
     } catch (error) {
       console.error("Grocery context loading error:", error);
+      setLoading(false);
+      alert(error.message || "Unable to load grocery list");
     }
   };
 
   const requestedIngredients = requestedItems.length
-    ? [...new Set(requestedItems.map((item) => item.name.toLowerCase()))]
+    ? [
+        ...new Set(
+          requestedItems
+            .map((item) => String(item.name || "").trim().toLowerCase())
+            .filter(Boolean)
+        ),
+      ]
     : requestedIngredientsFromUrl;
+
+  const matchingProducts = useMemo(() => {
+    return products.filter((product) => {
+      const productName = String(product.name || "").toLowerCase();
+      return requestedIngredients.some((ingredient) => {
+        const name = String(ingredient || "").toLowerCase();
+        return productName.includes(name) || name.includes(productName);
+      });
+    });
+  }, [products, requestedIngredients]);
+
+  const addAllMissing = async () => {
+    for (const product of matchingProducts) {
+      await addToCart(product._id);
+    }
+  };
 
   const loadStore = async (ingredientNames = []) => {
     try {
-      const names = [...new Set((ingredientNames || []).map((item) => String(item).trim().toLowerCase()).filter(Boolean))];
+      const names = [
+        ...new Set(
+          (ingredientNames || [])
+            .map((item) => String(item || "").trim().toLowerCase())
+            .filter(Boolean)
+        ),
+      ];
+
       const response = await fetch(
         `${API}/api/store/products${names.length ? `?search=${encodeURIComponent(names.join(","))}` : ""}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
+
       const data = await response.json();
-      if (response.ok) setProducts(data.products || []);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Unable to load store products");
+      }
+
+      setProducts(data.products || []);
     } catch (error) {
       console.error("Store loading error:", error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -206,15 +278,49 @@ export default function GroceryStore() {
 
         {requestedIngredients.length > 0 && (
           <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
-            <p className="font-bold text-gray-900">Missing ingredients from your meal plan</p>
-            <p className="text-sm text-gray-500 mt-1">The store is showing matching ingredients first.</p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {requestedIngredients.map((ingredient) => (
-                <span key={ingredient} className="px-3 py-1.5 rounded-full bg-green-50 text-primary text-sm font-semibold capitalize">
-                  {ingredient}
-                </span>
-              ))}
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="font-bold text-gray-900">Missing ingredients from your meal plan</p>
+                <p className="text-sm text-gray-500 mt-1">Matching products are shown first. Add only what you still need.</p>
+              </div>
+              {matchingProducts.length > 0 && (
+                <button
+                  onClick={addAllMissing}
+                  className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90"
+                >
+                  <ShoppingCart className="w-4 h-4" />
+                  Add All Missing ({matchingProducts.length})
+                </button>
+              )}
             </div>
+
+            <div className="flex flex-wrap gap-2 mt-3">
+              {requestedIngredients.map((ingredient) => {
+                const available = matchingProducts.some((product) => {
+                  const productName = String(product.name || "").toLowerCase();
+                  return productName.includes(ingredient) || ingredient.includes(productName);
+                });
+                return (
+                  <span
+                    key={ingredient}
+                    className={`px-3 py-1.5 rounded-full text-sm font-semibold capitalize ${available ? "bg-green-50 text-primary" : "bg-amber-50 text-amber-700"}`}
+                  >
+                    {ingredient}{!available ? " (Not In Store)" : ""}
+                  </span>
+                );
+              })}
+            </div>
+
+            {requestedIngredients.some((ingredient) =>
+              !matchingProducts.some((product) => {
+                const productName = String(product.name || "").toLowerCase();
+                return productName.includes(ingredient) || ingredient.includes(productName);
+              })
+            ) && (
+              <p className="text-xs text-amber-700 mt-3">
+                Some requested ingredients are not in the catalog. Use the search below to look for an alternative.
+              </p>
+            )}
           </div>
         )}
 
@@ -234,8 +340,13 @@ export default function GroceryStore() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {visibleProducts.map((product) => (
-              <div key={product._id} className="bg-white rounded-2xl border border-gray-100 p-5">
-                <p className="text-xs text-primary font-semibold uppercase">{product.category}</p>
+              <div key={product._id} className="bg-white rounded-2xl border border-green-100 p-5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-primary font-semibold uppercase">{product.category}</p>
+                  {matchingProducts.some((item) => item._id === product._id) && (
+                    <span className="px-2 py-1 rounded-full bg-green-50 text-primary text-xs font-semibold">Needed</span>
+                  )}
+                </div>
                 <h2 className="text-lg font-bold text-gray-900 mt-2">{product.name}</h2>
                 <p className="text-sm text-gray-500 mt-1">{product.unit}</p>
                 <p className="text-xl font-black text-gray-900 mt-4">₹{product.price}</p>
