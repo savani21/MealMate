@@ -68,6 +68,7 @@ async function getAIIngredientsForMeals(mealNames) {
     );
   }
 
+  let timeout;
   try {
     const prompt = `For each meal name below, return 4-8 main ingredients required to cook it.
 Meals: ${JSON.stringify(uncachedMeals)}
@@ -76,7 +77,7 @@ Return ONLY JSON in this exact shape:
 Use simple shopping ingredient names. Include salt when it is normally required. Do not use the meal name as an ingredient.`;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    timeout = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
