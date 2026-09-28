@@ -250,21 +250,45 @@ exports.createGroceryList = async (req, res) => {
 
 exports.getMyGroceryLists = async (req, res) => {
   try {
-    const lists = await GroceryList.find({ user: req.user.id }).populate("mealPlan").sort({ createdAt: -1 });
+    // Repair/complete the workflow automatically:
+    // every active meal plan should have a corresponding grocery list.
+    const mealPlans = await MealPlan.find({
+      user: req.user.id,
+      isArchived: false,
+    }).sort({ createdAt: -1 });
+
+    for (const mealPlan of mealPlans) {
+      await upsertGroceryListForMealPlan(mealPlan);
+    }
+
+    const lists = await GroceryList.find({
+      user: req.user.id,
+    })
+      .populate("mealPlan")
+      .sort({ createdAt: -1 });
+
     const refreshed = [];
 
     for (const list of lists) {
       if (!list.mealPlan) continue;
+
       const items = await buildGroceryItems(list.mealPlan);
       list.items = mergeCheckedState(items, list.items);
       await list.save();
       refreshed.push(list);
     }
 
-    res.status(200).json({ success: true, groceryLists: refreshed });
+    res.status(200).json({
+      success: true,
+      groceryLists: refreshed,
+    });
   } catch (err) {
     console.error("Get Grocery Lists Error:", err);
-    res.status(500).json({ success: false, message: err.message });
+
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
