@@ -110,20 +110,6 @@ export default function GroceryList() {
     }
   };
 
-  const toggleItem = (listIndex, itemIndex) => {
-    setGroceryLists((previous) =>
-      previous.map((list, i) => {
-        if (i !== listIndex) return list;
-        return {
-          ...list,
-          items: list.items.map((item, j) =>
-            j === itemIndex ? { ...item, checked: !item.checked } : item
-          ),
-        };
-      })
-    );
-  };
-
   const shopMissingItems = (list) => {
     const missing = list.items.filter((item) => !item.checked);
     if (!missing.length) {
@@ -214,7 +200,7 @@ export default function GroceryList() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {list.items.map((item) => (
                       <button
-                        key={itemIndex}
+                        key={item._id}
                         onClick={() => toggleItem(list, item)}
                         className={`flex items-center gap-4 p-4 rounded-xl border text-left transition ${
                           item.checked
