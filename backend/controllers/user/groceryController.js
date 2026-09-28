@@ -181,27 +181,70 @@ function mergeCheckedState(freshItems, oldItems) {
   }));
 }
 
+async function upsertGroceryListForMealPlan(mealPlan) {
+  const existing = await GroceryList.findOne({
+    user: mealPlan.user,
+    mealPlan: mealPlan._id,
+  });
+
+  const items = await buildGroceryItems(mealPlan);
+
+  return GroceryList.findOneAndUpdate(
+    {
+      user: mealPlan.user,
+      mealPlan: mealPlan._id,
+    },
+    {
+      $set: {
+        items: mergeCheckedState(items, existing?.items || []),
+      },
+    },
+    {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true,
+    }
+  );
+}
+
+exports.upsertGroceryListForMealPlan = upsertGroceryListForMealPlan;
+
 exports.createGroceryList = async (req, res) => {
   try {
     const { mealPlanId } = req.body;
-    if (!mealPlanId) return res.status(400).json({ success: false, message: "Meal plan ID is required" });
+    if (!mealPlanId) {
+      return res.status(400).json({
+        success: false,
+        message: "Meal plan ID is required",
+      });
+    }
 
-    const mealPlan = await MealPlan.findOne({ _id: mealPlanId, user: req.user.id });
-    if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found" });
+    const mealPlan = await MealPlan.findOne({
+      _id: mealPlanId,
+      user: req.user.id,
+    });
 
-    const existing = await GroceryList.findOne({ user: req.user.id, mealPlan: mealPlan._id });
-    const items = await buildGroceryItems(mealPlan);
-    const groceryList = await GroceryList.findOneAndUpdate(
-      { user: req.user.id, mealPlan: mealPlan._id },
-      { $set: { items: mergeCheckedState(items, existing?.items || []) } },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
-    );
+    if (!mealPlan) {
+      return res.status(404).json({
+        success: false,
+        message: "Meal plan not found",
+      });
+    }
 
+    const groceryList = await upsertGroceryListForMealPlan(mealPlan);
     await groceryList.populate("mealPlan");
-    res.status(201).json({ success: true, message: "Grocery list created successfully", groceryList });
+
+    res.status(201).json({
+      success: true,
+      message: "Grocery list created successfully",
+      groceryList,
+    });
   } catch (err) {
     console.error("Grocery List Error:", err);
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
   }
 };
 
