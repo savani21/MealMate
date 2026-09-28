@@ -56,15 +56,27 @@ function removeAvailable(requiredIngredients, availableIngredients) {
   return requiredIngredients.filter((item) => !available.has(canonicalIngredient(item.name)));
 }
 
+const aiIngredientCache = new Map();
+
 async function getAIIngredientsForMeals(mealNames) {
   if (!mealNames.length || !process.env.OPENROUTER_API_KEY) return {};
 
+  const uncachedMeals = mealNames.filter((name) => !aiIngredientCache.has(name.toLowerCase()));
+  if (!uncachedMeals.length) {
+    return Object.fromEntries(
+      mealNames.map((name) => [name, aiIngredientCache.get(name.toLowerCase()) || []])
+    );
+  }
+
   try {
     const prompt = `For each meal name below, return 4-8 main ingredients required to cook it.
-Meals: ${JSON.stringify(mealNames)}
+Meals: ${JSON.stringify(uncachedMeals)}
 Return ONLY JSON in this exact shape:
 {"Meal Name":[{"name":"ingredient","quantity":"quantity"}]}
 Use simple shopping ingredient names. Include salt when it is normally required. Do not use the meal name as an ingredient.`;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -74,6 +86,7 @@ Use simple shopping ingredient names. Include salt when it is normally required.
         "HTTP-Referer": "http://localhost:5173",
         "X-Title": "MealMate AI",
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: "openrouter/free",
         messages: [{ role: "user", content: prompt }],
@@ -82,13 +95,46 @@ Use simple shopping ingredient names. Include salt when it is normally required.
     });
 
     const data = await response.json();
-    if (!response.ok) throw new Error(data?.error?.message || `OpenRouter request failed: ${response.status}`);
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || `OpenRouter request failed: ${response.status}`);
+    }
 
     const text = data?.choices?.[0]?.message?.content;
-    return text ? JSON.parse(text) : {};
+    if (!text) {
+      uncachedMeals.forEach((name) => aiIngredientCache.set(name.toLowerCase(), []));
+      return Object.fromEntries(mealNames.map((name) => [name, aiIngredientCache.get(name.toLowerCase()) || []]));
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // Some free models may return a safety/status message instead of JSON.
+      // Cache an empty result so the same legacy meal is not retried on every request.
+      uncachedMeals.forEach((name) => aiIngredientCache.set(name.toLowerCase(), []));
+      console.warn("AI ingredient lookup returned non-JSON content; using recipe/local fallback.");
+      return Object.fromEntries(mealNames.map((name) => [name, aiIngredientCache.get(name.toLowerCase()) || []]));
+    }
+
+    for (const name of uncachedMeals) {
+      aiIngredientCache.set(
+        name.toLowerCase(),
+        Array.isArray(parsed?.[name]) ? parsed[name] : []
+      );
+    }
+
+    return Object.fromEntries(
+      mealNames.map((name) => [name, aiIngredientCache.get(name.toLowerCase()) || []])
+    );
   } catch (error) {
-    console.error("AI ingredient lookup failed:", error.message);
-    return {};
+    clearTimeout(timeout);
+    console.warn("AI ingredient lookup skipped:", error.message);
+    uncachedMeals.forEach((name) => aiIngredientCache.set(name.toLowerCase(), []));
+    return Object.fromEntries(
+      mealNames.map((name) => [name, aiIngredientCache.get(name.toLowerCase()) || []])
+    );
   }
 }
 
@@ -272,9 +318,8 @@ exports.getMyGroceryLists = async (req, res) => {
     for (const list of lists) {
       if (!list.mealPlan) continue;
 
-      const items = await buildGroceryItems(list.mealPlan);
-      list.items = mergeCheckedState(items, list.items);
-      await list.save();
+      // Active meal plans were already rebuilt above. Preserve checked state
+      // from the stored list without triggering another AI ingredient lookup.
       refreshed.push(list);
     }
 
