@@ -23,6 +23,81 @@ function cleanList(value) {
     .filter(Boolean);
 }
 
+function normalizeGeneratedIngredient(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/^[\s\d./-]+/, "")
+    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?)\s+/i, "")
+    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.,;:]+$/, "")
+    .replace(/\b(\w+)s$/, "$1");
+}
+
+function canonicalGeneratedIngredient(value) {
+  const name = normalizeGeneratedIngredient(value);
+  const aliases = {
+    "basmati rice": "rice",
+    "long grain rice": "rice",
+    "atta": "wheat flour",
+    "whole wheat flour": "wheat flour",
+    "wheat atta": "wheat flour",
+    "green chilli": "green chili",
+    "green chillies": "green chili",
+    "green chilies": "green chili",
+  };
+  return aliases[name] || name;
+}
+
+function generatedIngredients(day) {
+  return ["breakfast", "lunch", "snack", "dinner"].flatMap((type) =>
+    Array.isArray(day?.[type + "Ingredients"])
+      ? day[type + "Ingredients"]
+          .map((item) => typeof item === "string" ? item : item?.name || "")
+          .filter(Boolean)
+      : []
+  );
+}
+
+function mealUsesIngredientOutsidePool(day, allowedPool) {
+  const allowed = new Set(allowedPool.map(canonicalGeneratedIngredient));
+  return generatedIngredients(day).some(
+    (ingredient) => !allowed.has(canonicalGeneratedIngredient(ingredient))
+  );
+}
+
+function mealRepeatsRecommendedIngredientTooOften(day, available, recommended) {
+  const pantry = new Set(available.map(canonicalGeneratedIngredient));
+  const recommendedOnly = new Set(
+    recommended
+      .map(canonicalGeneratedIngredient)
+      .filter((ingredient) => ingredient && !pantry.has(ingredient))
+  );
+
+  if (!recommendedOnly.size) return false;
+
+  const usage = new Map();
+  for (const type of ["breakfast", "lunch", "snack", "dinner"]) {
+    const entries = Array.isArray(day?.[type + "Ingredients"])
+      ? day[type + "Ingredients"]
+      : [];
+
+    const usedThisMeal = new Set(
+      entries
+        .map((item) => typeof item === "string" ? item : item?.name || "")
+        .map(canonicalGeneratedIngredient)
+        .filter((ingredient) => recommendedOnly.has(ingredient))
+    );
+
+    usedThisMeal.forEach((ingredient) => {
+      usage.set(ingredient, (usage.get(ingredient) || 0) + 1);
+    });
+  }
+
+  return [...usage.values()].some((count) => count > 2);
+}
+
 function mealViolatesDiet(meal, diet) {
   const forbidden = DIET_FORBIDDEN[diet];
   if (!forbidden) return false;
@@ -112,10 +187,10 @@ function pickIngredients(pool, keywords, count = 3) {
     if (index >= 0) picked.push(pool[index]);
   });
 
-  for (const item of pool) {
-    if (picked.length >= count) break;
-    if (!picked.includes(item)) picked.push(item);
-  }
+  // Do not fill a meal with unrelated ingredients just because they exist
+  // in the user's allowed pool. This prevents ingredients such as paneer or
+  // capsicum from appearing in unrelated meals.
+  if (!picked.length && pool.length) picked.push(pool[0]);
 
   return picked.slice(0, Math.max(1, count)).map((name) =>
     makeIngredient(name, "as needed")
@@ -177,7 +252,6 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
         ? localMeal("Light Toast", pool, ["bread"])
         : localMeal("Simple Snack", pool, pool.slice(0, 2), 2);
 
-  const templates = [breakfast, lunch, dinner, snack];
   const days = [];
 
   for (let day = 1; day <= Number(duration); day += 1) {
@@ -266,6 +340,10 @@ Rules:
 7. Do not put the recipe name in its ingredient list.
 8. Keep ingredients specific to the meal.
 9. Quantities should be short and practical.
+10. Do not force every allowed ingredient into every meal. Select only ingredients that make culinary sense for that specific meal.
+11. Prefer the user's pantry ingredients. Use recommended ingredients selectively when they genuinely fit the meal.
+12. Avoid repeating the same recommended-only ingredient across breakfast, lunch, snack and dinner on the same day. It should normally appear in no more than two meal slots.
+13. Never use paneer, capsicum, or another optional ingredient merely because it is present in the allowed pool.
 
 Return ONLY valid JSON in exactly this structure:
 {
@@ -307,10 +385,43 @@ Do not include markdown or explanations outside JSON.
       });
     }
 
-    if (days.some((day) => mealViolatesDiet(day, diet))) {
+    const invalidGeneratedPlan = days.some(
+      (day) =>
+        mealViolatesDiet(day, diet) ||
+        mealUsesIngredientOutsidePool(day, allowedPool) ||
+        mealRepeatsRecommendedIngredientTooOften(day, available, recommended)
+    );
+
+    if (invalidGeneratedPlan && generatedBy === "openrouter") {
+      console.warn("AI meal plan used an invalid or overly repetitive ingredient. Using local fallback.");
+      generatedMeals = generateLocalMealPlan({
+        duration,
+        diet,
+        allowedPool,
+      });
+      generatedBy = "local-fallback";
+    }
+
+    const validatedDays = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+
+    if (!validatedDays.length) {
       return res.status(422).json({
         success: false,
-        message: `The generated meal plan does not match the selected ${diet} diet. Please generate the plan again.`,
+        message: "Meal plan generation returned no valid days. Please try again.",
+      });
+    }
+
+    if (validatedDays.some((day) => mealViolatesDiet(day, diet))) {
+      return res.status(422).json({
+        success: false,
+        message: `The generated meal plan does not match the selected ${diet} diet. Please try again.`,
+      });
+    }
+
+    if (validatedDays.some((day) => mealUsesIngredientOutsidePool(day, allowedPool))) {
+      return res.status(422).json({
+        success: false,
+        message: "The generated meal plan used an ingredient outside your selected ingredient list. Please try again.",
       });
     }
 
@@ -323,7 +434,7 @@ Do not include markdown or explanations outside JSON.
       recommendedIngredients: recommended.join(", "),
       ingredients: allowedPool.join(", "),
       duration: Number(duration),
-      meals: days,
+      meals: validatedDays,
     });
 
     try {
