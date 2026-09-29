@@ -181,13 +181,12 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
   const days = [];
 
   for (let day = 1; day <= Number(duration); day += 1) {
-    const offset = (day - 1) % templates.length;
-    const get = (index) => templates[(index + offset) % templates.length];
-
-    const b = get(0);
-    const l = get(1);
-    const d = get(2);
-    const s = get(3);
+    // Keep each meal in its correct semantic slot for every day.
+    // Do not rotate breakfast/lunch/snack/dinner templates between days.
+    const b = breakfast;
+    const l = lunch;
+    const s = snack;
+    const d = dinner;
 
     days.push({
       day,
