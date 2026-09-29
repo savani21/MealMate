@@ -153,8 +153,10 @@ async function buildGroceryItems(mealPlan) {
   const recipes = await Recipe.find({ name: { $in: uniqueMealNames } }).lean();
   const recipeMap = new Map(recipes.map((r) => [r.name.trim().toLowerCase(), r]));
 
-  // New OpenRouter meal plans already contain per-meal ingredients.
-  // Only legacy plans need recipe/AI fallback.
+  // New meal plans already contain per-meal ingredients.
+  // These stored ingredients are the source of truth for Grocery List.
+  // Recipe/AI lookup is ONLY for legacy meal plans that do not contain
+  // the corresponding *Ingredients array.
   const legacyMeals = [];
   for (const day of mealPlan.meals || []) {
     for (const [key] of mealTypes) {
@@ -174,9 +176,10 @@ async function buildGroceryItems(mealPlan) {
       const mealName = String(day[key] || "").trim();
       if (!mealName) continue;
 
-      let entries = Array.isArray(day[key + "Ingredients"]) ? day[key + "Ingredients"] : [];
+      const hasStoredIngredients = Array.isArray(day[key + "Ingredients"]);
+      let entries = hasStoredIngredients ? day[key + "Ingredients"] : [];
 
-      if (!entries.length) {
+      if (!hasStoredIngredients) {
         const recipe = recipeMap.get(mealName.toLowerCase());
         if (recipe?.ingredients?.length) {
           entries = recipe.ingredients.map((name) => ({ name, quantity: "" }));
