@@ -107,6 +107,13 @@ export default function GroceryList() {
   };
 
   const groupItems = (items) => {
+    const mealOrder = {
+      Breakfast: 0,
+      Lunch: 1,
+      Snack: 2,
+      Dinner: 3,
+    };
+
     const groups = new Map();
     for (const item of items) {
       const key = `${item.day || ""}|${item.mealType || ""}|${item.mealName || ""}`;
@@ -122,7 +129,10 @@ export default function GroceryList() {
     }
     return [...groups.values()].sort((a, b) => {
       if ((a.day || 0) !== (b.day || 0)) return (a.day || 0) - (b.day || 0);
-      return `${a.mealType}${a.mealName}`.localeCompare(`${b.mealType}${b.mealName}`);
+      const orderA = mealOrder[a.mealType] ?? 99;
+      const orderB = mealOrder[b.mealType] ?? 99;
+      if (orderA !== orderB) return orderA - orderB;
+      return String(a.mealName).localeCompare(String(b.mealName));
     });
   };
 
