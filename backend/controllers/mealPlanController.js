@@ -41,9 +41,6 @@ function mealViolatesDiet(meal, diet) {
 async function generateWithOpenRouter(prompt) {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
-  // OpenRouter requires a Bearer API key. When the local .env has not been
-  // configured yet, the meal planner uses the deterministic local generator
-  // below instead of crashing with "Missing Authentication header".
   if (!apiKey) return null;
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -71,9 +68,33 @@ async function generateWithOpenRouter(prompt) {
   }
 
   const text = data?.choices?.[0]?.message?.content;
-  if (!text) throw new Error("OpenRouter returned an empty AI response");
 
-  return JSON.parse(text);
+  if (!text) {
+    throw new Error("OpenRouter returned an empty AI response");
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch (parseError) {
+    // Some routed/free models can return non-JSON status or safety text even
+    // when JSON output was requested. Try extracting a JSON object first.
+    const jsonStart = text.indexOf("{");
+    const jsonEnd = text.lastIndexOf("}");
+
+    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+      try {
+        return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+      } catch {
+        // Fall through to the clean application error below.
+      }
+    }
+
+    console.error("Invalid OpenRouter meal plan response:", text);
+
+    throw new Error(
+      "AI returned an invalid meal plan response. Please try again."
+    );
+  }
 }
 
 function makeIngredient(name, quantity) {
