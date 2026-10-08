@@ -9,6 +9,8 @@ import {
   X,
   Search,
   Sparkles,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 
 const EMPTY_FORM = {
