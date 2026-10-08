@@ -8,6 +8,7 @@ require("dotenv").config();
 const app = express();
 const recipeRoutes = require("./routes/user/recipeRoutes");
 const favoriteRoutes = require("./routes/user/favoriteRoutes");
+const recipeReviewRoutes = require("./routes/user/recipeReviewRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
 
@@ -17,6 +18,7 @@ const adminMealPlanRoutes = require("./routes/admin/mealPlanRoutes");
 const adminAnalyticsRoutes = require("./routes/admin/analyticsRoutes");
 const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
+const adminRecipeReviewRoutes = require("./routes/admin/recipeReviewRoutes");
 
 app.use(cors());
 app.use(express.json());
@@ -32,6 +34,7 @@ app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
 app.use("/api/store", storeRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/recipe-reviews", recipeReviewRoutes);
 app.use("/api/ai", aiRoutes);
 
 app.use("/api/admin/users", adminUserRoutes);
@@ -40,6 +43,7 @@ app.use("/api/admin/meal-plans", adminMealPlanRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
+app.use("/api/admin/recipe-reviews", adminRecipeReviewRoutes);
 
 const PORT = 5000;
 
