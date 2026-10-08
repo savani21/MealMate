@@ -450,9 +450,7 @@ export default function Recipes() {
                   onChange={handleChange("instructions")}
                   className="input"
                   rows={4}
-                  placeholder={"Cook the rice.
-Sauté the tofu.
-Combine and serve."}
+                  placeholder={"Cook the rice.\nSauté the tofu.\nCombine and serve."}
                 />
               </Field>
 
