@@ -5,7 +5,17 @@ import { Sparkles, Target, ShoppingBasket, ThumbsUp, ChefHat, Clock, Heart, Arro
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
+  const returningToPlanner = params.get("return") === "meal-planner";
+
+  // A normal entry into Meal Planner starts a fresh form.
+  // Only restore the draft when the user is explicitly returning from
+  // a recipe/meal-plan flow.
+  if (!returningToPlanner) {
+    sessionStorage.removeItem("mealPlannerDraft");
+  }
+
   const savedDraft = (() => {
+    if (!returningToPlanner) return {};
     try {
       return JSON.parse(sessionStorage.getItem("mealPlannerDraft") || "null") || {};
     } catch {
