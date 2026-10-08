@@ -57,7 +57,7 @@ async function generateWithOpenRouter(prompt) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: "google/gemma-4-26b-a4b:free",
+        model: "google/gemma-4-26b-a4b-it:free",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.2,
