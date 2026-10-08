@@ -19,6 +19,12 @@ const cleanIngredients = (value) =>
     .map((item) => normalizeIngredient(item))
     .filter(Boolean);
 
+const getDietInvalidIngredients = (diet, ingredients) => {
+  const forbidden = RECIPE_FORBIDDEN[diet];
+  if (!forbidden) return [];
+  return ingredients.filter((ingredient) => forbidden.test(ingredient));
+};
+
 const RECIPE_FORBIDDEN = {
   vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
   vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
@@ -56,6 +62,15 @@ const getRecommendedRecipes = async (req, res) => {
       ? req.query.diet
       : "";
     const mode = req.query.mode === "recommended" ? "recommended" : "available";
+
+    const invalidAvailableIngredients = getDietInvalidIngredients(diet, available);
+    if (invalidAvailableIngredients.length > 0) {
+      return res.status(400).json({
+        message: `These available ingredients are not allowed for the selected Food Preference: ${invalidAvailableIngredients.join(", ")}. Choose Eggetarian for eggs or remove the incompatible ingredient.`,
+        invalidIngredients: invalidAvailableIngredients,
+      });
+    }
+
     const allowedIngredients = new Set(
       mode === "recommended"
         ? [...new Set([...available, ...recommended])]
