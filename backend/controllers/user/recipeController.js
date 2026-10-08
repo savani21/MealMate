@@ -72,7 +72,21 @@ const getRecommendedRecipes = async (req, res) => {
           ...new Set((recipe.ingredients || []).map(normalizeIngredient).filter(Boolean)),
         ];
 
+        const recipeDiet = normalizeIngredient(recipe.diet);
+        const incompatibleRecipeDiet =
+          diet === "vegetarian" &&
+          ["non-vegetarian", "eggetarian"].includes(recipeDiet)
+            ? true
+            : diet === "vegan" &&
+              ["vegetarian", "non-vegetarian", "eggetarian"].includes(recipeDiet)
+              ? true
+              : diet === "eggetarian" &&
+                recipeDiet === "non-vegetarian"
+                ? true
+                : false;
+
         const violatesDiet =
+          incompatibleRecipeDiet ||
           Boolean(RECIPE_FORBIDDEN[diet]?.test(recipe.name)) ||
           recipeIngredients.some((ingredient) => RECIPE_FORBIDDEN[diet]?.test(ingredient));
 
