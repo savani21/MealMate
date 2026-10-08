@@ -242,6 +242,19 @@ exports.createMealPlan = async (req, res) => {
 
     const available = cleanList(availableIngredients || ingredients);
     const recommended = cleanList(recommendedIngredients);
+
+    const invalidAvailableIngredients = available.filter(
+      (ingredient) => DIET_FORBIDDEN[diet]?.test(ingredient)
+    );
+
+    if (invalidAvailableIngredients.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `These available ingredients are not allowed with the selected ${diet} food preference: ${invalidAvailableIngredients.join(", ")}.`,
+        invalidIngredients: invalidAvailableIngredients,
+      });
+    }
+
     const allowedPool = ingredientMode === "recommended"
       ? [...new Set([...available, ...recommended])]
       : available;
