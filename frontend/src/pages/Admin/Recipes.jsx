@@ -34,7 +34,10 @@ export default function Recipes() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);\n  const [reviewRecipe, setReviewRecipe] = useState(null);\n  const [reviews, setReviews] = useState([]);\n  const [reviewLoading, setReviewLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [reviewRecipe, setReviewRecipe] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
     fetchRecipes();
@@ -88,7 +91,8 @@ export default function Recipes() {
       category: recipe.category || "Other",
       diet: recipe.diet || "Any",
       ingredients: (recipe.ingredients || []).join(", "),
-      instructions: (recipe.instructions || []).join("\n"),
+      instructions: (recipe.instructions || []).join("
+"),
       prepTime: recipe.prepTime || "",
       image: recipe.image || "",
     });
@@ -119,7 +123,8 @@ export default function Recipes() {
       category: form.category,
       diet: form.diet,
       ingredients: form.ingredients.split(",").map((i) => i.trim()).filter(Boolean),
-      instructions: form.instructions.split("\n").map((i) => i.trim()).filter(Boolean),
+      instructions: form.instructions.split("
+").map((i) => i.trim()).filter(Boolean),
       prepTime: form.prepTime,
       image: form.image,
     };
@@ -447,7 +452,9 @@ export default function Recipes() {
                   onChange={handleChange("instructions")}
                   className="input"
                   rows={4}
-                  placeholder={"Cook the rice.\nSauté the tofu.\nCombine and serve."}
+                  placeholder={"Cook the rice.
+Sauté the tofu.
+Combine and serve."}
                 />
               </Field>
 
