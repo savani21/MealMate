@@ -11,7 +11,8 @@ export default function MealPlanner() {
   const [duration, setDuration] = useState("3");
   const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
   const [recommendedIngredients, setRecommendedIngredients] = useState(params.get("recommended") ? params.get("recommended").split(",").filter(Boolean) : []);
-  const [recommendationLoading, setRecommendationLoading] = useState(false);\n  const [recommendedRecipes, setRecommendedRecipes] = useState([]);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendedRecipes, setRecommendedRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const getRecommendedIngredients = async () => {
