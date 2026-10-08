@@ -1,5 +1,133 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
+const MealPlan = require("../../models/MealPlan");
+
+const normalizeIngredient = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/^[\s\d./-]+/, "")
+    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?)\s+/i, "")
+    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.,;:]+$/, "")
+    .replace(/\b(\w+)s$/, "$1");
+
+const cleanIngredients = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => normalizeIngredient(item))
+    .filter(Boolean);
+
+const getRecommendedRecipes = async (req, res) => {
+  try {
+    const [users, mealPlans, recipes] = await Promise.all([
+      User.find({}, { favorites: 1 }).lean(),
+      MealPlan.find({}, { meals: 1 }).lean(),
+      Recipe.find().lean(),
+    ]);
+
+    const favoriteCounts = {};
+    users.forEach((user) => {
+      (user.favorites || []).forEach((recipeId) => {
+        const id = recipeId.toString();
+        favoriteCounts[id] = (favoriteCounts[id] || 0) + 1;
+      });
+    });
+
+    // A recipe is considered "frequently used" when its name appears in
+    // generated meal plans. This uses the data already stored by MealMate
+    // instead of introducing a separate usage-tracking collection.
+    const usageCounts = {};
+    mealPlans.forEach((plan) => {
+      (plan.meals || []).forEach((day) => {
+        ["breakfast", "lunch", "snack", "dinner"].forEach((type) => {
+          const mealName = normalizeIngredient(day?.[type]);
+          if (mealName) usageCounts[mealName] = (usageCounts[mealName] || 0) + 1;
+        });
+      });
+    });
+
+    const available = cleanIngredients(req.query.available);
+    const recommended = cleanIngredients(req.query.recommended);
+    const mode = req.query.mode === "recommended" ? "recommended" : "available";
+    const allowedIngredients = new Set(
+      mode === "recommended"
+        ? [...new Set([...available, ...recommended])]
+        : available
+    );
+
+    const ranked = recipes
+      .map((recipe) => {
+        const recipeIngredients = [
+          ...new Set((recipe.ingredients || []).map(normalizeIngredient).filter(Boolean)),
+        ];
+        const matchedIngredients = recipeIngredients.filter((ingredient) => {
+          return [...allowedIngredients].some(
+            (allowed) =>
+              ingredient === allowed ||
+              ingredient.includes(allowed) ||
+              allowed.includes(ingredient)
+          );
+        });
+
+        const matchPercentage = recipeIngredients.length
+          ? matchedIngredients.length / recipeIngredients.length
+          : 0;
+        const favoriteCount = favoriteCounts[recipe._id.toString()] || 0;
+        const usageCount = usageCounts[normalizeIngredient(recipe.name)] || 0;
+
+        // Ingredient fit is the primary factor; popularity and usage break
+        // ties so suggestions remain useful for the current pantry.
+        const recommendationScore =
+          matchPercentage * 100 +
+          matchedIngredients.length * 5 +
+          favoriteCount * 3 +
+          usageCount * 2;
+
+        return {
+          ...recipe,
+          favoriteCount,
+          usageCount,
+          matchedIngredients,
+          matchCount: matchedIngredients.length,
+          matchPercentage: Math.round(matchPercentage * 100),
+          recommendationScore,
+        };
+      })
+      .filter((recipe) => allowedIngredients.size === 0 || recipe.matchCount > 0)
+      .sort((a, b) =>
+        b.recommendationScore - a.recommendationScore ||
+        b.favoriteCount - a.favoriteCount ||
+        b.usageCount - a.usageCount
+      );
+
+    const topRecipes = ranked.slice(0, 3);
+
+    // Keep the existing recommended-ingredient response compatible with the
+    // Meal Planner while making it reflect the highest-ranked recipes.
+    const ingredients = [
+      ...new Set(
+        ranked
+          .slice(0, 10)
+          .flatMap((recipe) => recipe.ingredients || [])
+          .map((ingredient) => String(ingredient).trim())
+          .filter(Boolean)
+      ),
+    ].slice(0, 15);
+
+    res.status(200).json({
+      recipes: topRecipes,
+      ingredients,
+      mode,
+      availableIngredients: available,
+      recommendedIngredients: recommended,
+    });
+  } catch (error) {
+    console.error("RECOMMENDED RECIPES ERROR:", error);
+    res.status(500).json({ message: "Failed to get recommended recipes" });
+  }
+};
 
 const getRecipes = async (req, res) => {
   try {
@@ -8,51 +136,6 @@ const getRecipes = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipes" });
-  }
-};
-
-const getRecommendedRecipes = async (req, res) => {
-  try {
-    const users = await User.find({}, { favorites: 1 }).lean();
-    const likeCounts = {};
-
-    users.forEach((user) => {
-      (user.favorites || []).forEach((recipeId) => {
-        const id = recipeId.toString();
-        likeCounts[id] = (likeCounts[id] || 0) + 1;
-      });
-    });
-
-    const rankedIds = Object.entries(likeCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10);
-
-    if (rankedIds.length === 0) {
-      return res.status(200).json({ recipes: [], ingredients: [] });
-    }
-
-    const recipes = await Recipe.find({
-      _id: { $in: rankedIds.map(([id]) => id) },
-    }).lean();
-
-    const rankMap = Object.fromEntries(rankedIds);
-    recipes.sort(
-      (a, b) => (rankMap[b._id.toString()] || 0) - (rankMap[a._id.toString()] || 0)
-    );
-
-    const ingredients = [
-      ...new Set(
-        recipes
-          .flatMap((recipe) => recipe.ingredients || [])
-          .map((ingredient) => ingredient.trim())
-          .filter(Boolean)
-      ),
-    ].slice(0, 15);
-
-    res.status(200).json({ recipes, ingredients });
-  } catch (error) {
-    console.error("RECOMMENDED RECIPES ERROR:", error);
-    res.status(500).json({ message: "Failed to get recommended recipes" });
   }
 };
 
