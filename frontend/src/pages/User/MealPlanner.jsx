@@ -31,7 +31,9 @@ export default function MealPlanner() {
   const [recommendedIngredients, setRecommendedIngredients] = useState(
     params.get("recommended")
       ? params.get("recommended").split(",").filter(Boolean)
-      : savedDraft.recommendedIngredients || []
+      : Array.isArray(savedDraft.recommendedIngredients)
+        ? savedDraft.recommendedIngredients
+        : []
   );
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
@@ -107,10 +109,17 @@ export default function MealPlanner() {
       return [];
     } finally { setRecommendationLoading(false); }
   };
-  const getAvailableIngredients = () => ingredients.split(",").map((item) => item.trim()).filter(Boolean);
+  const getAvailableIngredients = () =>
+    String(ingredients || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
   const fetchRecommendedRecipes = async () => {
     const available = getAvailableIngredients();
-    if (available.length === 0) { setRecommendedRecipes([]); return; }
+    if (available.length === 0 || !diet) {
+      setRecommendedRecipes([]);
+      return;
+    }
     try {
       setRecommendationLoading(true);
       const params = new URLSearchParams({
@@ -129,7 +138,7 @@ export default function MealPlanner() {
     } finally { setRecommendationLoading(false); }
   };
   useEffect(() => {
-    const timer = setTimeout(fetchRecommendedRecipes, 350);
+    const timer = setTimeout(fetchRecommendedRecipes, 500);
     return () => clearTimeout(timer);
   }, [ingredients, ingredientMode, diet, recommendedIngredients.join(",")]);
   const generatePlan = async () => {
