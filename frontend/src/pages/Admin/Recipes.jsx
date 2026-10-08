@@ -91,8 +91,7 @@ export default function Recipes() {
       category: recipe.category || "Other",
       diet: recipe.diet || "Any",
       ingredients: (recipe.ingredients || []).join(", "),
-      instructions: (recipe.instructions || []).join("
-"),
+      instructions: (recipe.instructions || []).join("\n"),
       prepTime: recipe.prepTime || "",
       image: recipe.image || "",
     });
@@ -123,8 +122,7 @@ export default function Recipes() {
       category: form.category,
       diet: form.diet,
       ingredients: form.ingredients.split(",").map((i) => i.trim()).filter(Boolean),
-      instructions: form.instructions.split("
-").map((i) => i.trim()).filter(Boolean),
+      instructions: form.instructions.split("\n").map((i) => i.trim()).filter(Boolean),
       prepTime: form.prepTime,
       image: form.image,
     };
