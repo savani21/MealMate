@@ -305,6 +305,7 @@ const deleteRecipe = async (req, res) => {
       { favorites: recipe._id },
       { $pull: { favorites: recipe._id } }
     );
+    await RecipeReview.deleteMany({ recipe: recipe._id });
 
     res.status(200).json({ message: "Recipe deleted successfully" });
   } catch (error) {
