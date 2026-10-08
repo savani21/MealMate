@@ -114,9 +114,31 @@ export default function MealPlanner() {
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
+
+  const getDietInvalidIngredients = () => {
+    const forbidden =
+      diet === "vegetarian"
+        ? /\\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\\b/i
+        : diet === "vegan"
+          ? /\\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\\b/i
+          : diet === "eggetarian"
+            ? /\\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\\b/i
+            : null;
+
+    if (!forbidden) return [];
+
+    return getAvailableIngredients().filter((item) => forbidden.test(item));
+  };
   const fetchRecommendedRecipes = async () => {
     const available = getAvailableIngredients();
+    const invalidIngredients = getDietInvalidIngredients();
+
     if (available.length === 0 || !diet) {
+      setRecommendedRecipes([]);
+      return;
+    }
+
+    if (invalidIngredients.length > 0) {
       setRecommendedRecipes([]);
       return;
     }
@@ -130,7 +152,10 @@ export default function MealPlanner() {
       });
       const response = await fetch("http://localhost:5000/api/recipes/recommended?" + params.toString());
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to get recipe recommendations");
+      if (!response.ok) {
+        setRecommendedRecipes([]);
+        return;
+      }
       setRecommendedRecipes(data.recipes || []);
     } catch (error) {
       console.error("Recipe recommendation error:", error);
@@ -145,6 +170,20 @@ export default function MealPlanner() {
     if (!goal || !diet) { alert("Please select your diet plan and food preference."); return; }
     const available = getAvailableIngredients();
     if (available.length === 0) { alert("Enter your available ingredients first."); return; }
+
+    const invalidIngredients = getDietInvalidIngredients();
+    if (invalidIngredients.length > 0) {
+      alert(
+        invalidIngredients.join(", ") +
+        (invalidIngredients.length === 1 ? " is" : " are") +
+        " not allowed with " +
+        (diet === "vegetarian" ? "Vegetarian" : diet === "vegan" ? "Vegan" : "Eggetarian") +
+        " food preference. Remove " +
+        invalidIngredients.join(", ") +
+        " or choose Eggetarian for eggs."
+      );
+      return;
+    }
     try {
       setLoading(true);
       const token = localStorage.getItem("token");
