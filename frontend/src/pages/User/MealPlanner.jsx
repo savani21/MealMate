@@ -214,7 +214,7 @@ export default function MealPlanner() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h4 className="font-bold text-gray-900 truncate">{recipe.name}</h4>
-            <p className="text-xs text-gray-500 mt-1">{recipe.matchPercentage}% ingredient match</p>
+            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500"><span>{recipe.favoriteCount || 0} likes</span><span>•</span><span>{recipe.usageCount || 0} used</span></div>
           </div>
           {recipe.favoriteCount > 0 && <span className="text-xs font-semibold text-gray-500 shrink-0">{recipe.favoriteCount} likes</span>}
         </div>
