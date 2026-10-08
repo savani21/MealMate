@@ -32,7 +32,7 @@ export default function Recipes() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false);\n  const [reviewRecipe, setReviewRecipe] = useState(null);\n  const [reviews, setReviews] = useState([]);\n  const [reviewLoading, setReviewLoading] = useState(false);
 
   useEffect(() => {
     fetchRecipes();
@@ -157,6 +157,32 @@ export default function Recipes() {
     }
   };
 
+  const openReviews = async (recipe) => {
+    setReviewRecipe(recipe);
+    setReviews([]);
+    setReviewLoading(true);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/admin/recipe-reviews/${recipe._id}`,
+        { headers: authHeaders() }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Failed to load recipe feedback");
+        return;
+      }
+
+      setReviews(data.reviews || []);
+    } catch (error) {
+      console.error("Load admin recipe feedback error:", error);
+      alert("Unable to load recipe feedback.");
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
   const removeRecipe = async (recipe) => {
     if (!confirm(`Delete "${recipe.name}"? This cannot be undone.`)) {
       return;
@@ -263,13 +289,26 @@ export default function Recipes() {
                   {recipe.description || "No description provided."}
                 </p>
 
-                <div className="flex items-center gap-2 mt-5">
+                <div className="flex items-center gap-2 mt-3 text-sm">
+                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  <span className="font-bold text-gray-800">{recipe.averageRating ? recipe.averageRating.toFixed(1) : "No rating"}</span>
+                  <span className="text-gray-400">({recipe.ratingCount || 0} ratings)</span>
+                </div>
+
+                <div className="flex items-center gap-2 mt-3">
                   <button
                     onClick={() => openEditForm(recipe)}
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg px-3 py-2.5 hover:bg-gray-50 transition"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit
+                  </button>
+                  <button
+                    onClick={() => openReviews(recipe)}
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-primary border border-green-100 rounded-lg px-3 py-2.5 hover:bg-green-50 transition"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Feedback
                   </button>
                   <button
                     onClick={() => removeRecipe(recipe)}
@@ -284,6 +323,55 @@ export default function Recipes() {
           </div>
         )}
       </main>
+
+
+      {reviewRecipe && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <h2 className="text-lg font-black text-gray-900">{reviewRecipe.name}</h2>
+                <p className="text-xs text-gray-400 mt-1">Community ratings and feedback</p>
+              </div>
+              <button
+                onClick={() => setReviewRecipe(null)}
+                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-5">
+              {reviewLoading ? (
+                <p className="text-sm text-gray-400">Loading feedback...</p>
+              ) : reviews.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-400">
+                  No ratings or feedback yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((review) => (
+                    <article key={review._id} className="rounded-xl border border-gray-100 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-gray-800">{review.user?.name || "MealMate User"}</p>
+                          <p className="text-xs text-gray-400">{review.user?.email || ""}</p>
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((value) => (
+                            <Star key={value} className={`w-4 h-4 ${value <= review.rating ? "fill-amber-400 text-amber-400" : "text-gray-300"}`} />
+                          ))}
+                        </div>
+                      </div>
+                      {review.feedback && <p className="text-sm text-gray-600 mt-3">{review.feedback}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4">
