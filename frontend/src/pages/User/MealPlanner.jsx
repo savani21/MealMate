@@ -5,15 +5,44 @@ import { Sparkles, Target, ShoppingBasket, ThumbsUp, ChefHat, Clock, Heart, Arro
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
-  const [goal, setGoal] = useState("");
-  const [diet, setDiet] = useState("");
-  const [ingredients, setIngredients] = useState(params.get("ingredients") || "");
-  const [duration, setDuration] = useState("3");
-  const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
-  const [recommendedIngredients, setRecommendedIngredients] = useState(params.get("recommended") ? params.get("recommended").split(",").filter(Boolean) : []);
+  const savedDraft = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("mealPlannerDraft") || "null") || {};
+    } catch {
+      return {};
+    }
+  })();
+
+  const [goal, setGoal] = useState(params.get("goal") || savedDraft.goal || "");
+  const [diet, setDiet] = useState(params.get("diet") || savedDraft.diet || "");
+  const [ingredients, setIngredients] = useState(params.get("ingredients") || savedDraft.ingredients || "");
+  const [duration, setDuration] = useState(params.get("duration") || savedDraft.duration || "3");
+  const [ingredientMode, setIngredientMode] = useState(params.get("mode") || savedDraft.ingredientMode || "available");
+  const [recommendedIngredients, setRecommendedIngredients] = useState(
+    params.get("recommended")
+      ? params.get("recommended").split(",").filter(Boolean)
+      : savedDraft.recommendedIngredients || []
+  );
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Keep the planner form alive while the user opens recipe or meal-plan pages.
+  // sessionStorage survives route changes/browser back navigation but is cleared
+  // when the browser session ends.
+  useEffect(() => {
+    sessionStorage.setItem(
+      "mealPlannerDraft",
+      JSON.stringify({
+        goal,
+        diet,
+        ingredients,
+        duration,
+        ingredientMode,
+        recommendedIngredients,
+      })
+    );
+  }, [goal, diet, ingredients, duration, ingredientMode, recommendedIngredients.join(",")]);
 
   const getRecommendedIngredients = async () => {
     if (recommendedIngredients.length > 0) return recommendedIngredients;
