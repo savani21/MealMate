@@ -192,8 +192,36 @@ const getRecommendedRecipes = async (req, res) => {
 
 const getRecipes = async (req, res) => {
   try {
-    const recipes = await Recipe.find().sort({ createdAt: -1 });
-    res.status(200).json({ recipes });
+    const [recipes, reviewStats] = await Promise.all([
+      Recipe.find().sort({ createdAt: -1 }).lean(),
+      RecipeReview.aggregate([
+        {
+          $group: {
+            _id: "$recipe",
+            ratingCount: { $sum: 1 },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ]),
+    ]);
+
+    const statsByRecipe = Object.fromEntries(
+      reviewStats.map((item) => [
+        item._id.toString(),
+        {
+          ratingCount: item.ratingCount,
+          averageRating: Number(item.averageRating.toFixed(1)),
+        },
+      ])
+    );
+
+    const recipesWithRatings = recipes.map((recipe) => ({
+      ...recipe,
+      ratingCount: statsByRecipe[recipe._id.toString()]?.ratingCount || 0,
+      averageRating: statsByRecipe[recipe._id.toString()]?.averageRating || 0,
+    }));
+
+    res.status(200).json({ recipes: recipesWithRatings });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipes" });
@@ -202,13 +230,32 @@ const getRecipes = async (req, res) => {
 
 const getRecipeById = async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.id);
+    const recipe = await Recipe.findById(req.params.id).lean();
 
     if (!recipe) {
       return res.status(404).json({ message: "Recipe not found" });
     }
 
-    res.status(200).json({ recipe });
+    const reviewStats = await RecipeReview.aggregate([
+      { $match: { recipe: recipe._id } },
+      {
+        $group: {
+          _id: "$recipe",
+          ratingCount: { $sum: 1 },
+          averageRating: { $avg: "$rating" },
+        },
+      },
+    ]);
+
+    const rating = reviewStats[0];
+
+    res.status(200).json({
+      recipe: {
+        ...recipe,
+        ratingCount: rating?.ratingCount || 0,
+        averageRating: rating ? Number(rating.averageRating.toFixed(1)) : 0,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipe" });
