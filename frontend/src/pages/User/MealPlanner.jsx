@@ -61,6 +61,7 @@ export default function MealPlanner() {
 
   const handleDietChange = (value) => {
     setDiet(value);
+    setRecommendedIngredients([]);
 
     const token = localStorage.getItem("token");
     if (!token || !value) return;
@@ -98,9 +99,19 @@ export default function MealPlanner() {
     if (recommendedIngredients.length > 0) return recommendedIngredients;
     try {
       setRecommendationLoading(true);
-      const response = await fetch("http://localhost:5000/api/recipes/recommended");
+      const available = getAvailableIngredients();
+      const query = new URLSearchParams({
+        diet,
+        available: available.join(","),
+        mode: "recommended",
+      });
+      const response = await fetch(
+        "http://localhost:5000/api/recipes/recommended?" + query.toString()
+      );
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Failed to get recommendations");
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to get recommendations");
+      }
       setRecommendedIngredients(data.ingredients || []);
       return data.ingredients || [];
     } catch (error) {
