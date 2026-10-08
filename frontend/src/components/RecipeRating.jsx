@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
 
 const API = "http://localhost:5000";
 
@@ -9,6 +9,7 @@ export default function RecipeRating({ recipeId }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -33,6 +34,7 @@ export default function RecipeRating({ recipeId }) {
           setRating(data.review.rating);
           setFeedback(data.review.feedback || "");
           setHasRated(true);
+          setShowFeedback(Boolean(data.review.feedback));
         }
       } catch (error) {
         console.error("Load my recipe rating error:", error);
@@ -44,16 +46,45 @@ export default function RecipeRating({ recipeId }) {
     loadMyRating();
   }, [recipeId, token]);
 
-  const submitRating = async () => {
+  const submitRating = async (selectedRating) => {
     if (!token) {
       alert("Please log in to rate this recipe.");
       return;
     }
 
-    if (!rating) {
-      alert("Please select a star rating.");
-      return;
+    try {
+      setSaving(true);
+      setRating(selectedRating);
+
+      const response = await fetch(`${API}/api/recipe-reviews/${recipeId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ rating: selectedRating, feedback }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setRating(0);
+        alert(data.message || "Failed to save rating.");
+        return;
+      }
+
+      setHasRated(true);
+    } catch (error) {
+      setRating(0);
+      console.error("Save recipe rating error:", error);
+      alert("Unable to save your rating.");
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const submitFeedback = async () => {
+    if (!token || !rating || !feedback.trim()) return;
 
     try {
       setSaving(true);
@@ -64,21 +95,21 @@ export default function RecipeRating({ recipeId }) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ rating, feedback }),
+        body: JSON.stringify({ rating, feedback: feedback.trim() }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.message || "Failed to save rating.");
+        alert(data.message || "Failed to save feedback.");
         return;
       }
 
       setHasRated(true);
-      alert("Your rating and feedback have been saved.");
+      setShowFeedback(true);
     } catch (error) {
-      console.error("Save recipe rating error:", error);
-      alert("Unable to save your rating.");
+      console.error("Save recipe feedback error:", error);
+      alert("Unable to save feedback.");
     } finally {
       setSaving(false);
     }
@@ -86,70 +117,94 @@ export default function RecipeRating({ recipeId }) {
 
   return (
     <section className="mt-8 pt-7 border-t border-gray-100">
-      <div className="rounded-2xl bg-gray-50 border border-gray-100 p-5">
-        <h2 className="text-lg font-bold text-gray-900">
-          {hasRated ? "You rated this recipe" : "Rate this recipe"}
-        </h2>
-        <p className="text-sm text-gray-500 mt-1">
-          {hasRated
-            ? "Your rating and feedback have been submitted successfully."
-            : "Share your rating and feedback with MealMate."}
-        </p>
-
-        <div className="flex items-center gap-1 mt-4">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setRating(value)}
-              disabled={loading || saving || !token || hasRated}
-              className="p-1 rounded-lg hover:bg-white transition disabled:opacity-50"
-              aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
-            >
-              <Star
-                className={`w-7 h-7 ${
-                  value <= rating
-                    ? "fill-amber-400 text-amber-400"
-                    : "text-gray-300"
-                }`}
-              />
-            </button>
-          ))}
-          {rating > 0 && (
-            <span className="text-sm text-gray-500 ml-2">{rating}/5</span>
-          )}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">
+            {hasRated ? "Thanks for your rating!" : "How was this recipe?"}
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            {hasRated
+              ? "Your feedback helps MealMate improve your recommendations."
+              : "A quick rating helps us recommend recipes you’ll enjoy."}
+          </p>
         </div>
 
-        <textarea
-          value={feedback}
-          onChange={(event) => setFeedback(event.target.value)}
-          maxLength={1000}
-          rows={3}
-          placeholder="Share your feedback about this recipe..."
-          disabled={loading || saving || !token || hasRated}
-          className="mt-3 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary resize-none disabled:bg-gray-100"
-        />
-
-        <div className="flex items-center justify-between gap-3 mt-3">
-          <span className="text-xs text-gray-400">
-            {!token
-              ? "Log in to submit a rating."
-              : hasRated
-                ? "Thank you for reviewing this recipe."
-                : "Your rating will be saved to your account."}
-          </span>
-          {!hasRated && (
+        {!hasRated ? (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={submitRating}
-              disabled={saving || loading || !token}
-              className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
+              onClick={() => submitRating(5)}
+              disabled={loading || saving || !token}
+              className="w-11 h-11 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition disabled:opacity-50"
+              aria-label="Like this recipe"
+              title="Like"
             >
-              {saving ? "Saving..." : "Submit Rating"}
+              <ThumbsUp className="w-5 h-5" />
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={() => submitRating(1)}
+              disabled={loading || saving || !token}
+              className="w-11 h-11 rounded-full border border-gray-200 bg-white flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500 hover:border-red-200 transition disabled:opacity-50"
+              aria-label="Dislike this recipe"
+              title="Dislike"
+            >
+              <ThumbsDown className="w-5 h-5" />
+            </button>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-2 rounded-full bg-green-50 border border-green-100 px-3 py-2 text-sm font-semibold text-green-700">
+            {rating === 5 ? (
+              <ThumbsUp className="w-4 h-4" />
+            ) : (
+              <ThumbsDown className="w-4 h-4" />
+            )}
+            {rating === 5 ? "You liked this recipe" : "You disliked this recipe"}
+          </div>
+        )}
       </div>
+
+      {hasRated && (
+        <div className="mt-4">
+          {!showFeedback ? (
+            <button
+              type="button"
+              onClick={() => setShowFeedback(true)}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Add a comment (optional)
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <textarea
+                value={feedback}
+                onChange={(event) => setFeedback(event.target.value)}
+                maxLength={1000}
+                rows={3}
+                placeholder="Tell us what you liked or disliked..."
+                disabled={saving}
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary resize-none"
+              />
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={submitFeedback}
+                  disabled={saving || !feedback.trim()}
+                  className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Save Feedback"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!token && (
+        <p className="text-xs text-gray-400 mt-3">
+          Log in to rate this recipe.
+        </p>
+      )}
     </section>
   );
 }
