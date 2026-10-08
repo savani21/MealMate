@@ -37,6 +37,44 @@ export default function MealPlanner() {
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Load the user's saved Food Preference when opening a fresh planner.
+  // Returning from a recipe/meal-plan page keeps the current draft instead.
+  useEffect(() => {
+    if (returningToPlanner || params.get("diet")) return;
+
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch("http://localhost:5000/api/auth/profile", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.user?.foodPreference) {
+          setDiet(data.user.foodPreference);
+        }
+      })
+      .catch((error) => console.error("Failed to load food preference:", error));
+  }, []);
+
+  const handleDietChange = (value) => {
+    setDiet(value);
+
+    const token = localStorage.getItem("token");
+    if (!token || !value) return;
+
+    fetch("http://localhost:5000/api/auth/profile", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ foodPreference: value }),
+    }).catch((error) => {
+      console.error("Failed to save food preference:", error);
+    });
+  };
+
   // Keep the planner form alive while the user opens recipe or meal-plan pages.
   // sessionStorage survives route changes/browser back navigation but is cleared
   // when the browser session ends.
@@ -90,7 +128,7 @@ export default function MealPlanner() {
     return () => clearTimeout(timer);
   }, [ingredients, ingredientMode, recommendedIngredients.join(",")]);
   const generatePlan = async () => {
-    if (!goal || !diet) { alert("Please select your goal and diet type."); return; }
+    if (!goal || !diet) { alert("Please select your diet plan and food preference."); return; }
     const available = getAvailableIngredients();
     if (available.length === 0) { alert("Enter your available ingredients first."); return; }
     try {
@@ -138,9 +176,9 @@ export default function MealPlanner() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <section className="text-center mb-10"><div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Sparkles className="w-4 h-4" /> Powered by AI</div><h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">AI Meal Planner</h1><p className="text-gray-500 mt-3 max-w-2xl mx-auto">Create a practical meal plan around your preferences and the ingredients you have.</p></section>
         <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10"><div className="flex items-center gap-3 mb-8"><div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center"><Target className="w-6 h-6 text-primary" /></div><div><h2 className="text-xl font-black text-gray-900">Meal Plan Preferences</h2><p className="text-sm text-gray-500">Choose how MealMate should use your ingredients.</p></div></div><div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Goal</label><select value={goal} onChange={(e) => setGoal(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select your goal</option><option value="weight-loss">Weight Loss</option><option value="weight-gain">Weight Gain</option><option value="muscle-gain">Muscle Gain</option><option value="healthy-eating">Healthy Eating</option><option value="maintenance">Maintain Weight</option></select></div>
-          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Diet Type</label><select value={diet} onChange={(e) => setDiet(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select diet type</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="non-vegetarian">Non-Vegetarian</option><option value="eggetarian">Eggetarian</option></select></div>
-          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Plan Duration</label><select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option></select></div>
+          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Diet Plan</label><select value={goal} onChange={(e) => setGoal(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select your goal</option><option value="weight-loss">Weight Loss</option><option value="weight-gain">Weight Gain</option><option value="muscle-gain">Muscle Gain</option><option value="healthy-eating">Healthy Eating</option><option value="maintenance">Maintain Weight</option></select></div>
+          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Food Preference</label><select value={diet} onChange={(e) => handleDietChange(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select food preference</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="non-vegetarian">Non-Vegetarian</option><option value="eggetarian">Eggetarian</option></select></div>
+          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Duration</label><select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option></select></div>
           <div><label className="block text-sm font-semibold text-gray-700 mb-2">Available Ingredients</label><div className="relative"><ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="e.g. rice, paneer, tomato, spinach" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" /></div><p className="text-xs text-gray-400 mt-2">Separate ingredients with commas.</p></div>
         </div><div className="mt-8 border-t border-gray-100 pt-8"><h3 className="font-black text-gray-900 text-lg mb-4">How should we plan your meals?</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><button type="button" onClick={() => setIngredientMode("available")} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "available" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ShoppingBasket className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Only Available Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Plan meals using only the ingredients you already have. Nothing extra is added to the plan.</p>{ingredientMode === "available" && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button><button type="button" onClick={async () => { setIngredientMode("recommended"); await getRecommendedIngredients(); }} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "recommended" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ThumbsUp className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Available + Recommended Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Plan meals with what you have plus popular ingredients. Missing ingredients can be purchased from the MealMate Grocery Store.</p>{recommendationLoading ? <p className="text-sm text-primary font-semibold mt-4">Loading recommended ingredients...</p> : recommendedIngredients.length > 0 ? <div className="flex flex-wrap gap-2 mt-4">{recommendedIngredients.slice(0, 8).map((item) => <span key={item} className="px-2.5 py-1 rounded-full bg-white border border-green-100 text-xs font-medium text-gray-600">{item}</span>)}</div> : <p className="text-xs text-gray-400 mt-4">Recommended ingredients come from recipes liked by users.</p>}{ingredientMode === "recommended" && !recommendationLoading && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button></div></div><section className="mt-8 border-t border-gray-100 pt-7">
   <div className="flex items-start justify-between gap-4 mb-4">
