@@ -19,6 +19,12 @@ const cleanIngredients = (value) =>
     .map((item) => normalizeIngredient(item))
     .filter(Boolean);
 
+const RECIPE_FORBIDDEN = {
+  vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
+  vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
+  eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
+};
+
 const getRecommendedRecipes = async (req, res) => {
   try {
     const [users, mealPlans, recipes] = await Promise.all([
@@ -50,6 +56,9 @@ const getRecommendedRecipes = async (req, res) => {
 
     const available = cleanIngredients(req.query.available);
     const recommended = cleanIngredients(req.query.recommended);
+    const diet = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(req.query.diet)
+      ? req.query.diet
+      : "";
     const mode = req.query.mode === "recommended" ? "recommended" : "available";
     const allowedIngredients = new Set(
       mode === "recommended"
@@ -62,14 +71,34 @@ const getRecommendedRecipes = async (req, res) => {
         const recipeIngredients = [
           ...new Set((recipe.ingredients || []).map(normalizeIngredient).filter(Boolean)),
         ];
-        const matchedIngredients = recipeIngredients.filter((ingredient) => {
-          return [...allowedIngredients].some(
+
+        const violatesDiet =
+          Boolean(RECIPE_FORBIDDEN[diet]?.test(recipe.name)) ||
+          recipeIngredients.some((ingredient) => RECIPE_FORBIDDEN[diet]?.test(ingredient));
+
+        if (violatesDiet) return null;
+
+        const matchedAvailableIngredients = recipeIngredients.filter((ingredient) =>
+          available.some(
             (allowed) =>
               ingredient === allowed ||
               ingredient.includes(allowed) ||
               allowed.includes(ingredient)
-          );
-        });
+          )
+        );
+
+        const matchedIngredients = recipeIngredients.filter((ingredient) =>
+          [...allowedIngredients].some(
+            (allowed) =>
+              ingredient === allowed ||
+              ingredient.includes(allowed) ||
+              allowed.includes(ingredient)
+          )
+        );
+
+        const missingIngredients = recipeIngredients.filter(
+          (ingredient) => !matchedAvailableIngredients.includes(ingredient)
+        );
 
         const matchPercentage = recipeIngredients.length
           ? matchedIngredients.length / recipeIngredients.length
@@ -77,8 +106,6 @@ const getRecommendedRecipes = async (req, res) => {
         const favoriteCount = favoriteCounts[recipe._id.toString()] || 0;
         const usageCount = usageCounts[normalizeIngredient(recipe.name)] || 0;
 
-        // Ingredient fit is the primary factor; popularity and usage break
-        // ties so suggestions remain useful for the current pantry.
         const recommendationScore =
           matchPercentage * 100 +
           matchedIngredients.length * 5 +
@@ -90,11 +117,15 @@ const getRecommendedRecipes = async (req, res) => {
           favoriteCount,
           usageCount,
           matchedIngredients,
+          matchedAvailableIngredients,
+          missingIngredients,
           matchCount: matchedIngredients.length,
           matchPercentage: Math.round(matchPercentage * 100),
+          canCookWithAvailable: missingIngredients.length === 0,
           recommendationScore,
         };
       })
+      .filter(Boolean)
       .filter((recipe) => allowedIngredients.size === 0 || recipe.matchCount > 0)
       .sort((a, b) =>
         b.recommendationScore - a.recommendationScore ||
@@ -120,6 +151,7 @@ const getRecommendedRecipes = async (req, res) => {
       recipes: topRecipes,
       ingredients,
       mode,
+      diet,
       availableIngredients: available,
       recommendedIngredients: recommended,
     });
