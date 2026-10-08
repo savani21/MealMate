@@ -1,6 +1,5 @@
 const Recipe = require("../../models/user/Recipe");
 const RecipeReview = require("../../models/user/RecipeReview");
-const RecipeReview = require("../../models/user/RecipeReview");
 
 const getRecipes = async (req, res) => {
   try {
