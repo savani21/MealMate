@@ -1,6 +1,7 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
 const MealPlan = require("../../models/MealPlan");
+const RecipeReview = require("../../models/user/RecipeReview");
 
 const normalizeIngredient = (value) =>
   String(value || "")
@@ -27,19 +28,29 @@ const RECIPE_FORBIDDEN = {
 
 const getRecommendedRecipes = async (req, res) => {
   try {
-    const [users, mealPlans, recipes] = await Promise.all([
-      User.find({}, { favorites: 1 }).lean(),
+    const [mealPlans, recipes, reviewStats] = await Promise.all([
       MealPlan.find({}, { meals: 1 }).lean(),
       Recipe.find().lean(),
+      RecipeReview.aggregate([
+        {
+          $group: {
+            _id: "$recipe",
+            ratingCount: { $sum: 1 },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ]),
     ]);
 
-    const favoriteCounts = {};
-    users.forEach((user) => {
-      (user.favorites || []).forEach((recipeId) => {
-        const id = recipeId.toString();
-        favoriteCounts[id] = (favoriteCounts[id] || 0) + 1;
-      });
-    });
+    const ratingStats = Object.fromEntries(
+      reviewStats.map((item) => [
+        item._id.toString(),
+        {
+          ratingCount: item.ratingCount,
+          averageRating: Number(item.averageRating.toFixed(1)),
+        },
+      ])
+    );
 
     // A recipe is considered "frequently used" when its name appears in
     // generated meal plans. This uses the data already stored by MealMate
@@ -117,18 +128,21 @@ const getRecommendedRecipes = async (req, res) => {
         const matchPercentage = recipeIngredients.length
           ? matchedIngredients.length / recipeIngredients.length
           : 0;
-        const favoriteCount = favoriteCounts[recipe._id.toString()] || 0;
+        const ratingCount = ratingStats[recipe._id.toString()]?.ratingCount || 0;
+        const averageRating = ratingStats[recipe._id.toString()]?.averageRating || 0;
         const usageCount = usageCounts[normalizeIngredient(recipe.name)] || 0;
 
         const recommendationScore =
           matchPercentage * 100 +
           matchedIngredients.length * 5 +
-          favoriteCount * 3 +
+          averageRating * 4 +
+          ratingCount * 2 +
           usageCount * 2;
 
         return {
           ...recipe,
-          favoriteCount,
+          ratingCount,
+          averageRating,
           usageCount,
           matchedIngredients,
           matchedAvailableIngredients,
@@ -142,8 +156,8 @@ const getRecommendedRecipes = async (req, res) => {
       .filter(Boolean)
       .filter((recipe) => allowedIngredients.size === 0 || recipe.matchCount > 0)
       .sort((a, b) =>
-        b.favoriteCount - a.favoriteCount ||
-        b.usageCount - a.usageCount ||
+        b.ratingCount - a.ratingCount ||
+        b.averageRating - a.averageRating ||
         b.recommendationScore - a.recommendationScore ||
         b.matchPercentage - a.matchPercentage
       );
