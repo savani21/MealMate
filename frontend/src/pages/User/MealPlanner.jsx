@@ -131,7 +131,7 @@ export default function MealPlanner() {
   useEffect(() => {
     const timer = setTimeout(fetchRecommendedRecipes, 350);
     return () => clearTimeout(timer);
-  }, [ingredients, ingredientMode, recommendedIngredients.join(",")]);
+  }, [ingredients, ingredientMode, diet, recommendedIngredients.join(",")]);
   const generatePlan = async () => {
     if (!goal || !diet) { alert("Please select your diet plan and food preference."); return; }
     const available = getAvailableIngredients();
