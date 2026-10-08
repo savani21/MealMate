@@ -43,57 +43,72 @@ async function generateWithOpenRouter(prompt) {
 
   if (!apiKey) return null;
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "MealMate AI",
-    },
-    body: JSON.stringify({
-      model: "openrouter/free",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-        `OpenRouter API request failed with status ${response.status}`
-    );
-  }
-
-  const text = data?.choices?.[0]?.message?.content;
-
-  if (!text) {
-    throw new Error("OpenRouter returned an empty AI response");
-  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
 
   try {
-    return JSON.parse(text);
-  } catch (parseError) {
-    // Some routed/free models can return non-JSON status or safety text even
-    // when JSON output was requested. Try extracting a JSON object first.
-    const jsonStart = text.indexOf("{");
-    const jsonEnd = text.lastIndexOf("}");
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:5173",
+        "X-Title": "MealMate AI",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "google/gemma-4-26b-a4b:free",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 1800,
+      }),
+    });
 
-    if (jsonStart !== -1 && jsonEnd > jsonStart) {
-      try {
-        return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
-      } catch {
-        // Fall through to the clean application error below.
-      }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null);
+      console.error(
+        "OpenRouter request failed:",
+        errorData?.error?.message || `HTTP ${response.status}`
+      );
+      return null;
     }
 
-    console.error("Invalid OpenRouter meal plan response:", text);
+    const data = await response.json();
+    const text = data?.choices?.[0]?.message?.content;
 
-    throw new Error(
-      "AI returned an invalid meal plan response. Please try again."
-    );
+    if (!text) {
+      console.error("OpenRouter returned an empty AI response");
+      return null;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Some models may still wrap JSON in extra text. Extract the object.
+      const jsonStart = text.indexOf("{");
+      const jsonEnd = text.lastIndexOf("}");
+
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        try {
+          return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+        } catch {
+          // Fall through to the local fallback.
+        }
+      }
+
+      console.error("Invalid OpenRouter meal plan response:", text);
+      return null;
+    }
+  } catch (error) {
+    if (error.name === "AbortError") {
+      console.error("OpenRouter meal plan request timed out after 12 seconds");
+    } else {
+      console.error("OpenRouter meal plan request error:", error.message);
+    }
+    return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -107,7 +122,7 @@ function pickIngredients(pool, keywords, count = 3) {
 
   keywords.forEach((keyword) => {
     const index = lower.findIndex(
-      (item) => item.includes(keyword) && !picked.includes(pool[index])
+      (item) => item.includes(keyword) && !picked.includes(item)
     );
     if (index >= 0) picked.push(pool[index]);
   });
