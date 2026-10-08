@@ -8,6 +8,7 @@ export default function RecipeRating({ recipeId }) {
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
 
   const token = localStorage.getItem("token");
 
@@ -31,6 +32,7 @@ export default function RecipeRating({ recipeId }) {
         if (response.ok && data.review) {
           setRating(data.review.rating);
           setFeedback(data.review.feedback || "");
+          setHasRated(true);
         }
       } catch (error) {
         console.error("Load my recipe rating error:", error);
@@ -72,6 +74,7 @@ export default function RecipeRating({ recipeId }) {
         return;
       }
 
+      setHasRated(true);
       alert("Your rating and feedback have been saved.");
     } catch (error) {
       console.error("Save recipe rating error:", error);
@@ -84,9 +87,13 @@ export default function RecipeRating({ recipeId }) {
   return (
     <section className="mt-8 pt-7 border-t border-gray-100">
       <div className="rounded-2xl bg-gray-50 border border-gray-100 p-5">
-        <h2 className="text-lg font-bold text-gray-900">Rate this recipe</h2>
+        <h2 className="text-lg font-bold text-gray-900">
+          {hasRated ? "You rated this recipe" : "Rate this recipe"}
+        </h2>
         <p className="text-sm text-gray-500 mt-1">
-          Share your rating and feedback with MealMate.
+          {hasRated
+            ? "Your rating and feedback have been submitted successfully."
+            : "Share your rating and feedback with MealMate."}
         </p>
 
         <div className="flex items-center gap-1 mt-4">
@@ -95,7 +102,7 @@ export default function RecipeRating({ recipeId }) {
               key={value}
               type="button"
               onClick={() => setRating(value)}
-              disabled={loading || saving || !token}
+              disabled={loading || saving || !token || hasRated}
               className="p-1 rounded-lg hover:bg-white transition disabled:opacity-50"
               aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
             >
@@ -119,24 +126,28 @@ export default function RecipeRating({ recipeId }) {
           maxLength={1000}
           rows={3}
           placeholder="Share your feedback about this recipe..."
-          disabled={loading || saving || !token}
+          disabled={loading || saving || !token || hasRated}
           className="mt-3 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-primary resize-none disabled:bg-gray-100"
         />
 
         <div className="flex items-center justify-between gap-3 mt-3">
           <span className="text-xs text-gray-400">
-            {token
-              ? "You can update your rating anytime."
-              : "Log in to submit a rating."}
+            {!token
+              ? "Log in to submit a rating."
+              : hasRated
+                ? "Thank you for reviewing this recipe."
+                : "Your rating will be saved to your account."}
           </span>
-          <button
-            type="button"
-            onClick={submitRating}
-            disabled={saving || loading || !token}
-            className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Submit Rating"}
-          </button>
+          {!hasRated && (
+            <button
+              type="button"
+              onClick={submitRating}
+              disabled={saving || loading || !token}
+              className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Submit Rating"}
+            </button>
+          )}
         </div>
       </div>
     </section>
