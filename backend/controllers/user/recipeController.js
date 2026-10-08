@@ -1,6 +1,5 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
-const MealPlan = require("../../models/MealPlan");
 const RecipeReview = require("../../models/user/RecipeReview");
 
 const normalizeIngredient = (value) =>
@@ -28,8 +27,7 @@ const RECIPE_FORBIDDEN = {
 
 const getRecommendedRecipes = async (req, res) => {
   try {
-    const [mealPlans, recipes, reviewStats] = await Promise.all([
-      MealPlan.find({}, { meals: 1 }).lean(),
+    const [recipes, reviewStats] = await Promise.all([
       Recipe.find().lean(),
       RecipeReview.aggregate([
         {
@@ -51,19 +49,6 @@ const getRecommendedRecipes = async (req, res) => {
         },
       ])
     );
-
-    // A recipe is considered "frequently used" when its name appears in
-    // generated meal plans. This uses the data already stored by MealMate
-    // instead of introducing a separate usage-tracking collection.
-    const usageCounts = {};
-    mealPlans.forEach((plan) => {
-      (plan.meals || []).forEach((day) => {
-        ["breakfast", "lunch", "snack", "dinner"].forEach((type) => {
-          const mealName = normalizeIngredient(day?.[type]);
-          if (mealName) usageCounts[mealName] = (usageCounts[mealName] || 0) + 1;
-        });
-      });
-    });
 
     const available = cleanIngredients(req.query.available);
     const recommended = cleanIngredients(req.query.recommended);
@@ -130,20 +115,17 @@ const getRecommendedRecipes = async (req, res) => {
           : 0;
         const ratingCount = ratingStats[recipe._id.toString()]?.ratingCount || 0;
         const averageRating = ratingStats[recipe._id.toString()]?.averageRating || 0;
-        const usageCount = usageCounts[normalizeIngredient(recipe.name)] || 0;
 
         const recommendationScore =
           matchPercentage * 100 +
           matchedIngredients.length * 5 +
           averageRating * 4 +
-          ratingCount * 2 +
-          usageCount * 2;
+          ratingCount * 2;
 
         return {
           ...recipe,
           ratingCount,
           averageRating,
-          usageCount,
           matchedIngredients,
           matchedAvailableIngredients,
           missingIngredients,
