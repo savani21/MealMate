@@ -155,7 +155,8 @@ const permanentlyDeleteArchivedRecipe = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to permanently delete recipe" });
   }
 };nst Recipe = require("../../models/user/Recipe");
-const RecipeReview = require("../../models/user/RecipeReview");\nconst ArchivedRecipe = require("../../models/user/ArchivedRecipe");
+const RecipeReview = require("../../models/user/RecipeReview");
+const ArchivedRecipe = require("../../models/user/ArchivedRecipe");
 
 const getRecipes = async (req, res) => {
   try {
