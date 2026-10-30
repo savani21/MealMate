@@ -34,7 +34,9 @@ function mealViolatesDiet(meal, diet) {
           .map((item) => typeof item === "string" ? item : item?.name || "")
           .join(" ")
       : "";
-    return forbidden.test(name + " " + ingredients);
+    const options = Array.isArray(meal?.[type + "Options"]) ? meal[type + "Options"] : [];
+    const optionText = options.map((option) => `${option?.name || ""} ${(option?.ingredients || []).map((item) => typeof item === "string" ? item : item?.name || "").join(" ")}`).join(" ");
+    return forbidden.test(name + " " + ingredients + " " + optionText);
   });
 }
 
@@ -305,6 +307,26 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+
+    // Keep the legacy selected-meal fields in sync with the first suggested option.
+    // Older saved meal plans without option arrays remain fully compatible.
+    days.forEach((day) => {
+      ["breakfast", "lunch", "dinner"].forEach((type) => {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"].filter((item) => item?.name && Array.isArray(item.ingredients)) : [];
+        if (options.length) {
+          day[type + "Options"] = options.slice(0, 3);
+          day[type] = options[0].name;
+          day[type + "Ingredients"] = options[0].ingredients;
+        } else {
+          day[type + "Options"] = [{
+            name: day[type] || "Meal option",
+            description: "Current generated meal",
+            prepTime: "",
+            ingredients: day[type + "Ingredients"] || [],
+          }];
+        }
+      });
+    });
 
     if (!days.length) {
       return res.status(422).json({
