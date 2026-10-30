@@ -600,31 +600,7 @@ const createRecipe = async (req, res) => {
   }
 };
 
-const deleteRecipe = async (req, res) => {
-  try {
-    const recipe = await Recipe.findOneAndDelete({
-      _id: req.params.id,
-      createdBy: req.user.id,
-    });
 
-    if (!recipe) {
-      return res.status(404).json({
-        message: "Recipe not found or you do not have permission to delete it",
-      });
-    }
-
-    await User.updateMany(
-      { favorites: recipe._id },
-      { $pull: { favorites: recipe._id } }
-    );
-    await RecipeReview.deleteMany({ recipe: recipe._id });
-
-    res.status(200).json({ message: "Recipe deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to delete recipe" });
-  }
-};
 
 module.exports = {
   getRecipes,
