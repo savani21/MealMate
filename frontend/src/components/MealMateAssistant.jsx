@@ -28,6 +28,7 @@ export default function MealMateAssistant() {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [voiceReplies, setVoiceReplies] = useState(true);
+  const [voiceNotice, setVoiceNotice] = useState("");
   const recognitionRef = useRef(null);
   const scrollRef = useRef(null);
   const voiceRequestRef = useRef(false);
@@ -70,16 +71,55 @@ export default function MealMateAssistant() {
     window.speechSynthesis?.cancel();
   }, []);
 
-  const speak = (text) => {
+  const speak = async (text) => {
     if (!voiceReplies || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
+
+    const synthesis = window.speechSynthesis;
+    synthesis.cancel();
+    setVoiceNotice("");
+
+    // Chrome may initially return an empty voice list; wait briefly for voices to load.
+    let voices = synthesis.getVoices();
+    if (!voices.length) {
+      await new Promise((resolve) => {
+        let settled = false;
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          synthesis.removeEventListener?.("voiceschanged", finish);
+          resolve();
+        };
+        synthesis.addEventListener?.("voiceschanged", finish, { once: true });
+        window.setTimeout(finish, 1200);
+      });
+      voices = synthesis.getVoices();
+    }
+
+    const languagePrefix = selectedLanguage.code.toLowerCase().split("-")[0];
+    const matchingVoice = voices.find((voice) => voice.lang?.toLowerCase() === selectedLanguage.code.toLowerCase())
+      || voices.find((voice) => voice.lang?.toLowerCase().startsWith(languagePrefix + "-"))
+      || voices.find((voice) => voice.lang?.toLowerCase() === languagePrefix);
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = selectedLanguage.code;
     utterance.rate = 0.96;
+
+    if (matchingVoice) {
+      utterance.voice = matchingVoice;
+    } else {
+      const languageLabel = selectedLanguage.label;
+      setVoiceNotice(`No ${languageLabel} speech voice is installed in this browser/device. Install or enable a ${languageLabel} text-to-speech voice, then reload MealMate.`);
+    }
+
     utterance.onstart = () => setSpeaking(true);
     utterance.onend = () => setSpeaking(false);
-    utterance.onerror = () => setSpeaking(false);
-    window.speechSynthesis.speak(utterance);
+    utterance.onerror = (event) => {
+      setSpeaking(false);
+      console.error("Speech synthesis error:", event.error);
+      if (!matchingVoice) return;
+      setVoiceNotice(`Your device could not play the selected ${selectedLanguage.label} voice. Check its text-to-speech language settings.`);
+    };
+    synthesis.speak(utterance);
   };
 
   const sendMessage = async (text = input, fromVoice = false) => {
@@ -240,6 +280,7 @@ export default function MealMateAssistant() {
             <div className="min-w-0">
               <p className="font-semibold text-slate-800 text-sm">{listening ? "I'm listening..." : speaking ? "Speaking..." : loading ? "Thinking..." : "Ready when you are"}</p>
               <p className="text-xs text-slate-500">{listening ? "Speak naturally in your selected language" : "Ask me to plan breakfast, lunch and dinner"}</p>
+              {voiceNotice && <p className="text-[11px] text-amber-700 mt-1">{voiceNotice}</p>}
             </div>
             {speaking && <button onClick={stopSpeaking} className="ml-auto text-slate-500 hover:text-slate-800" aria-label="Stop speaking"><VolumeX className="w-5 h-5" /></button>}
           </div>
