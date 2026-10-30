@@ -319,17 +319,6 @@ Do not include markdown or explanations outside JSON.
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
 
-    if (!generatedMeals) {
-      generatedMeals = generateLocalMealPlan({
-        duration,
-        diet,
-        allowedPool,
-      });
-      generatedBy = "local-fallback";
-    }
-
-    const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
-
     // Keep the legacy selected-meal fields in sync with the first suggested option.
     // Older saved meal plans without option arrays remain fully compatible.
     days.forEach((day) => {
