@@ -1,6 +1,7 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
-const RecipeReview = require("../../models/user/RecipeReview");\nconst ArchivedRecipe = require("../../models/user/ArchivedRecipe");
+const RecipeReview = require("../../models/user/RecipeReview");
+const ArchivedRecipe = require("../../models/user/ArchivedRecipe");
 
 const normalizeIngredient = (value) =>
   String(value || "")
