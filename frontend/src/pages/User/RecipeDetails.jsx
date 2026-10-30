@@ -16,7 +16,8 @@ export default function RecipeDetails() {
   const mode = query.get("mode") || "available";
   const [recipe, setRecipe] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState(false);\n  const [disliked, setDisliked] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [disliked, setDisliked] = useState(false);
   useEffect(() => { if (params?.id) fetchRecipe(); }, [params?.id]);
   const fetchRecipe = async () => { try { const response = await fetch(`${API_BASE_URL}/api/recipes/${params.id}`); const data = await response.json(); if (!response.ok) { alert(data.message || "Recipe not found"); navigateToSource(); return; } setRecipe(data.recipe); } catch (error) { console.error(error); alert("Unable to connect to server."); } finally { setLoading(false); } };
   const navigateToSource = () => { if (returnToMealPlan && planId) return setLocation(`/meal-plans/${planId}`); if (!returnToPlanner) return setLocation("/recipes"); const params = new URLSearchParams({ ingredients: available, recommended, mode }); setLocation(`/meal-planner?${params.toString()}`); };
