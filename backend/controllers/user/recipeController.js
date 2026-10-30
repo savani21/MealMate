@@ -265,6 +265,7 @@ const createRecipe = async (req, res) => {
     const recipe = new Recipe({
       name: req.body.name,
       description: req.body.description,
+      slogan: req.body.slogan,
       category: req.body.category,
       diet: req.body.diet,
       ingredients: req.body.ingredients,
