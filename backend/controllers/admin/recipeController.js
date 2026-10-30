@@ -230,7 +230,7 @@ const createRecipe = async (req, res) => {
 
 const updateRecipe = async (req, res) => {
   try {
-    const { name, description, category, diet, ingredients, instructions, prepTime, image } = req.body;
+    const { name, description, slogan, category, diet, ingredients, instructions, prepTime, image } = req.body;
 
     const recipe = await Recipe.findByIdAndUpdate(
       req.params.id,
@@ -249,18 +249,6 @@ const updateRecipe = async (req, res) => {
   }
 };
 
-const deleteRecipe = async (req, res) => {
-  try {
-    const recipe = await Recipe.findByIdAndDelete(req.params.id);
-    if (!recipe) {
-      return res.status(404).json({ success: false, message: "Recipe not found" });
-    }
-    await RecipeReview.deleteMany({ recipe: recipe._id });
-    res.status(200).json({ success: true, message: "Recipe deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Failed to delete recipe" });
-  }
-};
+
 
 module.exports = { getRecipes, getRecipeById, createRecipe, updateRecipe, deleteRecipe, getArchivedRecipes, restoreArchivedRecipe, permanentlyDeleteArchivedRecipe };
