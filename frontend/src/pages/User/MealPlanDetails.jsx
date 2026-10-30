@@ -104,6 +104,8 @@ export default function MealPlanDetails() {
       ingredients: ingredientText,
       return: "meal-plan",
       planId: plan._id,
+      day: selectedDayPlan.day,
+      mealType: selectedMealType,
     });
     setLocation(`/recipes?${query.toString()}`);
   };
