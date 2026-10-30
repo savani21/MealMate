@@ -247,6 +247,10 @@ export default function Recipes() {
             </div>
           </div>
 
+          <div className="flex items-center gap-2">
+          <button onClick={() => setLocation("/admin/archived-recipes")} className="flex items-center gap-2 border border-gray-200 text-gray-700 px-3 py-2.5 rounded-xl font-semibold text-sm hover:bg-gray-50 transition">
+            <Archive className="w-4 h-4" /><span className="hidden sm:inline">Archive</span>
+          </button>
           <button
             onClick={openCreateForm}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"
@@ -254,6 +258,7 @@ export default function Recipes() {
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Add Recipe</span>
           </button>
+          </div>
         </div>
       </header>
 
@@ -406,6 +411,16 @@ export default function Recipes() {
                   className="input"
                   placeholder="e.g. Veggie Rice Bowl"
                   required
+                />
+              </Field>
+
+              <Field label="Recipe slogan">
+                <input
+                  value={form.slogan}
+                  onChange={handleChange("slogan")}
+                  className="input"
+                  maxLength={160}
+                  placeholder="A short, attractive line for this recipe"
                 />
               </Field>
 
