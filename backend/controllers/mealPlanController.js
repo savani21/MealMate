@@ -259,6 +259,14 @@ ${JSON.stringify(allowedPool)}
 
 Planning mode: ${ingredientMode === "recommended" ? "Available + Recommended Ingredients" : "Only Available Ingredients"}
 
+Cuisine preference:
+- Prefer Indian cuisine and familiar Indian home-style dishes by default, whenever they can be made realistically from the allowed ingredients.
+- Suggest a varied mix of regional Indian dishes rather than repeating the same generic rice or vegetable bowl.
+- Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
+- These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet and allergies.
+- Do not invent missing ingredients or force an Indian dish when the available ingredients do not support one. In that case, suggest the closest practical recipe and retain Indian flavors where appropriate.
+- Keep the three choices in each meal category meaningfully different from one another.
+
 Rules:
 1. Every meal must have its own complete ingredient list.
 2. Use pantry ingredients first whenever practical.
