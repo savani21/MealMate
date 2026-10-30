@@ -361,3 +361,73 @@ exports.updateGroceryItem = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+function getShoppingIngredient(raw) {
+  const value = String(raw || "").trim();
+  const quantityMatch = value.match(/^((?:\d+\/\d+|\d+(?:\.\d+)?)\s*(?:cups?|tbsp|tbsps|tsp|tsps|kg|g|gm|grams?|ml|l|pieces?|piece|cloves?|slices?)?)\s+(.+)$/i);
+  return {
+    name: normalizeIngredient(value),
+    quantity: quantityMatch ? quantityMatch[1].trim() : "",
+  };
+}
+
+exports.addRecipeIngredientsToGroceryList = async (req, res) => {
+  try {
+    const { mealPlanId, recipeId, ingredients, day, mealType, mealName } = req.body;
+    if (!mealPlanId || !recipeId || !Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ success: false, message: "Meal plan, recipe and selected ingredients are required." });
+    }
+
+    const [mealPlan, recipe] = await Promise.all([
+      MealPlan.findOne({ _id: mealPlanId, user: req.user.id }),
+      Recipe.findById(recipeId).lean(),
+    ]);
+    if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
+    if (!recipe) return res.status(404).json({ success: false, message: "Recipe not found." });
+
+    const recipeIngredients = new Set((recipe.ingredients || []).map((item) => String(item).trim().toLowerCase()));
+    const selected = [...new Set(ingredients.map((item) => String(item).trim()).filter(Boolean))];
+    const invalid = selected.filter((item) => !recipeIngredients.has(item.toLowerCase()));
+    if (invalid.length) {
+      return res.status(400).json({ success: false, message: "Some selected ingredients do not belong to this recipe." });
+    }
+
+    const groceryList = await upsertGroceryListForMealPlan(mealPlan);
+    const numericDay = Number(day);
+    const safeDay = Number.isFinite(numericDay) && numericDay > 0 ? numericDay : null;
+    const safeMealType = String(mealType || "Recipe").trim().slice(0, 40);
+    const safeMealName = String(mealName || recipe.name).trim().slice(0, 120);
+    let addedCount = 0;
+
+    for (const raw of selected) {
+      const parsed = getShoppingIngredient(raw);
+      if (!parsed.name) continue;
+      const alreadyExists = groceryList.items.some((item) =>
+        (item.day || null) === safeDay &&
+        String(item.mealType || "").toLowerCase() === safeMealType.toLowerCase() &&
+        canonicalIngredient(item.name) === canonicalIngredient(parsed.name)
+      );
+      if (alreadyExists) continue;
+      groceryList.items.push({
+        name: parsed.name,
+        quantity: parsed.quantity,
+        checked: false,
+        day: safeDay,
+        mealType: safeMealType,
+        mealName: safeMealName,
+      });
+      addedCount += 1;
+    }
+
+    await groceryList.save();
+    await groceryList.populate("mealPlan");
+    return res.status(200).json({
+      success: true,
+      message: addedCount ? `${addedCount} ingredient(s) added to your grocery list.` : "These ingredients are already in your grocery list.",
+      addedCount,
+      groceryList,
+    });
+  } catch (error) {
+    console.error("ADD RECIPE INGREDIENTS ERROR:", error);
+    res.status(500).json({ success: false, message: "Failed to add selected ingredients to grocery list." });
+  }
+};
