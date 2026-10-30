@@ -4,6 +4,7 @@ const Cart = require("../../models/user/Cart");
 const Order = require("../../models/user/Order");
 const User = require("../../models/User");
 const StoreProduct = require("../../models/store/StoreProduct");
+const { sendOrderReceipt } = require("../../services/emailService");
 
 function generateOrderId() {
   const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "");
@@ -116,11 +117,22 @@ exports.checkout = async (req, res) => {
 
     const user = await User.findById(req.user.id).select("name email");
 
+    // Email delivery is best-effort: a mail provider outage must not undo a
+    // successfully created order or make the customer submit checkout again.
+    let receiptEmail = { sent: false, reason: "No email address is available" };
+    try {
+      receiptEmail = await sendOrderReceipt({ user, order });
+    } catch (emailError) {
+      console.error("Order receipt email failed:", emailError.message);
+      receiptEmail = { sent: false, reason: "Unable to send receipt email" };
+    }
+
     res.status(201).json({
       success: true,
       message: "Order placed successfully",
       order,
       user,
+      receiptEmail,
     });
   } catch (err) {
     console.error("Checkout error:", err);
