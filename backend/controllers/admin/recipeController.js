@@ -1,6 +1,7 @@
 const Recipe = require("../../models/user/Recipe");
 const RecipeReview = require("../../models/user/RecipeReview");
 const ArchivedRecipe = require("../../models/user/ArchivedRecipe");
+const User = require("../../models/User");
 
 const getRecipes = async (req, res) => {
   try {
@@ -144,6 +145,10 @@ const permanentlyDeleteArchivedRecipe = async (req, res) => {
     const archived = await ArchivedRecipe.findByIdAndDelete(req.params.id);
     if (!archived) return res.status(404).json({ success: false, message: "Archived recipe not found" });
     await RecipeReview.deleteMany({ recipe: archived.recipeId });
+    await User.updateMany(
+      { $or: [{ favorites: archived.recipeId }, { dislikes: archived.recipeId }] },
+      { $pull: { favorites: archived.recipeId, dislikes: archived.recipeId } }
+    );
     res.status(200).json({ success: true, message: "Archived recipe permanently deleted" });
   } catch (error) {
     console.error(error);
