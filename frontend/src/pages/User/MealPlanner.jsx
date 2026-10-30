@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Sparkles, Target, ShoppingBasket, ThumbsUp, Mic, MicOff } from "lucide-react";
+import { Sparkles, Target, ShoppingBasket, ThumbsUp, Mic } from "lucide-react";
 
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
