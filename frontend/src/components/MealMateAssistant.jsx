@@ -20,7 +20,7 @@ const GREETINGS = {
 export default function MealMateAssistant() {
   const [open, setOpen] = useState(false);
   const [language, setLanguage] = useState(
-    () => localStorage.getItem("mealmateLanguage") || "en"
+    () => { const savedUser = JSON.parse(localStorage.getItem("user") || "null"); return localStorage.getItem("mealmateLanguage") || savedUser?.preferredLanguage || "en"; }
   );
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -38,6 +38,22 @@ export default function MealMateAssistant() {
     setMessages([{ role: "assistant", text: GREETINGS[language] || GREETINGS.en }]);
     localStorage.setItem("mealmateLanguage", language);
     window.dispatchEvent(new CustomEvent("mealmate-language-change", { detail: language }));
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`${API_BASE_URL}/api/auth/profile`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ preferredLanguage: language }),
+      })
+        .then((response) => response.ok ? response.json() : null)
+        .then((data) => {
+          if (data?.user) {
+            const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+            localStorage.setItem("user", JSON.stringify({ ...currentUser, ...data.user }));
+          }
+        })
+        .catch((error) => console.error("Could not save language preference:", error));
+    }
   }, [language]);
 
   useEffect(() => {
@@ -89,7 +105,7 @@ export default function MealMateAssistant() {
 
       const reply = data.reply || "I couldn't prepare a response. Please try again.";
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-      if (fromVoice) speak(reply);
+      if (voiceReplies) speak(reply);
     } catch (error) {
       console.error("MealMate assistant error:", error);
       const fallback = language === "gu"
@@ -98,7 +114,7 @@ export default function MealMateAssistant() {
           ? "क्षमा करें, अभी MealMate AI से कनेक्ट नहीं हो पा रहा है।"
           : "Sorry, I couldn't connect to MealMate AI. Please try again.";
       setMessages((prev) => [...prev, { role: "assistant", text: fallback }]);
-      if (fromVoice) speak(fallback);
+      if (voiceReplies) speak(fallback);
     } finally {
       setLoading(false);
       voiceRequestRef.current = false;
