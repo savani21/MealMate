@@ -267,18 +267,23 @@ Rules:
 7. Do not put the recipe name in its ingredient list.
 8. Keep ingredients specific to the meal.
 9. Quantities should be short and practical.
+10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool and selected diet.
+11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
 {
   "days": [
     {
       "day": 1,
-      "breakfast": "meal name",
+      "breakfast": "selected recipe name (same as first option)",
       "breakfastIngredients": [{"name": "ingredient", "quantity": "quantity"}],
-      "lunch": "meal name",
+      "breakfastOptions": [{"name":"recipe name","description":"short description","prepTime":"15 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
+      "lunch": "selected recipe name (same as first option)",
       "lunchIngredients": [{"name": "ingredient", "quantity": "quantity"}],
-      "dinner": "meal name",
+      "lunchOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
+      "dinner": "selected recipe name (same as first option)",
       "dinnerIngredients": [{"name": "ingredient", "quantity": "quantity"}],
+      "dinnerOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
       "snack": "meal name",
       "snackIngredients": [{"name": "ingredient", "quantity": "quantity"}]
     }
