@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const Cart = require("../../models/user/Cart");
 const Order = require("../../models/user/Order");
 const User = require("../../models/User");
+const StoreProduct = require("../../models/store/StoreProduct");
 
 function generateOrderId() {
   const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "");
@@ -25,6 +26,22 @@ exports.checkout = async (req, res) => {
       });
     }
 
+    // Re-check product availability at checkout; cart contents may be stale.
+    for (const entry of cart.items) {
+      if (!entry.product || !entry.product.isActive) {
+        return res.status(409).json({
+          success: false,
+          message: "A product in your cart is no longer available. Please refresh your cart.",
+        });
+      }
+      if (entry.product.stock < entry.quantity) {
+        return res.status(409).json({
+          success: false,
+          message: `Insufficient stock for ${entry.product.name}. Please update the quantity.`,
+        });
+      }
+    }
+
     const items = cart.items.map((entry) => ({
       name: entry.product.name,
       price: entry.product.price,
@@ -37,21 +54,65 @@ exports.checkout = async (req, res) => {
       0
     );
 
-    // Simple delivery estimate: 30-60 minutes from now
-    const deliveryMinutes = 30 + Math.floor(Math.random() * 31);
-    const deliveryTime = new Date(Date.now() + deliveryMinutes * 60 * 1000);
+    // Reserve stock atomically so two customers cannot buy the same final units.
+    const reserved = [];
+    let order = null;
 
-    const order = await Order.create({
-      user: req.user.id,
-      orderId: generateOrderId(),
-      items,
-      totalAmount,
-      deliveryTime,
-    });
+    try {
+      for (const entry of cart.items) {
+        const updatedProduct = await StoreProduct.findOneAndUpdate(
+          {
+            _id: entry.product._id,
+            isActive: true,
+            stock: { $gte: entry.quantity },
+          },
+          { $inc: { stock: -entry.quantity } },
+          { new: true }
+        );
 
-    // Empty the cart now that the order has been placed
-    cart.items = [];
-    await cart.save();
+        if (!updatedProduct) {
+          const stockError = new Error(
+            `Stock changed for ${entry.product.name}. Please refresh your cart.`
+          );
+          stockError.status = 409;
+          throw stockError;
+        }
+
+        reserved.push({
+          productId: entry.product._id,
+          quantity: entry.quantity,
+        });
+      }
+
+      // Simple delivery estimate: 30-60 minutes from now
+      const deliveryMinutes = 30 + Math.floor(Math.random() * 31);
+      const deliveryTime = new Date(Date.now() + deliveryMinutes * 60 * 1000);
+
+      order = await Order.create({
+        user: req.user.id,
+        orderId: generateOrderId(),
+        items,
+        totalAmount,
+        deliveryTime,
+      });
+
+      // Empty the cart only after the order has been saved.
+      cart.items = [];
+      await cart.save();
+    } catch (checkoutError) {
+      // Restore reserved stock if order creation or cart clearing fails.
+      await Promise.all(
+        reserved.map(({ productId, quantity }) =>
+          StoreProduct.updateOne(
+            { _id: productId },
+            { $inc: { stock: quantity } }
+          )
+        )
+      );
+
+      if (order) await Order.deleteOne({ _id: order._id });
+      throw checkoutError;
+    }
 
     const user = await User.findById(req.user.id).select("name email");
 
@@ -63,9 +124,9 @@ exports.checkout = async (req, res) => {
     });
   } catch (err) {
     console.error("Checkout error:", err);
-    res.status(500).json({
+    res.status(err.status || 500).json({
       success: false,
-      message: "Failed to place order",
+      message: err.status ? err.message : "Failed to place order",
     });
   }
 };
