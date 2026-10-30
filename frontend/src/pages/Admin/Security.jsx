@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
@@ -36,7 +37,7 @@ export default function Security() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/security/overview", {
+      const response = await fetch(`${API_BASE_URL}/api/admin/security/overview`, {
         headers: authHeaders(),
       });
 
@@ -70,7 +71,7 @@ export default function Security() {
       setBusyId(admin._id);
 
       const response = await fetch(
-        `http://localhost:5000/api/admin/users/${admin._id}/role`,
+        `${API_BASE_URL}/api/admin/users/${admin._id}/role`,
         {
           method: "PATCH",
           headers: { ...authHeaders(), "Content-Type": "application/json" },
