@@ -67,6 +67,8 @@ exports.login = async (req, res) => {
       {
         id: user._id,
         role: user.role,
+        preferredLanguage: user.preferredLanguage || "en",
+        foodPreference: user.foodPreference || "",
       },
       process.env.JWT_SECRET,
       {
@@ -94,19 +96,33 @@ exports.login = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   try {
-    const { foodPreference } = req.body;
+    const { foodPreference, preferredLanguage } = req.body;
+    const updates = {};
     const allowedPreferences = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"];
+    const allowedLanguages = ["en", "hi", "gu"];
 
-    if (!allowedPreferences.includes(foodPreference)) {
-      return res.status(400).json({
-        message: "Invalid food preference",
-      });
+    if (foodPreference !== undefined) {
+      if (!allowedPreferences.includes(foodPreference)) {
+        return res.status(400).json({ message: "Invalid food preference" });
+      }
+      updates.foodPreference = foodPreference;
+    }
+
+    if (preferredLanguage !== undefined) {
+      if (!allowedLanguages.includes(preferredLanguage)) {
+        return res.status(400).json({ message: "Invalid preferred language" });
+      }
+      updates.preferredLanguage = preferredLanguage;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No valid profile fields provided" });
     }
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
-      { foodPreference },
-      { returnDocument: 'after', runValidators: true }
+      updates,
+      { returnDocument: "after", runValidators: true }
     ).select("-password");
 
     if (!user) {
