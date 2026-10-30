@@ -39,11 +39,6 @@ app.use(
 );
 app.use(express.json());
 
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
-  .catch((err) => console.log(err));
-
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
 app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
