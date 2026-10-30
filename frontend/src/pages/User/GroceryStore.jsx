@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
@@ -13,7 +14,7 @@ import {
   History,
 } from "lucide-react";
 
-const API = "http://localhost:5000";
+const API = `${API_BASE_URL}`;
 
 function maskEmail(email) {
   if (!email) return "";
