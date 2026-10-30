@@ -72,6 +72,23 @@ export default function MealPlanDetails() {
 
   const selectedRecipe = findRecipe(selectedMealName);
 
+  const selectMealOption = async (day, mealType, option) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/api/meal-plans/${plan._id}/selection`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ day, mealType, option }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save meal selection");
+      setPlan(data.mealPlan);
+    } catch (error) {
+      console.error("Meal option selection error:", error);
+      alert(error.message);
+    }
+  };
+
   const generateRecipe = () => {
     if (!selectedMealName) { alert("Please select a day and meal first."); return; }
     const query = new URLSearchParams({
@@ -146,7 +163,7 @@ export default function MealPlanDetails() {
           {plan.meals.map((day) => <div key={day.day} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8">
             <div className="flex items-center gap-3 mb-6"><div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center"><Utensils className="w-5 h-5 text-primary" /></div><h2 className="text-xl font-black text-gray-900">Day {day.day}</h2></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MealCard title="Breakfast" meal={day.breakfast} /><MealCard title="Lunch" meal={day.lunch} /><MealCard title="Snack" meal={day.snack} /><MealCard title="Dinner" meal={day.dinner} />
+              <MealCard title="Breakfast" meal={day.breakfast} options={day.breakfastOptions} groupName={`breakfast-${day.day}`} onSelect={(option) => selectMealOption(day.day, "breakfast", option)} /><MealCard title="Lunch" meal={day.lunch} options={day.lunchOptions} groupName={`lunch-${day.day}`} onSelect={(option) => selectMealOption(day.day, "lunch", option)} /><MealCard title="Snack" meal={day.snack} /><MealCard title="Dinner" meal={day.dinner} options={day.dinnerOptions} groupName={`dinner-${day.day}`} onSelect={(option) => selectMealOption(day.day, "dinner", option)} />
             </div>
           </div>)}
         </section>
@@ -176,4 +193,12 @@ export default function MealPlanDetails() {
 
 function NavLink({ label, active, onClick }) { return <button onClick={onClick} className={`px-3 py-2 rounded-lg whitespace-nowrap transition ${active ? "bg-green-50 text-primary" : "text-gray-600 hover:bg-gray-50 hover:text-primary"}`}>{label}</button>; }
 function InfoCard({ title, value }) { return <div className="bg-white rounded-2xl border border-gray-100 p-5"><p className="text-sm text-gray-500">{title}</p><p className="text-lg font-bold text-gray-900 capitalize mt-1">{value}</p></div>; }
-function MealCard({ title, meal }) { return <div className="border border-gray-100 rounded-2xl p-5"><p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p><p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p></div>; }
+function MealCard({ title, meal, options = [], groupName, onSelect }) {
+  return <div className="border border-gray-100 rounded-2xl p-5">
+    <p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p>
+    {options.length > 0 ? <div className="mt-3 space-y-3">{options.slice(0, 3).map((option, index) => <label key={option.name || index} className={`flex gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${meal === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}>
+      <input type="radio" name={groupName} checked={meal === option.name} onChange={() => onSelect?.(option)} className="mt-1 accent-green-700" />
+      <span className="min-w-0"><span className="block text-sm font-bold text-gray-900">{option.name}</span>{option.description && <span className="block text-xs text-gray-500 mt-1">{option.description}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-1">{option.prepTime}</span>}</span>
+    </label>)}</div> : <p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p>}
+  </div>;
+}
