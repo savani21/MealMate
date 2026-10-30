@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Sparkles, Target, ShoppingBasket, ThumbsUp } from "lucide-react";
+import { Sparkles, Target, ShoppingBasket, ThumbsUp, Mic, MicOff } from "lucide-react";
 
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
@@ -38,7 +38,7 @@ export default function MealPlanner() {
   );
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);\n  const [listening, setListening] = useState(false);
 
   // Load the user's saved Food Preference when opening a fresh planner.
   // Returning from a recipe/meal-plan page keeps the current draft instead.
@@ -250,7 +250,7 @@ export default function MealPlanner() {
           <div><label className="block text-sm font-semibold text-gray-700 mb-2">Diet Plan</label><select value={goal} onChange={(e) => setGoal(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select your goal</option><option value="weight-loss">Weight Loss</option><option value="weight-gain">Weight Gain</option><option value="muscle-gain">Muscle Gain</option><option value="healthy-eating">Healthy Eating</option><option value="maintenance">Maintain Weight</option></select></div>
           <div><label className="block text-sm font-semibold text-gray-700 mb-2">Food Preference</label><select value={diet} onChange={(e) => handleDietChange(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select food preference</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="non-vegetarian">Non-Vegetarian</option><option value="eggetarian">Eggetarian</option></select></div>
           <div><label className="block text-sm font-semibold text-gray-700 mb-2">Duration</label><select value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option></select></div>
-          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Available Ingredients</label><div className="relative"><ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="e.g. rice, paneer, tomato, spinach" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" /></div><p className="text-xs text-gray-400 mt-2">Separate ingredients with commas.</p></div>
+          <div><label className="block text-sm font-semibold text-gray-700 mb-2">Available Ingredients</label><div className="flex gap-2"><div className="relative flex-1"><ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" value={ingredients} onChange={(e) => setIngredients(e.target.value)} placeholder="e.g. rice, paneer, tomato, spinach" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" /></div><button type="button" onClick={captureIngredientsByVoice} disabled={listening} title="Speak ingredients" className="shrink-0 px-4 rounded-xl border border-gray-200 text-primary hover:bg-green-50 disabled:opacity-60 flex items-center gap-2"><Mic className="w-5 h-5" /><span className="hidden sm:inline">{listening ? "Listening..." : "Speak"}</span></button></div><p className="text-xs text-gray-400 mt-2">Separate ingredients with commas, or use Speak to add them by voice.</p></div>
         </div><section className="mt-8 border-t border-gray-100 pt-7">
   <div className="flex items-start justify-between gap-4 mb-4">
     <div>
@@ -264,7 +264,7 @@ export default function MealPlanner() {
       <article key={recipe._id} className="border border-gray-100 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h4 className="font-bold text-gray-900 truncate">{recipe.name}</h4>
+            <h4 className="font-bold text-gray-900 truncate">{recipe.name}</h4>\n            {recipe.slogan && <p className="text-xs text-primary italic mt-1 line-clamp-2">{recipe.slogan}</p>}
             <div className="flex items-center gap-1 mt-1 text-xs text-gray-500"><span className="text-amber-500">★</span><span className="font-semibold text-gray-700">{recipe.averageRating ? recipe.averageRating.toFixed(1) : "No rating"}</span><span>({recipe.ratingCount || 0} ratings)</span></div>
           </div>
           
@@ -279,7 +279,7 @@ export default function MealPlanner() {
           )}
         </div>
         {!recipe.canCookWithAvailable && <p className="text-xs text-gray-500 mt-2 truncate">Extra: {recipe.missingIngredients.slice(0, 4).join(", ")}</p>}
-        <div className="flex items-center justify-between mt-3">
+        {recipe.ingredients?.length > 0 && <p className="text-xs text-gray-500 mt-3 line-clamp-2">Ingredients: {recipe.ingredients.slice(0, 4).join(" · ")}</p>}\n        <div className="flex items-center justify-between mt-3">
           {recipe.prepTime ? <span className="text-xs text-gray-400">{recipe.prepTime}</span> : <span />}
           <button type="button" onClick={() => {
             const query = new URLSearchParams({
