@@ -90,11 +90,18 @@ export default function MealPlanDetails() {
   };
 
   const generateRecipe = () => {
-    if (!selectedMealName) { alert("Please select a day and meal first."); return; }
+    if (!selectedMealName || !selectedDayPlan) { alert("Please select a day and meal first."); return; }
+    // Use only the ingredients belonging to the selected meal, never the whole pantry/plan list.
+    const selectedIngredients = selectedDayPlan[selectedMealType + "Ingredients"] || [];
+    const ingredientText = selectedIngredients.map((item) => {
+      if (typeof item === "string") return item;
+      return [item?.quantity, item?.name].filter(Boolean).join(" ");
+    }).filter(Boolean).join(", ");
+    if (!ingredientText) { alert("No ingredients were saved for this selected meal."); return; }
     const query = new URLSearchParams({
       generate: "1",
       meal: selectedMealName,
-      ingredients: plan.ingredients || "",
+      ingredients: ingredientText,
       return: "meal-plan",
       planId: plan._id,
     });
