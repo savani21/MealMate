@@ -13,6 +13,13 @@ const recipeSchema = new mongoose.Schema(
       default: "",
     },
 
+    slogan: {
+      type: String,
+      trim: true,
+      maxlength: 160,
+      default: "",
+    },
+
     category: {
       type: String,
       default: "Other",
