@@ -18,7 +18,27 @@ export default function MealMateAssistant() {
     ]);
 
     const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);\n    const [listening, setListening] = useState(false);
+
+const startVoiceInput = () => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => setListening(true);
+  recognition.onend = () => setListening(false);
+  recognition.onerror = () => setListening(false);
+  recognition.onresult = (event) => {
+    const spoken = event.results?.[0]?.[0]?.transcript?.trim();
+    if (spoken) setInput((current) => current ? `${current} ${spoken}` : spoken);
+  };
+  recognition.start();
+};
 
 const sendMessage = async () => {
   if (!input.trim() || loading) return;
@@ -178,6 +198,7 @@ const sendMessage = async () => {
                                 className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
                             />
 
+                            <button type="button" onClick={startVoiceInput} disabled={listening} title="Speak to MealMate AI" className="w-11 h-11 shrink-0 rounded-xl border border-gray-200 text-primary flex items-center justify-center disabled:opacity-40"><Mic className="w-5 h-5" /></button>
                             <button
                                 onClick={ sendMessage }
                                 disabled={ loading || !input.trim() }
