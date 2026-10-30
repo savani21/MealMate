@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -39,7 +40,7 @@ export default function AIFeatures() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/ai/status", {
+      const response = await fetch(`${API_BASE_URL}/api/admin/ai/status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -68,7 +69,7 @@ export default function AIFeatures() {
     setSending(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/ai/chat", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, history: chatHistory }),
