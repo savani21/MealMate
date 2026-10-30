@@ -1,233 +1,238 @@
+import { useEffect, useRef, useState } from "react";
 import { API_BASE_URL } from "../api/config.js";
-import { useState } from "react";
 import {
-    MessageCircle,
-    X,
-    Send,
-    Sparkles,
-    Mic,
+  X, Send, Sparkles, Mic, Volume2, VolumeX, MessageCircle,
+  Languages, Loader2, MicOff, RotateCcw
 } from "lucide-react";
 
-export default function MealMateAssistant() {
-    const [open, setOpen] = useState(false);
+const LANGUAGES = [
+  { code: "en-IN", value: "en", label: "English", short: "EN" },
+  { code: "hi-IN", value: "hi", label: "हिन्दी", short: "हि" },
+  { code: "gu-IN", value: "gu", label: "ગુજરાતી", short: "ગુ" },
+];
 
-    const [messages, setMessages] = useState([
-        {
-            role: "assistant",
-            text: "Hi! 👋 I'm MealMate AI. How can I help you today?",
-        },
-    ]);
-
-    const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [listening, setListening] = useState(false);
-
-const startVoiceInput = () => {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
-    return;
-  }
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-IN";
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  recognition.onstart = () => setListening(true);
-  recognition.onend = () => setListening(false);
-  recognition.onerror = () => setListening(false);
-  recognition.onresult = (event) => {
-    const spoken = event.results?.[0]?.[0]?.transcript?.trim();
-    if (spoken) setInput((current) => current ? `${current} ${spoken}` : spoken);
-  };
-  recognition.start();
+const GREETINGS = {
+  en: "Hello! I'm MealMate. Tell me what ingredients you have, and I'll help plan your meals for today.",
+  hi: "नमस्ते! मैं MealMate हूँ। आपके पास कौन-कौन सी सामग्री है? मैं आज के भोजन की योजना बनाने में मदद करूँगा।",
+  gu: "નમસ્તે! હું MealMate છું. તમારી પાસે કઈ સામગ્રી છે? હું આજના ભોજનનું આયોજન કરવામાં મદદ કરીશ.",
 };
 
-const sendMessage = async () => {
-  if (!input.trim() || loading) return;
+export default function MealMateAssistant() {
+  const [open, setOpen] = useState(false);
+  const [language, setLanguage] = useState(
+    () => localStorage.getItem("mealmateLanguage") || "en"
+  );
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceReplies, setVoiceReplies] = useState(true);
+  const recognitionRef = useRef(null);
+  const scrollRef = useRef(null);
+  const voiceRequestRef = useRef(false);
 
-  const userMessage = input.trim();
+  const selectedLanguage = LANGUAGES.find((item) => item.value === language) || LANGUAGES[0];
 
-  const updatedMessages = [
-    ...messages,
-    {
-      role: "user",
-      text: userMessage,
-    },
-  ];
+  useEffect(() => {
+    setMessages([{ role: "assistant", text: GREETINGS[language] || GREETINGS.en }]);
+    localStorage.setItem("mealmateLanguage", language);
+    window.dispatchEvent(new CustomEvent("mealmate-language-change", { detail: language }));
+  }, [language]);
 
-  setMessages(updatedMessages);
-  setInput("");
-  setLoading(true);
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
 
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/ai/chat`,
-      {
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+    window.speechSynthesis?.cancel();
+  }, []);
+
+  const speak = (text) => {
+    if (!voiceReplies || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = selectedLanguage.code;
+    utterance.rate = 0.96;
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const sendMessage = async (text = input, fromVoice = false) => {
+    const userMessage = text.trim();
+    if (!userMessage || loading) return;
+
+    const previousMessages = messages;
+    setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+    setInput("");
+    setLoading(true);
+    voiceRequestRef.current = fromVoice;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage,
-
-          // Send previous conversation to Gemini
-          history: messages.map((msg) => ({
-            role: msg.role,
-            text: msg.text,
-          })),
+          language,
+          history: previousMessages.map(({ role, text }) => ({ role, text })),
         }),
-      }
-    );
+      });
 
-    const data = await response.json();
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "AI request failed");
 
-    if (!response.ok) {
-      throw new Error(data.message || "AI request failed");
+      const reply = data.reply || "I couldn't prepare a response. Please try again.";
+      setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+      if (fromVoice) speak(reply);
+    } catch (error) {
+      console.error("MealMate assistant error:", error);
+      const fallback = language === "gu"
+        ? "માફ કરશો, અત્યારે MealMate AI સાથે જોડાઈ શકાતું નથી."
+        : language === "hi"
+          ? "क्षमा करें, अभी MealMate AI से कनेक्ट नहीं हो पा रहा है।"
+          : "Sorry, I couldn't connect to MealMate AI. Please try again.";
+      setMessages((prev) => [...prev, { role: "assistant", text: fallback }]);
+      if (fromVoice) speak(fallback);
+    } finally {
+      setLoading(false);
+      voiceRequestRef.current = false;
+    }
+  };
+
+  const startVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported here. Please use Chrome or Edge.");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
     }
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        text: data.reply,
-      },
-    ]);
-
-  } catch (error) {
-    console.error("CHAT ERROR:", error);
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        text: "Sorry, I couldn't connect to MealMate AI.",
-      },
-    ]);
-  } finally {
-    setLoading(false);
-  }
-};
-    const handleKeyDown = (e) => {
-        if (e.key === "Enter") {
-            sendMessage();
-        }
+    window.speechSynthesis?.cancel();
+    const recognition = new SpeechRecognition();
+    recognition.lang = selectedLanguage.code;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognition.onresult = (event) => {
+      const spokenText = event.results?.[0]?.[0]?.transcript?.trim();
+      if (spokenText) sendMessage(spokenText, true);
     };
+    recognition.start();
+  };
 
-    return (
-        <>
-            { open && (
-                <div className="fixed bottom-24 right-5 z-[100] w-[360px] max-w-[calc(100vw-2rem)] bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+  const handleLanguageChange = (event) => {
+    setLanguage(event.target.value);
+    window.speechSynthesis?.cancel();
+    recognitionRef.current?.stop();
+  };
 
-                    {/* Header */ }
-                    <div className="bg-primary text-white px-5 py-4 flex items-center justify-between">
+  const stopSpeaking = () => {
+    window.speechSynthesis?.cancel();
+    setSpeaking(false);
+  };
 
-                        <div className="flex items-center gap-3">
-
-                            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                                <Sparkles className="w-5 h-5" />
-                            </div>
-
-                            <div>
-                                <h3 className="font-bold">
-                                    MealMate AI
-                                </h3>
-
-                                <p className="text-xs text-white/80">
-                                    Your meal assistant
-                                </p>
-                            </div>
-
-                        </div>
-
-                        <button
-                            onClick={ () => setOpen(false) }
-                            className="p-2 rounded-lg hover:bg-white/10"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
-
-                    </div>
-
-                    {/* Messages */ }
-                    <div className="h-[380px] overflow-y-auto p-4 space-y-3">
-
-                        { messages.map((message, index) => (
-
-                            <div
-                                key={ index }
-                                className={ `flex ${message.role === "user"
-                                        ? "justify-end"
-                                        : "justify-start"
-                                    }` }
-                            >
-
-                                <div
-                                    className={ `max-w-[80%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap ${message.role === "user"
-                                            ? "bg-primary text-white rounded-br-md"
-                                            : "bg-gray-100 text-gray-700 rounded-bl-md"
-                                        }` }
-                                >
-                                    { message.text }
-                                </div>
-
-                            </div>
-
-                        )) }
-
-                        { loading && (
-                            <div className="flex justify-start">
-
-                                <div className="bg-gray-100 text-gray-500 px-4 py-3 rounded-2xl text-sm">
-                                    MealMate AI is thinking...
-                                </div>
-
-                            </div>
-                        ) }
-
-                    </div>
-
-                    {/* Input */ }
-                    <div className="p-3 border-t border-gray-100">
-
-                        <div className="flex gap-2">
-
-                            <input
-                                type="text"
-                                value={ input }
-                                onChange={ (e) => setInput(e.target.value) }
-                                onKeyDown={ handleKeyDown }
-                                placeholder="Ask about meals..."
-                                className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
-                            />
-
-                            <button type="button" onClick={startVoiceInput} disabled={listening} title="Speak to MealMate AI" className="w-11 h-11 shrink-0 rounded-xl border border-gray-200 text-primary flex items-center justify-center disabled:opacity-40"><Mic className="w-5 h-5" /></button>
-                            <button
-                                onClick={ sendMessage }
-                                disabled={ loading || !input.trim() }
-                                className="w-11 h-11 shrink-0 rounded-xl bg-primary text-white flex items-center justify-center disabled:opacity-40"
-                            >
-                                <Send className="w-5 h-5" />
-                            </button>
-
-                        </div>
-
-                    </div>
-
+  return (
+    <>
+      {open && (
+        <section className="fixed bottom-24 right-4 sm:right-6 z-[100] w-[min(410px,calc(100vw-2rem))] bg-white rounded-[28px] shadow-2xl border border-slate-200 overflow-hidden">
+          <header className="bg-gradient-to-br from-[#102d55] via-[#155c91] to-[#2589b9] text-white px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-white/15 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6" />
                 </div>
-            ) }
+                <div>
+                  <h3 className="font-bold text-lg">MealMate</h3>
+                  <p className="text-xs text-white/75">Your personal meal companion</p>
+                </div>
+              </div>
+              <button onClick={() => { setOpen(false); stopSpeaking(); recognitionRef.current?.stop(); }} className="p-2 rounded-xl hover:bg-white/15" aria-label="Close assistant">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            {/* Floating Button */ }
-            <button
-                onClick={ () => setOpen(!open) }
-                className="fixed bottom-5 right-5 z-[100] w-14 h-14 rounded-full bg-primary text-white shadow-xl flex items-center justify-center hover:scale-105 transition"
-                title="MealMate AI"
-            >
-                { open ? (
-                    <X className="w-6 h-6" />
-                ) : (
-                    <MessageCircle className="w-6 h-6" />
-                ) }
-            </button>
-        </>
-    );
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-xs text-white/90">
+                <Languages className="w-4 h-4" />
+                <span>Language</span>
+                <select value={language} onChange={handleLanguageChange} className="bg-white/15 border border-white/20 rounded-lg px-2 py-1.5 text-white outline-none">
+                  {LANGUAGES.map((item) => (
+                    <option key={item.value} value={item.value} className="text-slate-900">{item.label}</option>
+                  ))}
+                </select>
+              </label>
+              <button onClick={() => setVoiceReplies((value) => !value)} className="flex items-center gap-1.5 text-xs bg-white/15 rounded-lg px-2.5 py-2" title={voiceReplies ? "Turn off spoken replies" : "Turn on spoken replies"}>
+                {voiceReplies ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+                Voice {voiceReplies ? "on" : "off"}
+              </button>
+            </div>
+          </header>
+
+          <div className="bg-slate-50 px-4 py-3 flex items-center gap-3 border-b border-slate-100">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${listening ? "bg-rose-100 ring-4 ring-rose-100 animate-pulse" : speaking ? "bg-sky-100 ring-4 ring-sky-50" : "bg-blue-100"}`}>
+              {listening ? <Mic className="w-6 h-6 text-rose-600" /> : speaking ? <Volume2 className="w-6 h-6 text-sky-700" /> : <Sparkles className="w-6 h-6 text-blue-700" />}
+            </div>
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-800 text-sm">{listening ? "I'm listening..." : speaking ? "Speaking..." : loading ? "Thinking..." : "Ready when you are"}</p>
+              <p className="text-xs text-slate-500">{listening ? "Speak naturally in your selected language" : "Ask me to plan breakfast, lunch and dinner"}</p>
+            </div>
+            {speaking && <button onClick={stopSpeaking} className="ml-auto text-slate-500 hover:text-slate-800" aria-label="Stop speaking"><VolumeX className="w-5 h-5" /></button>}
+          </div>
+
+          <div ref={scrollRef} className="h-[300px] overflow-y-auto p-4 space-y-3 bg-white">
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[86%] px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${message.role === "user" ? "bg-[#1769a6] text-white rounded-br-md" : "bg-slate-100 text-slate-700 rounded-bl-md"}`}>
+                  {message.text}
+                </div>
+              </div>
+            ))}
+            {loading && <div className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="w-4 h-4 animate-spin" /> Preparing your meal ideas...</div>}
+          </div>
+
+          <div className="p-3 border-t border-slate-100 bg-white">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => event.key === "Enter" && sendMessage()}
+                placeholder={language === "gu" ? "અહીં લખો..." : language === "hi" ? "यहाँ लिखें..." : "Ask MealMate anything..."}
+                className="min-w-0 flex-1 px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+              <button type="button" onClick={startVoiceInput} disabled={loading} className={`w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center transition ${listening ? "bg-rose-500 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"} disabled:opacity-40`} title={listening ? "Stop listening" : "Talk to MealMate"}>
+                {listening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+              <button onClick={() => sendMessage()} disabled={loading || !input.trim()} className="w-12 h-12 shrink-0 rounded-2xl bg-[#1769a6] text-white flex items-center justify-center disabled:opacity-40" aria-label="Send message">
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-[10px] text-slate-400 text-center mt-2">Voice recognition availability depends on your browser and microphone permission.</p>
+          </div>
+        </section>
+      )}
+
+      <button
+        onClick={() => setOpen((value) => !value)}
+        className="fixed bottom-5 right-5 z-[100] w-16 h-16 rounded-full bg-gradient-to-br from-[#123e70] to-[#2495c5] text-white shadow-xl flex items-center justify-center hover:scale-105 transition-all ring-4 ring-white"
+        title="Talk to MealMate"
+        aria-label="Open MealMate voice assistant"
+      >
+        {open ? <X className="w-7 h-7" /> : <MessageCircle className="w-7 h-7" />}
+      </button>
+    </>
+  );
 }
