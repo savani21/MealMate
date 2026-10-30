@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -34,7 +35,7 @@ export default function MealPlans() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/meal-plans", {
+      const response = await fetch(`${API_BASE_URL}/api/admin/meal-plans`, {
         headers: authHeaders(),
       });
 
@@ -61,7 +62,7 @@ export default function MealPlans() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/meal-plans/${plan._id}`,
+        `${API_BASE_URL}/api/admin/meal-plans/${plan._id}`,
         { method: "DELETE", headers: authHeaders() }
       );
 
