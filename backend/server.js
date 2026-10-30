@@ -20,7 +20,22 @@ const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
 const adminRecipeReviewRoutes = require("./routes/admin/recipeReviewRoutes");
 
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow server-to-server and local non-browser requests without an Origin.
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Origin is not allowed by CORS"));
+    },
+  })
+);
 app.use(express.json());
 
 mongoose
@@ -45,8 +60,31 @@ app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
 app.use("/api/admin/recipe-reviews", adminRecipeReviewRoutes);
 
-const PORT = 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server Running on ${PORT}`);
+app.get("/api/health", (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: mongoose.connection.readyState === 1 ? "healthy" : "database-disconnected",
+  });
 });
+
+const PORT = process.env.PORT || 5000;
+
+async function startServer() {
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI is not configured");
+    }
+
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log("MongoDB Connected");
+
+    app.listen(PORT, () => {
+      console.log(`Server Running on ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Server startup failed:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
