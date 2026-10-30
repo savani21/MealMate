@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -57,7 +58,7 @@ export default function Recipes() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/recipes", {
+      const response = await fetch(`${API_BASE_URL}/api/admin/recipes`, {
         headers: authHeaders(),
       });
 
@@ -131,8 +132,8 @@ export default function Recipes() {
       setSaving(true);
 
       const url = editingId
-        ? `http://localhost:5000/api/admin/recipes/${editingId}`
-        : "http://localhost:5000/api/admin/recipes";
+        ? `${API_BASE_URL}/api/admin/recipes/${editingId}`
+        : `${API_BASE_URL}/api/admin/recipes`;
 
       const response = await fetch(url, {
         method: editingId ? "PUT" : "POST",
@@ -169,7 +170,7 @@ export default function Recipes() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/recipe-reviews/${recipe._id}`,
+        `${API_BASE_URL}/api/admin/recipe-reviews/${recipe._id}`,
         { headers: authHeaders() }
       );
       const data = await response.json();
@@ -195,7 +196,7 @@ export default function Recipes() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/recipes/${recipe._id}`,
+        `${API_BASE_URL}/api/admin/recipes/${recipe._id}`,
         { method: "DELETE", headers: authHeaders() }
       );
 
