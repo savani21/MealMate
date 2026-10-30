@@ -11,12 +11,14 @@ import {
   Search,
   Sparkles,
   Star,
-  MessageSquare,\n  Archive,
+  MessageSquare,
+  Archive,
 } from "lucide-react";
 
 const EMPTY_FORM = {
   name: "",
-  description: "",\n  slogan: "",
+  description: "",
+  slogan: "",
   category: "Other",
   diet: "Any",
   ingredients: "",
@@ -88,7 +90,8 @@ export default function Recipes() {
     setEditingId(recipe._id);
     setForm({
       name: recipe.name || "",
-      description: recipe.description || "",\n      slogan: recipe.slogan || "",
+      description: recipe.description || "",
+      slogan: recipe.slogan || "",
       category: recipe.category || "Other",
       diet: recipe.diet || "Any",
       ingredients: (recipe.ingredients || []).join(", "),
@@ -119,7 +122,8 @@ export default function Recipes() {
 
     const payload = {
       name: form.name,
-      description: form.description,\n      slogan: form.slogan,
+      description: form.description,
+      slogan: form.slogan,
       category: form.category,
       diet: form.diet,
       ingredients: form.ingredients.split(",").map((i) => i.trim()).filter(Boolean),
