@@ -88,12 +88,15 @@ exports.addToCart = async (req, res) => {
 
     const product = await StoreProduct.findOne({ _id: productId, isActive: true });
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
-    if (product.stock < amount) return res.status(400).json({ success: false, message: "Insufficient stock" });
-
     let cart = await Cart.findOne({ user: req.user.id });
     if (!cart) cart = await Cart.create({ user: req.user.id, items: [] });
 
     const existing = cart.items.find((item) => item.product.toString() === productId);
+    const requestedTotal = (existing?.quantity || 0) + amount;
+    if (product.stock < requestedTotal) {
+      return res.status(400).json({ success: false, message: "Insufficient stock for the requested cart quantity" });
+    }
+
     if (existing) existing.quantity += amount;
     else cart.items.push({ product: productId, quantity: amount });
 
