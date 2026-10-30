@@ -73,7 +73,7 @@ const createRecipe = async (req, res) => {
 
 const updateRecipe = async (req, res) => {
   try {
-    const { name, description, category, diet, ingredients, instructions, prepTime, image } = req.body;
+    const { name, description, slogan, category, diet, ingredients, instructions, prepTime, image } = req.body;
 
     const recipe = await Recipe.findByIdAndUpdate(
       req.params.id,
