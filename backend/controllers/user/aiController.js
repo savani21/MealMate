@@ -118,6 +118,7 @@ const generateRecipe = async (req, res) => {
 
     const prompt = `
 Create one practical recipe using these ingredients: ${ingredients}.
+Provide realistic ingredient quantities and units for 1-2 servings. Do not list ingredients without quantities unless they are seasoning or to taste.
 Diet preference: ${diet}.
 Category: ${category}.
 ${mealInstruction}
