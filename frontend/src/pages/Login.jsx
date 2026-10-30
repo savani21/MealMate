@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../api/config.js";
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
@@ -36,7 +37,7 @@ const { login } = useAuth();
     setLoading(true);
 
     const res = await axios.post(
-      "http://localhost:5000/api/auth/login",
+      `${API_BASE_URL}/api/auth/login`,
       { email, password }
     );
 
