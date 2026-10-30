@@ -154,10 +154,10 @@ const getRecommendedRecipes = async (req, res) => {
       .filter(Boolean)
       .filter((recipe) => allowedIngredients.size === 0 || recipe.matchCount > 0)
       .sort((a, b) =>
-        b.ratingCount - a.ratingCount ||
-        b.averageRating - a.averageRating ||
         b.recommendationScore - a.recommendationScore ||
-        b.matchPercentage - a.matchPercentage
+        b.matchPercentage - a.matchPercentage ||
+        b.averageRating - a.averageRating ||
+        b.ratingCount - a.ratingCount
       );
 
     const topRecipes = ranked.slice(0, 3);
