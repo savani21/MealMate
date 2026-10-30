@@ -18,7 +18,7 @@ export default function MealPlanner() {
     if (recommendedIngredients.length > 0) return recommendedIngredients;
     try {
       setRecommendationLoading(true);
-      const response = await fetch("http://localhost:5000/api/recipes/recommended");
+      const token = localStorage.getItem("token"); const response = await fetch("http://localhost:5000/api/recipes/recommended", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to get recommendations");
       setRecommendedIngredients(data.ingredients || []);
