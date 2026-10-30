@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
@@ -87,7 +88,7 @@ export default function UserSection() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("http://localhost:5000/api/meal-plans", {
+        const response = await fetch(`${API_BASE_URL}/api/meal-plans`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
