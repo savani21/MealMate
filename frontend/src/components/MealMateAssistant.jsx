@@ -5,6 +5,7 @@ import {
     X,
     Send,
     Sparkles,
+    Mic,
 } from "lucide-react";
 
 export default function MealMateAssistant() {
@@ -18,7 +19,8 @@ export default function MealMateAssistant() {
     ]);
 
     const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);\n    const [listening, setListening] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [listening, setListening] = useState(false);
 
 const startVoiceInput = () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
