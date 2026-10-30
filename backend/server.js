@@ -7,7 +7,8 @@ require("dotenv").config();
 
 const app = express();
 const recipeRoutes = require("./routes/user/recipeRoutes");
-const favoriteRoutes = require("./routes/user/favoriteRoutes");\nconst dislikeRoutes = require("./routes/user/dislikeRoutes");
+const favoriteRoutes = require("./routes/user/favoriteRoutes");
+const dislikeRoutes = require("./routes/user/dislikeRoutes");
 const recipeReviewRoutes = require("./routes/user/recipeReviewRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
@@ -48,7 +49,8 @@ app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
 app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
 app.use("/api/store", storeRoutes);
 app.use("/api/recipes", recipeRoutes);
-app.use("/api/favorites", favoriteRoutes);\napp.use("/api/dislikes", dislikeRoutes);
+app.use("/api/favorites", favoriteRoutes);
+app.use("/api/dislikes", dislikeRoutes);
 app.use("/api/recipe-reviews", recipeReviewRoutes);
 app.use("/api/ai", aiRoutes);
 
