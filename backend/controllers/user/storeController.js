@@ -114,6 +114,17 @@ exports.updateCartItem = async (req, res) => {
       return res.status(400).json({ success: false, message: "Quantity must be at least 1" });
     }
 
+    const product = await StoreProduct.findOne({
+      _id: req.params.productId,
+      isActive: true,
+    });
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+    if (product.stock < amount) {
+      return res.status(400).json({ success: false, message: "Insufficient stock" });
+    }
+
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) return res.status(404).json({ success: false, message: "Cart not found" });
 
