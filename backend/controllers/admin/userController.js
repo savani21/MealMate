@@ -28,7 +28,8 @@ const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id)
       .select("-password")
-      .populate("favorites", "name category")\n      .populate("dislikes", "name category");
+      .populate("favorites", "name category")
+      .populate("dislikes", "name category");
 
     if (!user) {
       return res.status(404).json({
