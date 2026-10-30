@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { Sparkles, Utensils, ShoppingBasket, X } from "lucide-react";
@@ -22,7 +23,7 @@ export default function MealPlanDetails() {
     try {
       const token = localStorage.getItem("token");
       if (!token) { setLocation("/login"); return; }
-      const response = await fetch(`http://localhost:5000/api/meal-plans/${params.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/meal-plans/${params.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -44,7 +45,7 @@ export default function MealPlanDetails() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/recipes");
+      const response = await fetch(`${API_BASE_URL}/api/recipes`);
       const data = await response.json();
       if (response.ok) setRecipes(data.recipes || []);
     } catch (error) { console.error("Recipe loading error:", error); }
@@ -94,7 +95,7 @@ export default function MealPlanDetails() {
       setGroceryLoading(true);
       const token = localStorage.getItem("token");
       if (!token) { setLocation("/login"); return; }
-      const response = await fetch("http://localhost:5000/api/user/grocery", {
+      const response = await fetch(`${API_BASE_URL}/api/user/grocery`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ mealPlanId: plan._id }),
