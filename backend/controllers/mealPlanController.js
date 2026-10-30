@@ -294,8 +294,22 @@ Return ONLY valid JSON in exactly this structure:
 Do not include markdown or explanations outside JSON.
 `;
 
-    let generatedMeals = await generateWithOpenRouter(prompt);
+    // A preview request returns recipe choices without saving a meal plan.
+    // The final save request sends the exact selected options back to this endpoint.
+    let generatedMeals;
     let generatedBy = "openrouter";
+    if (Array.isArray(req.body.selectedDays) && req.body.selectedDays.length) {
+      generatedMeals = { days: req.body.selectedDays };
+      generatedBy = "user-selected";
+    } else {
+      generatedMeals = await generateWithOpenRouter(prompt);
+      if (!generatedMeals) {
+        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+        generatedBy = "local-fallback";
+      }
+    }
+
+    const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
 
     if (!generatedMeals) {
       generatedMeals = generateLocalMealPlan({
@@ -339,6 +353,16 @@ Do not include markdown or explanations outside JSON.
       return res.status(422).json({
         success: false,
         message: `The generated meal plan does not match the selected ${diet} diet. Please generate the plan again.`,
+      });
+    }
+
+    if (req.body.previewOnly === true) {
+      return res.status(200).json({
+        success: true,
+        preview: true,
+        generatedBy,
+        days,
+        message: "Choose one recipe for breakfast, lunch and dinner.",
       });
     }
 
