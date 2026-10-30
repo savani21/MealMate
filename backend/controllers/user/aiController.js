@@ -58,6 +58,13 @@ Create one practical recipe using these ingredients: ${ingredients}.
 Diet preference: ${diet}. Category: ${category}.
 ${mealInstruction}
 
+Cuisine guidance:
+- Prefer Indian home-style and regional Indian recipes by default whenever the supplied ingredients support them.
+- Consider suitable options such as poha, upma, idli, dosa, paratha, thepla, dal, khichdi, pulao, rajma, chole, sabzi, paneer preparations, and Indian-style snacks.
+- Treat these as examples, not a fixed list. Choose a recipe that genuinely fits the provided ingredients, meal category, diet preference, and allergies.
+- Do not add unavailable ingredients just to make a dish Indian. If the ingredients do not suit an Indian recipe, create the best practical recipe from the supplied ingredients instead.
+- Use familiar Indian cooking methods and flavors where appropriate, and avoid suggesting the same generic recipe repeatedly.
+
 Return ONLY valid JSON with this exact structure:
 {
   "name": "Recipe name",
