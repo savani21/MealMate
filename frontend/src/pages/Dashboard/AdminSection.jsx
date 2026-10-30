@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -31,7 +32,7 @@ export default function AdminSection() {
       if (!token) return;
 
       const response = await fetch(
-        "http://localhost:5000/api/admin/analytics/stats",
+        `${API_BASE_URL}/api/admin/analytics/stats`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
