@@ -329,8 +329,9 @@ Do not include markdown or explanations outside JSON.
         const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"].filter((item) => item?.name && Array.isArray(item.ingredients)) : [];
         if (options.length) {
           day[type + "Options"] = options.slice(0, 3);
-          day[type] = options[0].name;
-          day[type + "Ingredients"] = options[0].ingredients;
+          const selected = options.find((item) => item.name === day[type]) || options[0];
+          day[type] = selected.name;
+          day[type + "Ingredients"] = selected.ingredients;
         } else {
           day[type + "Options"] = [{
             name: day[type] || "Meal option",
