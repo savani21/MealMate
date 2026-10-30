@@ -38,7 +38,8 @@ export default function MealPlanner() {
   );
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
-  const [loading, setLoading] = useState(false);\n  const [listening, setListening] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [listening, setListening] = useState(false);
 
   // Load the user's saved Food Preference when opening a fresh planner.
   // Returning from a recipe/meal-plan page keeps the current draft instead.
@@ -264,7 +265,8 @@ export default function MealPlanner() {
       <article key={recipe._id} className="border border-gray-100 rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h4 className="font-bold text-gray-900 truncate">{recipe.name}</h4>\n            {recipe.slogan && <p className="text-xs text-primary italic mt-1 line-clamp-2">{recipe.slogan}</p>}
+            <h4 className="font-bold text-gray-900 truncate">{recipe.name}</h4>
+            {recipe.slogan && <p className="text-xs text-primary italic mt-1 line-clamp-2">{recipe.slogan}</p>}
             <div className="flex items-center gap-1 mt-1 text-xs text-gray-500"><span className="text-amber-500">★</span><span className="font-semibold text-gray-700">{recipe.averageRating ? recipe.averageRating.toFixed(1) : "No rating"}</span><span>({recipe.ratingCount || 0} ratings)</span></div>
           </div>
           
@@ -279,7 +281,8 @@ export default function MealPlanner() {
           )}
         </div>
         {!recipe.canCookWithAvailable && <p className="text-xs text-gray-500 mt-2 truncate">Extra: {recipe.missingIngredients.slice(0, 4).join(", ")}</p>}
-        {recipe.ingredients?.length > 0 && <p className="text-xs text-gray-500 mt-3 line-clamp-2">Ingredients: {recipe.ingredients.slice(0, 4).join(" · ")}</p>}\n        <div className="flex items-center justify-between mt-3">
+        {recipe.ingredients?.length > 0 && <p className="text-xs text-gray-500 mt-3 line-clamp-2">Ingredients: {recipe.ingredients.slice(0, 4).join(" · ")}</p>}
+        <div className="flex items-center justify-between mt-3">
           {recipe.prepTime ? <span className="text-xs text-gray-400">{recipe.prepTime}</span> : <span />}
           <button type="button" onClick={() => {
             const query = new URLSearchParams({
