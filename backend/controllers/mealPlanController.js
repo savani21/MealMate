@@ -343,6 +343,16 @@ Do not include markdown or explanations outside JSON.
       });
     });
 
+    if (days.some((day) => ["breakfast", "lunch", "dinner"].some((type) => {
+      const options = day[type + "Options"] || [];
+      return options.length < 2;
+    }))) {
+      return res.status(422).json({
+        success: false,
+        message: "MealMate could not create at least two choices for every meal. Please try generating the options again.",
+      });
+    }
+
     if (!days.length) {
       return res.status(422).json({
         success: false,
