@@ -13,7 +13,8 @@ import {
   Calendar,
   Heart,
   ClipboardList,
-  ShoppingBasket,\n  ThumbsDown,
+  ShoppingBasket,
+  ThumbsDown,
 } from "lucide-react";
 
 export default function Users() {
@@ -375,7 +376,12 @@ export default function Users() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">\n                <div><h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">Favourite Recipes</h3><p className="text-sm text-gray-600">{(selectedUser.user.favorites || []).length ? selectedUser.user.favorites.map((recipe) => recipe?.name).filter(Boolean).join(", ") : "No favourites yet."}</p></div>\n                <div><h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">Disliked Recipes</h3><p className="text-sm text-gray-600">{(selectedUser.user.dislikes || []).length ? selectedUser.user.dislikes.map((recipe) => recipe?.name).filter(Boolean).join(", ") : "No dislikes recorded."}</p></div>\n              </div>\n\n              <div className="flex items-center gap-3 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">Favourite Recipes</h3><p className="text-sm text-gray-600">{(selectedUser.user.favorites || []).length ? selectedUser.user.favorites.map((recipe) => recipe?.name).filter(Boolean).join(", ") : "No favourites yet."}</p></div>
+                <div><h3 className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-2">Disliked Recipes</h3><p className="text-sm text-gray-600">{(selectedUser.user.dislikes || []).length ? selectedUser.user.dislikes.map((recipe) => recipe?.name).filter(Boolean).join(", ") : "No dislikes recorded."}</p></div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
                 <button
                   onClick={() => toggleRole(selectedUser.user)}
                   disabled={busyId === selectedUser.user._id}
@@ -404,7 +410,9 @@ export default function Users() {
   );
 }
 
-function ThumbsDownIcon() { return <ThumbsDown className="w-4 h-4 text-primary" />; }\n\nfunction MiniStat({ icon, label, value }) {
+function ThumbsDownIcon() { return <ThumbsDown className="w-4 h-4 text-primary" />; }
+
+function MiniStat({ icon, label, value }) {
   return (
     <div className="bg-gray-50 rounded-xl p-3 text-center">
       <div className="flex items-center justify-center gap-1.5 mb-1">{icon}</div>
