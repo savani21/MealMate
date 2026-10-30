@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../api/config.js";
 import { useState } from "react";
 import {
     MessageCircle,
@@ -38,7 +39,7 @@ const sendMessage = async () => {
 
   try {
     const response = await fetch(
-      "http://localhost:5000/api/ai/chat",
+      `${API_BASE_URL}/api/ai/chat`,
       {
         method: "POST",
         headers: {
