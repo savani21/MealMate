@@ -194,7 +194,7 @@ export default function Recipes() {
   };
 
   const removeRecipe = async (recipe) => {
-    if (!confirm(`Delete "${recipe.name}"? This cannot be undone.`)) {
+    if (!confirm(`Move "${recipe.name}" to the archive? An admin can restore it later.`)) {
       return;
     }
 
