@@ -14,82 +14,72 @@ async function generateWithOpenRouter(messages, responseFormat) {
       body: JSON.stringify({
         model: "openrouter/free",
         messages,
-        ...(responseFormat
-          ? { response_format: responseFormat }
-          : {}),
+        ...(responseFormat ? { response_format: responseFormat } : {}),
       }),
     }
   );
 
   const data = await response.json();
-
   if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-        `OpenRouter request failed with status ${response.status}`
-    );
+    throw new Error(data?.error?.message || `OpenRouter request failed with status ${response.status}`);
   }
-
   const content = data?.choices?.[0]?.message?.content;
-
-  if (!content) {
-    throw new Error("OpenRouter returned an empty AI response");
-  }
-
+  if (!content) throw new Error("OpenRouter returned an empty AI response");
   return content;
 }
 
 const chatWithAI = async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
-
+    const { message, history = [], language = "en" } = req.body;
     if (!message || !message.trim()) {
-      return res.status(400).json({
-        message: "Message is required",
-      });
+      return res.status(400).json({ message: "Message is required" });
     }
+
+    const languageNames = {
+      en: "English",
+      hi: "Hindi",
+      gu: "Gujarati",
+    };
+    const responseLanguage = languageNames[language] || "English";
 
     const messages = [
       {
         role: "system",
-        content: `You are MealMate AI, a friendly food and meal assistant.
+        content: `You are MealMate, a warm, Siri-like personal food and meal-planning voice assistant.
 
-You help users with:
-- Recipes
-- Meal suggestions
-- Meal planning
-- Ingredients
-- Grocery suggestions
-- Healthy food choices
-- Cooking ideas
+Always reply in ${responseLanguage}. If the user explicitly asks to switch languages, follow that request and continue in the new language.
 
-Remember previous messages and use them to give relevant follow-up answers.
-Keep responses simple, practical and friendly.
-If the user asks something unrelated to food or MealMate, politely explain that you specialize in MealMate assistance.
-Do not provide medical diagnosis.`,
+Your main job is to help plan the user's entire day of meals:
+- Ask what ingredients are available when that information is missing.
+- Consider the user's saved dietary preference when provided in conversation.
+- Suggest breakfast, lunch, evening snack and dinner.
+- Offer 2-3 practical recipe choices when useful.
+- Include ingredient names with realistic quantities and units.
+- Give concise cooking steps, preparation time and substitutions.
+- Help create grocery lists from missing ingredients.
+- Ask one short follow-up question at a time when essential information is missing.
+- Remember the conversation context and use previous answers.
+- Keep spoken responses natural, clear and not overly long.
+- If the user asks something unrelated to food or MealMate, politely explain that you specialize in MealMate assistance.
+- Do not provide medical diagnosis or claim that foods treat diseases.
+
+You are conversational like a voice assistant, not a generic search engine. Do not say you have performed an application action unless an available tool actually performed it.`,
       },
     ];
 
     history.forEach((msg) => {
       if (!msg.text) return;
-
       messages.push({
         role: msg.role === "user" ? "user" : "assistant",
         content: msg.text,
       });
     });
 
-    messages.push({
-      role: "user",
-      content: message,
-    });
-
+    messages.push({ role: "user", content: message });
     const reply = await generateWithOpenRouter(messages);
-
     res.status(200).json({ reply });
   } catch (error) {
     console.error("OpenRouter AI Error:", error);
-
     res.status(500).json({
       message: "Failed to get AI response",
       error: error.message,
@@ -107,9 +97,7 @@ const generateRecipe = async (req, res) => {
     } = req.body;
 
     if (!ingredients || !ingredients.trim()) {
-      return res.status(400).json({
-        message: "Ingredients are required",
-      });
+      return res.status(400).json({ message: "Ingredients are required" });
     }
 
     const mealInstruction = mealName.trim()
@@ -124,34 +112,24 @@ Category: ${category}.
 ${mealInstruction}
 
 Return ONLY valid JSON. Do not use markdown or code fences.
-
 Use exactly this structure:
 {
   "name": "Recipe name",
-  "description": "Short description",\n  "slogan": "Short attractive recipe slogan",
+  "description": "Short description",
+  "slogan": "Short attractive recipe slogan",
   "category": "Category",
   "diet": "Diet",
   "ingredients": ["ingredient with quantity"],
   "instructions": ["step 1", "step 2"],
   "prepTime": "30 minutes"
 }
-
-Do not invent medical claims.
-Keep the recipe realistic and easy to prepare.
+Do not invent medical claims. Keep the recipe realistic and easy to prepare.
 `;
 
     const raw = await generateWithOpenRouter(
-      [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      {
-        type: "json_object",
-      }
+      [{ role: "user", content: prompt }],
+      { type: "json_object" }
     );
-
     const recipeData = JSON.parse(raw);
 
     const recipe = await Recipe.create({
@@ -167,13 +145,9 @@ Keep the recipe realistic and easy to prepare.
       createdBy: req.user.id,
     });
 
-    res.status(201).json({
-      message: "Recipe generated successfully",
-      recipe,
-    });
+    res.status(201).json({ message: "Recipe generated successfully", recipe });
   } catch (error) {
     console.error("Recipe Generation Error:", error);
-
     res.status(500).json({
       message: "Failed to generate recipe",
       error: error.message,
@@ -181,7 +155,4 @@ Keep the recipe realistic and easy to prepare.
   }
 };
 
-module.exports = {
-  chatWithAI,
-  generateRecipe,
-};
+module.exports = { chatWithAI, generateRecipe };
