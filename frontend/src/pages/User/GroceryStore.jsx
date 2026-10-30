@@ -177,7 +177,7 @@ export default function GroceryStore() {
 
       setCart({ items: [] });
       setCartOpen(false);
-      setReceipt({ order: data.order, user: data.user });
+      setReceipt({ order: data.order, user: data.user, receiptEmail: data.receiptEmail });
     } catch (error) {
       console.error(error);
       alert("Unable to connect to server.");
@@ -564,6 +564,14 @@ export default function GroceryStore() {
             </div>
 
             <div className="p-6 space-y-4">
+              {receipt.receiptEmail && (
+                <p className={`text-xs rounded-lg px-3 py-2 ${receipt.receiptEmail.sent ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                  {receipt.receiptEmail.sent
+                    ? `Email receipt sent to ${receipt.user?.email || "your registered email"}`
+                    : "Order placed. Email receipt could not be sent; you can still print this receipt."}
+                </p>
+              )}
+
               <div className="border-b border-dashed border-gray-200 pb-4 space-y-1.5 text-sm">
                 <Row label="Order ID" value={receipt.order.orderId} />
                 <Row label="Date & Time" value={formatDateTime(receipt.order.createdAt)} />
