@@ -9,6 +9,9 @@ const {
   createRecipe,
   updateRecipe,
   deleteRecipe,
+  getArchivedRecipes,
+  restoreArchivedRecipe,
+  permanentlyDeleteArchivedRecipe,
 } = require("../../controllers/admin/recipeController");
 
 router.get("/archived", auth, admin, getArchivedRecipes);
