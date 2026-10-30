@@ -122,6 +122,35 @@ export default function MealPlanner() {
       return [];
     } finally { setRecommendationLoading(false); }
   };
+  const captureIngredientsByVoice = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      alert("Voice input could not be captured. Please try again.");
+    };
+    recognition.onresult = (event) => {
+      const spoken = event.results?.[0]?.[0]?.transcript?.trim();
+      if (!spoken) return;
+      setIngredients((current) => {
+        const existing = current.split(",").map((item) => item.trim()).filter(Boolean);
+        const additions = spoken.split(/,|\band\b/).map((item) => item.trim()).filter(Boolean);
+        return [...new Set([...existing, ...additions])].join(", ");
+      });
+    };
+    recognition.start();
+  };
+
   const getAvailableIngredients = () =>
     String(ingredients || "")
       .split(",")
