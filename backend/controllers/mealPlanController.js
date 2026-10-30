@@ -496,6 +496,7 @@ exports.updateMealSelection = async (req, res) => {
     if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
     dayPlan[mealType] = selected.name;
     dayPlan[mealType + "Ingredients"] = selected.ingredients;
+    mealPlan.markModified("meals");
     await mealPlan.save();
     res.json({ success: true, message: "Meal selection saved.", mealPlan });
   } catch (error) {
