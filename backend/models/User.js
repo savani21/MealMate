@@ -30,6 +30,13 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    dislikes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Recipe",
+      },
+    ],
+
     // Remember the user's food preference for future meal plans.
     foodPreference: {
       type: String,
