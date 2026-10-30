@@ -31,6 +31,9 @@ export default function MealMateAssistant() {
   const recognitionRef = useRef(null);
   const scrollRef = useRef(null);
   const voiceRequestRef = useRef(false);
+  const recognitionHandledRef = useRef(false);
+  const lastVoiceTranscriptRef = useRef("");
+  const lastVoiceTranscriptAtRef = useRef(0);
 
   const selectedLanguage = LANGUAGES.find((item) => item.value === language) || LANGUAGES[0];
 
@@ -136,15 +139,48 @@ export default function MealMateAssistant() {
     window.speechSynthesis?.cancel();
     const recognition = new SpeechRecognition();
     recognition.lang = selectedLanguage.code;
+    recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
+    recognitionHandledRef.current = false;
     recognitionRef.current = recognition;
+
     recognition.onstart = () => setListening(true);
     recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = (event) => {
+      setListening(false);
+      if (event.error !== "no-speech" && event.error !== "aborted") {
+        console.error("Voice recognition error:", event.error);
+      }
+    };
     recognition.onresult = (event) => {
-      const spokenText = event.results?.[0]?.[0]?.transcript?.trim();
-      if (spokenText) sendMessage(spokenText, true);
+      if (recognitionHandledRef.current) return;
+
+      let spokenText = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (result.isFinal) {
+          spokenText = result[0]?.transcript?.trim() || "";
+          if (spokenText) break;
+        }
+      }
+
+      if (!spokenText) return;
+
+      const now = Date.now();
+      const isDuplicate = spokenText.toLocaleLowerCase() === lastVoiceTranscriptRef.current.toLocaleLowerCase()
+        && now - lastVoiceTranscriptAtRef.current < 2500;
+      if (isDuplicate) {
+        recognitionHandledRef.current = true;
+        recognition.stop();
+        return;
+      }
+
+      recognitionHandledRef.current = true;
+      lastVoiceTranscriptRef.current = spokenText;
+      lastVoiceTranscriptAtRef.current = now;
+      recognition.stop();
+      sendMessage(spokenText, true);
     };
     recognition.start();
   };
