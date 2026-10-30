@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../../api/config.js";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp } from "lucide-react";
@@ -47,7 +48,7 @@ export default function MealPlanner() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    fetch("http://localhost:5000/api/auth/profile", {
+    fetch(`${API_BASE_URL}/api/auth/profile`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((response) => response.json())
@@ -66,7 +67,7 @@ export default function MealPlanner() {
     const token = localStorage.getItem("token");
     if (!token || !value) return;
 
-    fetch("http://localhost:5000/api/auth/profile", {
+    fetch(`${API_BASE_URL}/api/auth/profile`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -106,7 +107,7 @@ export default function MealPlanner() {
         mode: "recommended",
       });
       const response = await fetch(
-        "http://localhost:5000/api/recipes/recommended?" + query.toString()
+        `${API_BASE_URL}/api/recipes/recommended?` + query.toString()
       );
       const data = await response.json();
       if (!response.ok) {
@@ -161,7 +162,7 @@ export default function MealPlanner() {
         mode: ingredientMode,
         diet,
       });
-      const response = await fetch("http://localhost:5000/api/recipes/recommended?" + params.toString());
+      const response = await fetch(`${API_BASE_URL}/api/recipes/recommended?` + params.toString());
       const data = await response.json();
       if (!response.ok) {
         setRecommendedRecipes([]);
@@ -206,7 +207,7 @@ export default function MealPlanner() {
         recommendedToUse = recommended;
         finalIngredients = [...new Set([...available, ...recommended])];
       }
-      const response = await fetch("http://localhost:5000/api/meal-plans", {
+      const response = await fetch(`${API_BASE_URL}/api/meal-plans`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
