@@ -156,7 +156,8 @@ Keep the recipe realistic and easy to prepare.
 
     const recipe = await Recipe.create({
       name: recipeData.name,
-      description: recipeData.description || "",\n      slogan: recipeData.slogan || "Made with love, served with joy!",
+      description: recipeData.description || "",
+      slogan: recipeData.slogan || "Made with love, served with joy!",
       category: recipeData.category || category,
       diet: recipeData.diet || diet,
       ingredients: recipeData.ingredients || [],
