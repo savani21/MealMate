@@ -127,7 +127,7 @@ Return ONLY valid JSON. Do not use markdown or code fences.
 Use exactly this structure:
 {
   "name": "Recipe name",
-  "description": "Short description",
+  "description": "Short description",\n  "slogan": "Short attractive recipe slogan",
   "category": "Category",
   "diet": "Diet",
   "ingredients": ["ingredient with quantity"],
@@ -155,7 +155,7 @@ Keep the recipe realistic and easy to prepare.
 
     const recipe = await Recipe.create({
       name: recipeData.name,
-      description: recipeData.description || "",
+      description: recipeData.description || "",\n      slogan: recipeData.slogan || "Made with love, served with joy!",
       category: recipeData.category || category,
       diet: recipeData.diet || diet,
       ingredients: recipeData.ingredients || [],
