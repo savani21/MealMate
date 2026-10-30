@@ -12,10 +12,11 @@ const addFavorite = async (req, res) => {
       });
     }
 
-    if (!user.favorites.includes(recipe._id)) {
+    if (!user.favorites.some((id) => id.toString() === recipe._id.toString())) {
       user.favorites.push(recipe._id);
-      await user.save();
     }
+    user.dislikes = (user.dislikes || []).filter((id) => id.toString() !== recipe._id.toString());
+    await user.save();
 
     res.json({
       message: "Recipe added to favorites",
