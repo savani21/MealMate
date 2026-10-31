@@ -33,7 +33,7 @@ const ALLERGEN_ALIASES = {
   sesame: ["sesame", "sesame seeds", "til", "tahini"],
   fish: ["fish", "salmon", "tuna", "cod", "sardine", "anchovy"],
   shellfish: ["shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "mussel", "clam", "oyster"],
-  "tree nuts": ["almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
+  "tree nuts": ["nut", "nuts", "almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
 };
 
 function normalizeFoodText(value) {
@@ -68,7 +68,7 @@ function mealAllergyConflicts(meal, allergies) {
     }
     const options = Array.isArray(meal?.[type + "Options"]) ? meal[type + "Options"] : [];
     options.forEach((option) => {
-      parts.push(option?.name);
+      parts.push(option?.name, option?.description);
       if (Array.isArray(option?.ingredients)) {
         parts.push(...option.ingredients.map((item) => typeof item === "string" ? item : item?.name || ""));
       }
