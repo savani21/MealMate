@@ -9,6 +9,7 @@ export default function MealPlanner() {
   const params = new URLSearchParams(window.location.search);
   const [goal, setGoal] = useState("");
   const [diet, setDiet] = useState("");
+  const [allergies, setAllergies] = useState("");
   const [ingredients, setIngredients] = useState(params.get("ingredients") || "");
   const [duration, setDuration] = useState("3");
   const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
@@ -76,7 +77,7 @@ export default function MealPlanner() {
       finalIngredients = [...new Set([...available, ...recommendedToUse])];
     }
     return {
-      goal, diet, duration: Number(duration),
+      goal, diet, allergies, duration: Number(duration),
       availableIngredients: available.join(", "),
       recommendedIngredients: recommendedToUse.join(", "),
       ingredientMode,
@@ -199,6 +200,7 @@ export default function MealPlanner() {
             <div><label className="block text-sm font-semibold text-gray-700 mb-2">Diet Type</label><select value={diet} onChange={(e) => {handleDietChange(e.target.value);setPreviewReady(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select diet type</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="non-vegetarian">Non-Vegetarian</option><option value="eggetarian">Eggetarian</option></select></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-2">Plan Duration</label><select value={duration} onChange={(e) => {setDuration(e.target.value);setPreviewReady(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option></select></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-2">Ingredients You Already Have</label><div className="relative"><ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" value={ingredients} onChange={(e) => {setIngredients(e.target.value);setPreviewReady(false);}} placeholder="e.g. rice, paneer, tomato, spinach" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" /></div><p className="text-xs text-gray-400 mt-2">These ingredients will be passed to the recipe generator automatically. You won't need to enter them again.</p></div>
+            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Food Allergies / Ingredients to Avoid</label><textarea value={allergies} onChange={(e) => {setAllergies(e.target.value);setPreviewReady(false);}} placeholder="e.g. peanuts, milk, soy, shellfish (comma-separated)" rows={3} className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-primary resize-y" /><p className="text-xs text-amber-700 mt-2">MealMate will reject a generated plan if a listed allergen is found in a meal name or ingredient list. Always verify food labels and cross-contact risks.</p></div>
           </div>
           <div className="mt-8 border-t border-gray-100 pt-8"><h3 className="font-black text-gray-900 text-lg mb-4">How should we plan your meals?</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button type="button" onClick={() => {setIngredientMode("available");setPreviewReady(false);}} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "available" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ShoppingBasket className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Only Available Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Use only the ingredients you already have.</p>{ingredientMode === "available" && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button>
