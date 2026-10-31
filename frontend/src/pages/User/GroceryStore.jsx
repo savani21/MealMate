@@ -291,15 +291,19 @@ export default function GroceryStore() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <button
-            onClick={() => setLocation("/user/grocery")}
-            className="flex items-center gap-2 text-gray-600 hover:text-primary transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Grocery List
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
+        <div className="w-full h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center"><ShoppingBasket className="w-5 h-5 text-primary" /></span>
+            <span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
           </button>
+          <nav className="hidden lg:flex items-center gap-1">
+            <NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} />
+            <NavLink label="Meal Planner" onClick={() => setLocation("/meal-planner")} />
+            <NavLink label="Pantry" onClick={() => setLocation("/pantry")} />
+            <NavLink label="Meal Plans" onClick={() => setLocation("/my-meal-plans")} />
+            <NavLink label="Recipes" onClick={() => setLocation("/recipes")} />
+          </nav>
 
           <div className="flex items-center gap-3">
             <button
@@ -379,7 +383,7 @@ export default function GroceryStore() {
             )}
 
             {unmatchedRequestedIngredients.length > 0 && (
-              <p className="text-xs text-amber-600 mt-4">Some required ingredients are not currently in the store catalog. Use the search box below for alternatives.</p>
+              <p className="text-xs text-amber-600 mt-4">Some ingredients are not sold in the store catalog. Search each missing ingredient below and add a suitable alternative manually. Ingredients already marked “Needed” can be added together using Add All Missing.</p>
             )}
           </div>
         )}
