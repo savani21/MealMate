@@ -131,79 +131,120 @@ function localMeal(name, pool, keywords, count = 3) {
   };
 }
 
-function generateLocalMealPlan({ duration, diet, allowedPool }) {
-  const pool = allowedPool.filter(
-    (item) => !DIET_FORBIDDEN[diet]?.test(item)
-  );
-
-  if (!pool.length) {
-    throw new Error(
-      `No allowed ingredients are available for the selected ${diet} diet.`
+function buildLocalOptions(pool, type, dayNumber) {
+  const templates = {
+    breakfast: [
+      ["Poha", ["poha", "flattened rice", "onion", "potato", "peanut"]],
+      ["Aloo Paratha", ["wheat", "atta", "flour", "potato", "curd"]],
+      ["Vegetable Upma", ["rava", "sooji", "semolina", "onion", "vegetable"]],
+      ["Besan Chilla", ["besan", "gram flour", "onion", "tomato"]],
+      ["Idli Sambar", ["idli", "batter", "urad", "dal", "rice"]],
+      ["Sweet Wheat Porridge", ["wheat", "atta", "flour", "sugar", "milk"]],
+      ["Banana Milk Smoothie", ["banana", "milk", "curd"]],
+      ["Paneer Sandwich", ["bread", "paneer", "tomato", "onion"]],
+    ],
+    lunch: [
+      ["Vegetable Pulao", ["rice", "vegetable", "carrot", "peas", "onion"]],
+      ["Dal Rice", ["rice", "dal", "lentil", "tomato"]],
+      ["Chana Masala", ["chana", "chickpea", "tomato", "onion"]],
+      ["Paneer Bhurji with Roti", ["paneer", "wheat", "atta", "flour", "tomato"]],
+      ["Tomato Rice", ["rice", "tomato", "onion"]],
+      ["Aloo Roti", ["potato", "wheat", "atta", "flour"]],
+      ["Vegetable Khichdi", ["rice", "dal", "lentil", "vegetable"]],
+    ],
+    dinner: [
+      ["Dal Khichdi", ["rice", "dal", "lentil", "turmeric"]],
+      ["Roti with Aloo Sabzi", ["wheat", "atta", "flour", "potato", "tomato"]],
+      ["Paneer Rice Bowl", ["paneer", "rice", "tomato", "onion"]],
+      ["Tomato Pulao", ["rice", "tomato", "onion"]],
+      ["Vegetable Dalia", ["dalia", "broken wheat", "vegetable", "onion"]],
+      ["Curd Rice", ["rice", "curd", "yogurt"]],
+    ],
+  };
+  const normalized = pool.map((item) => item.toLowerCase());
+  const candidates = templates[type] || templates.lunch;
+  const ranked = candidates.map(([name, keywords], index) => {
+    const matched = pool.filter((item, i) =>
+      keywords.some((keyword) => normalized[i].includes(keyword))
     );
+    return { name, keywords, matched, score: matched.length, index };
+  }).sort((a, b) => b.score - a.score || a.index - b.index);
+
+  const chosen = [];
+  for (const candidate of ranked) {
+    if (chosen.length === 3) break;
+    if (candidate.score > 0 && !chosen.some((item) => item.name === candidate.name)) {
+      chosen.push(candidate);
+    }
   }
 
-  const lower = pool.map((item) => item.toLowerCase());
-  const has = (term) => lower.some((item) => item.includes(term));
+  // Always return three distinct, usable options, even when the pantry is sparse.
+  const fallbacks = [
+    ["Indian Masala Bowl", ["rice", "potato", "tomato", "onion"]],
+    ["Homestyle Spiced Roti", ["wheat", "atta", "flour", "potato", "tomato"]],
+    ["Simple Indian Veggie Mix", ["vegetable", "potato", "tomato", "onion"]],
+  ];
+  for (const [name, keywords] of fallbacks) {
+    if (chosen.length >= 3) break;
+    if (!chosen.some((item) => item.name === name)) {
+      chosen.push({
+        name,
+        keywords,
+        matched: pool.filter((item) => keywords.some((keyword) => item.toLowerCase().includes(keyword))),
+        score: 0,
+      });
+    }
+  }
 
-  const breakfast = has("oat")
-    ? localMeal("Oatmeal Bowl", pool, ["oat", "milk", "banana", "salt"])
-    : has("bread")
-      ? localMeal("Healthy Bread Sandwich", pool, ["bread", "tomato", "onion", "paneer"])
-      : has("banana") && has("milk")
-        ? localMeal("Banana Milk Smoothie", pool, ["banana", "milk"])
-        : localMeal("Healthy Ingredient Bowl", pool, ["fruit", "milk", "oat", "bread"]);
+  return chosen.slice(0, 3).map((candidate, index) => {
+    const picked = candidate.matched.length
+      ? candidate.matched.slice(0, 4)
+      : pool.slice(index % pool.length, index % pool.length + 3);
+    const ingredients = (picked.length ? picked : pool.slice(0, 3)).map((name) => ({
+      name,
+      quantity: "as needed",
+    }));
+    return {
+      name: candidate.name,
+      description: "A quick Indian home-style meal using your selected ingredients.",
+      prepTime: index === 0 ? "20 minutes" : "25 minutes",
+      ingredients,
+    };
+  });
+}
 
-  const lunch = has("rice") && has("dal")
-    ? localMeal("Dal Rice", pool, ["rice", "dal", "tomato", "onion"])
-    : has("rice")
-      ? localMeal("Vegetable Rice Bowl", pool, ["rice", "vegetable", "onion", "tomato"])
-      : has("roti") || has("atta") || has("wheat")
-        ? localMeal("Roti with Mixed Vegetables", pool, ["roti", "atta", "wheat", "vegetable", "tomato"])
-        : has("paneer")
-          ? localMeal("Paneer Stir-Fry", pool, ["paneer", "capsicum", "onion", "tomato"])
-          : localMeal("Mixed Ingredient Bowl", pool, ["vegetable", "onion", "tomato"]);
+function generateLocalMealPlan({ duration, diet, allowedPool }) {
+  const pool = [...new Set(allowedPool)].filter(
+    (item) => !DIET_FORBIDDEN[diet]?.test(item)
+  );
+  if (!pool.length) {
+    throw new Error(`No allowed ingredients are available for the selected ${diet} diet.`);
+  }
 
-  const dinner = has("paneer")
-    ? localMeal("Paneer and Vegetable Stir-Fry", pool, ["paneer", "capsicum", "onion", "tomato"])
-    : has("rice") && has("dal")
-      ? localMeal("Simple Khichdi", pool, ["rice", "dal", "salt", "turmeric"])
-      : has("bread")
-        ? localMeal("Light Vegetable Sandwich", pool, ["bread", "tomato", "onion", "vegetable"])
-        : localMeal("Simple Dinner Bowl", pool, ["vegetable", "rice", "dal", "paneer"]);
-
-  const snack = has("banana")
-    ? localMeal("Banana Snack", pool, ["banana", "milk", "oat"])
-    : has("fruit")
-      ? localMeal("Fresh Fruit Snack", pool, ["fruit"])
-      : has("bread")
-        ? localMeal("Light Toast", pool, ["bread"])
-        : localMeal("Simple Snack", pool, pool.slice(0, 2), 2);
-
-  const templates = [breakfast, lunch, dinner, snack];
   const days = [];
-
   for (let day = 1; day <= Number(duration); day += 1) {
-    const offset = (day - 1) % templates.length;
-    const get = (index) => templates[(index + offset) % templates.length];
-
-    const b = get(0);
-    const l = get(1);
-    const d = get(2);
-    const s = get(3);
+    const breakfastOptions = buildLocalOptions(pool, "breakfast", day);
+    const lunchOptions = buildLocalOptions(pool, "lunch", day);
+    const dinnerOptions = buildLocalOptions(pool, "dinner", day);
+    const snackName = pool.some((item) => /banana|apple|fruit|milk|curd|yogurt/i.test(item))
+      ? "Indian Fruit or Curd Snack"
+      : "Roasted Masala Ingredient Snack";
 
     days.push({
       day,
-      breakfast: b.name,
-      breakfastIngredients: b.ingredients,
-      lunch: l.name,
-      lunchIngredients: l.ingredients,
-      dinner: d.name,
-      dinnerIngredients: d.ingredients,
-      snack: s.name,
-      snackIngredients: s.ingredients,
+      breakfast: breakfastOptions[0].name,
+      breakfastIngredients: breakfastOptions[0].ingredients,
+      breakfastOptions,
+      lunch: lunchOptions[0].name,
+      lunchIngredients: lunchOptions[0].ingredients,
+      lunchOptions,
+      dinner: dinnerOptions[0].name,
+      dinnerIngredients: dinnerOptions[0].ingredients,
+      dinnerOptions,
+      snack: snackName,
+      snackIngredients: pool.slice(0, Math.min(2, pool.length)).map((name) => ({ name, quantity: "as needed" })),
     });
   }
-
   return { days };
 }
 
@@ -310,10 +351,17 @@ Do not include markdown or explanations outside JSON.
       generatedMeals = { days: req.body.selectedDays };
       generatedBy = "user-selected";
     } else {
-      generatedMeals = await generateWithOpenRouter(prompt);
-      if (!generatedMeals) {
+      // Preview must be fast and predictable: use local Indian meal templates
+      // instead of waiting on variable-latency free AI model routing.
+      if (req.body.previewOnly === true) {
         generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
-        generatedBy = "local-fallback";
+        generatedBy = "local-fast";
+      } else {
+        generatedMeals = await generateWithOpenRouter(prompt);
+        if (!generatedMeals) {
+          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+          generatedBy = "local-fallback";
+        }
       }
     }
 
