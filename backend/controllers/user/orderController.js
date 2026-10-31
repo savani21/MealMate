@@ -3,6 +3,35 @@ const crypto = require("crypto");
 const Cart = require("../../models/user/Cart");
 const Order = require("../../models/user/Order");
 const User = require("../../models/User");
+const GroceryList = require("../../models/user/GroceryList");
+
+function normalizePurchasedIngredient(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "")
+    .replace(/^\\s*[\\d./]+\\s*/, "")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim()
+    .replace(/s$/, "");
+}
+
+async function markPurchasedGroceryItems(userId, orderItems) {
+  const purchasedNames = new Set(orderItems.map((item) => normalizePurchasedIngredient(item.name)).filter(Boolean));
+  if (!purchasedNames.size) return;
+
+  const lists = await GroceryList.find({ user: userId });
+  for (const list of lists) {
+    let changed = false;
+    for (const item of list.items) {
+      if (purchasedNames.has(normalizePurchasedIngredient(item.name)) && !item.checked) {
+        item.checked = true;
+        changed = true;
+      }
+    }
+    if (changed) await list.save();
+  }
+}
 
 function generateOrderId() {
   const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "");
@@ -48,6 +77,16 @@ exports.checkout = async (req, res) => {
       totalAmount,
       deliveryTime,
     });
+
+    // A completed purchase satisfies matching ingredients in every meal-plan
+    // grocery list, so they are not offered for purchase again.
+    try {
+      await markPurchasedGroceryItems(req.user.id, items);
+    } catch (groceryError) {
+      // The order is already created; do not turn a successful payment/order
+      // into a failed checkout because a grocery-list sync needs retrying.
+      console.error("Could not sync purchased ingredients to grocery lists:", groceryError);
+    }
 
     // Empty the cart now that the order has been placed
     cart.items = [];
