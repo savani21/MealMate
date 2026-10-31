@@ -99,7 +99,7 @@ export default function MealPlanDetails() {
       .map((item) => {
         const rawName = typeof item === "string" ? item : item?.name;
         return String(rawName || "")
-          .replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "")
+          .replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "")
           .trim();
       })
       .filter(Boolean);
