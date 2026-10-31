@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat } from "lucide-react";
 
@@ -119,6 +119,44 @@ export default function MealPlanner() {
     } finally { setLoading(false); }
   };
 
+
+  const [recommendedRecipes, setRecommendedRecipes] = useState([]);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+
+  const fetchRecommendedRecipes = async () => {
+    const available = ingredients.split(",").map((item) => item.trim()).filter(Boolean);
+    if (!available.length || !diet) {
+      setRecommendedRecipes([]);
+      return;
+    }
+    try {
+      setRecommendationLoading(true);
+      const query = new URLSearchParams({
+        available: available.join(","),
+        recommended: recommendedIngredients.join(","),
+        mode: ingredientMode,
+        diet,
+      });
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/recipes/recommended?" + query.toString(), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Failed to get recommendations");
+      setRecommendedRecipes(data.recipes || []);
+    } catch (error) {
+      console.error("Recipe recommendation error:", error);
+      setRecommendedRecipes([]);
+    } finally {
+      setRecommendationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(fetchRecommendedRecipes, 450);
+    return () => clearTimeout(timer);
+  }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
+
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-30"><div className="w-full px-4 sm:px-6 lg:px-8"><div className="h-20 flex items-center justify-between gap-6"><div className="flex items-center gap-2 shrink-0"><Sparkles className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div><nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto text-sm font-semibold"><NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} /><NavLink label="Meal Planner" active onClick={() => setLocation("/meal-planner")} /><NavLink label="Pantry" onClick={() => setLocation("/pantry")} /><NavLink label="Meal Plans" onClick={() => setLocation("/my-meal-plans")} /><NavLink label="Recipes" onClick={() => setLocation("/recipes")} /></nav></div></div></header>
@@ -136,6 +174,34 @@ export default function MealPlanner() {
             <button type="button" onClick={() => {setIngredientMode("available");setPreviewReady(false);}} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "available" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ShoppingBasket className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Only Available Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Use only the ingredients you already have.</p>{ingredientMode === "available" && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button>
             <button type="button" onClick={async () => {setIngredientMode("recommended");setPreviewReady(false);await getRecommendedIngredients();}} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "recommended" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ThumbsUp className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Available + Recommended Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Use your ingredients plus suggested ingredients you can purchase.</p>{recommendationLoading ? <p className="text-sm text-primary font-semibold mt-4">Loading recommendations...</p> : recommendedIngredients.length > 0 ? <div className="flex flex-wrap gap-2 mt-4">{recommendedIngredients.slice(0, 8).map((item) => <span key={item} className="px-2.5 py-1 rounded-full bg-white border border-green-100 text-xs font-medium text-gray-600">{item}</span>)}</div> : <p className="text-xs text-gray-400 mt-4">Suggestions are based on popular recipes.</p>}{ingredientMode === "recommended" && !recommendationLoading && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button>
           </div></div>
+
+          <section className="mt-8 border-t border-gray-100 pt-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="font-black text-gray-900 text-lg">Recommended Recipes</h3>
+                <p className="text-sm text-gray-500">Suggestions based on your ingredients, food preference and ratings.</p>
+              </div>
+              {recommendationLoading && <span className="text-xs font-semibold text-primary">Updating...</span>}
+            </div>
+            {recommendedRecipes.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {recommendedRecipes.slice(0, 3).map((recipe) => (
+                  <div key={recipe._id} className="rounded-xl border border-gray-100 p-4 bg-gray-50">
+                    <h4 className="font-bold text-gray-900">{recipe.name}</h4>
+                    <p className="text-xs text-gray-500 mt-1">{recipe.description}</p>
+                    <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                      <span className="rounded-full bg-white px-2 py-1">{recipe.matchPercentage || 0}% ingredient match</span>
+                      <span className="rounded-full bg-white px-2 py-1">{recipe.averageRating || 0}/5 ({recipe.ratingCount || 0})</span>
+                    </div>
+                    {recipe.missingIngredients?.length > 0 && <p className="text-xs text-amber-700 mt-2">Missing: {recipe.missingIngredients.join(", ")}</p>}
+                    <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="mt-3 text-sm font-semibold text-primary hover:underline">View recipe</button>
+                  </div>
+                ))}
+              </div>
+            ) : !recommendationLoading ? (
+              <p className="text-sm text-gray-400">Add ingredients and select a food preference to see recipe suggestions.</p>
+            ) : null}
+          </section>
           <div className="mt-8 pt-6 border-t border-gray-100"><button onClick={generatePlan} disabled={loading || recommendationLoading} className="w-full md:w-auto md:min-w-[280px] mx-auto flex items-center justify-center gap-2 bg-primary text-white px-6 py-3.5 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-60"><Sparkles className="w-5 h-5" />{loading ? "Preparing Recipe Options..." : "Show My Recipe Options"}</button></div>
         </section>
 
