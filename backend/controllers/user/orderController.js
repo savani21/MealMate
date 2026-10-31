@@ -9,7 +9,7 @@ function normalizePurchasedIngredient(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "")
-    .replace(/^\s*[\\d./]+\s*/, "")
+    .replace(/^\s*[\d./]+\s*/, "")
     .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
