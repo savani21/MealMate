@@ -29,6 +29,12 @@ const userSchema = new mongoose.Schema(
         ref: "Recipe",
       },
     ],
+
+    foodPreference: {
+      type: String,
+      enum: ["", "vegetarian", "vegan", "non-vegetarian", "eggetarian"],
+      default: "",
+    },
   },
   {
     timestamps: true,
