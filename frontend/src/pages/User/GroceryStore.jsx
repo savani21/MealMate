@@ -284,9 +284,15 @@ export default function GroceryStore() {
   const isRequestedProduct = (product) =>
     requestedIngredients.some((ingredient) => productMatchesIngredient(product, ingredient));
 
+  const isProductInCart = (product) =>
+    (cart.items || []).some((item) =>
+      String(item.product?._id || item.product || item.productId || "") === String(product._id)
+    );
+
+  // Only show products that are still missing from the cart.
   const matchedRequestedProducts = useMemo(
-    () => products.filter(isRequestedProduct),
-    [products, requestedIngredients.join(",")]
+    () => products.filter((product) => isRequestedProduct(product) && !isProductInCart(product)),
+    [products, requestedIngredients.join(","), cart.items]
   );
 
   const unmatchedRequestedIngredients = requestedIngredients.filter(
@@ -297,11 +303,12 @@ export default function GroceryStore() {
   const [requestedAddMessage, setRequestedAddMessage] = useState("");
 
   const addAllRequested = async () => {
-    if (!matchedRequestedProducts.length || addingRequested) return;
+    const productsToAdd = matchedRequestedProducts;
+    if (!productsToAdd.length || addingRequested) return;
     setAddingRequested(true);
     setRequestedAddMessage("");
     const failed = [];
-    for (const product of matchedRequestedProducts) {
+    for (const product of productsToAdd) {
       try {
         const response = await fetch(`${API}/api/store/cart`, {
           method: "POST",
@@ -318,7 +325,7 @@ export default function GroceryStore() {
     await loadCart();
     setRequestedAddMessage(failed.length
       ? `Added available items. Could not add: ${failed.join(", ")}.`
-      : `Successfully added ${matchedRequestedProducts.length} missing item(s) to your cart.`);
+      : `Successfully added ${productsToAdd.length} missing item(s) to your cart.`);
     setAddingRequested(false);
     setCartOpen(true);
   };
@@ -389,8 +396,8 @@ export default function GroceryStore() {
                 <p className="text-sm text-gray-500 mt-1">Only missing ingredients are shown, organized by the meal that needs them.</p>
               </div>
               {matchedRequestedProducts.length > 0 && (
-                <button onClick={addAllRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition">
-                  <ShoppingCart className="w-4 h-4" /> Add All Missing ({matchedRequestedProducts.length})
+                <button onClick={addAllRequested} disabled={addingRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-60 transition">
+                  <ShoppingCart className="w-4 h-4" /> {addingRequested ? "Adding..." : `Add All Missing (${matchedRequestedProducts.length})`}
                 </button>
               )}
             </div>
@@ -403,15 +410,17 @@ export default function GroceryStore() {
                       <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
                       <p className="font-bold text-gray-900 mt-1">{group.mealName}</p>
                     </div>
-                    <div className="px-4 py-3 flex flex-wrap gap-2">
-                      {group.items.map((item) => {
-                        const matched = products.some((product) => productMatchesIngredient(product, item.name));
-                        return (
-                          <span key={item._id} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${matched ? "bg-green-50 text-green-700 border border-green-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>
-                            {item.name}{item.quantity ? ` · ${item.quantity}` : ""}{!matched ? " (Not in store)" : ""}
+                    <div className="px-4 py-3">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">
+                        Items needed: {group.items.map((item) => item.name).join(", ")}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.items.filter((item) => !products.some((product) => productMatchesIngredient(product, item.name))).map((item) => (
+                          <span key={item._id} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                            {item.name} (Not in store)
                           </span>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -422,7 +431,8 @@ export default function GroceryStore() {
               </div>
             )}
 
-            {requestedAddMessage && <p role="status" className="mt-3 text-sm font-semibold text-primary">{requestedAddMessage}</p>}\n            {unmatchedRequestedIngredients.length > 0 && (
+            {requestedAddMessage && <p role="status" className="mt-3 text-sm font-semibold text-primary">{requestedAddMessage}</p>}
+            {unmatchedRequestedIngredients.length > 0 && (
               <p className="text-xs text-amber-600 mt-4">Some ingredients are not sold in the store catalog. Search each missing ingredient below and add a suitable alternative manually. Ingredients already marked “Needed” can be added together using Add All Missing.</p>
             )}
           </div>
@@ -454,11 +464,15 @@ export default function GroceryStore() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-primary font-semibold uppercase">{product.category}</p>
-                  {isRequestedProduct(product) && (
+                  {isProductInCart(product) ? (
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-700">
+                      In Cart
+                    </span>
+                  ) : isRequestedProduct(product) ? (
                     <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-green-50 text-primary">
                       Needed
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <h2 className="text-lg font-bold text-gray-900 mt-2">{product.name}</h2>
                 <p className="text-sm text-gray-500 mt-1">{product.unit}</p>
