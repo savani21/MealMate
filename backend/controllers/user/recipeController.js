@@ -25,6 +25,36 @@ function attachEngagement(recipe, counts, likedIds = []) {
   };
 }
 
+const normalizeIngredient = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/^[\s\d./-]+/, "")
+    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?)\s+/i, "")
+    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.,;:]+$/, "")
+    .replace(/\b(\w+)s$/, "$1");
+
+const cleanIngredients = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => normalizeIngredient(item))
+    .filter(Boolean);
+
+const getDietInvalidIngredients = (diet, ingredients) => {
+  const forbidden = RECIPE_FORBIDDEN[diet];
+  if (!forbidden) return [];
+  return ingredients.filter((ingredient) => forbidden.test(ingredient));
+};
+
+const RECIPE_FORBIDDEN = {
+  vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
+  vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
+  eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
+};
+
+
 const getRecommendedRecipes = async (req, res) => {
   try {
     const [recipes, reviewStats] = await Promise.all([
