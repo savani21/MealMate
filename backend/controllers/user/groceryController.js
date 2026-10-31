@@ -12,6 +12,7 @@ function normalizeIngredient(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/^[\s\d./-]+/, "")
+    .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
     .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|pack(?:s)?|cans?|can)\s+/i, "")
     .replace(/^[\s\d./-]+/, "")
     .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
@@ -365,7 +366,7 @@ function getShoppingIngredient(raw) {
   const value = String(raw || "").trim();
   const quantityMatch = value.match(/^((?:\d+\/\d+|\d+(?:\.\d+)?)\s*(?:cups?|tbsp|tbsps|tsp|tsps|kg|g|gm|grams?|ml|l|pieces?|piece|cloves?|slices?)?)\s+(.+)$/i);
   return {
-    name: normalizeIngredient(value),
+    name: normalizeIngredient(value.replace(/^as\\s+needed\\s*[:,-]?\\s*/i, "")),
     quantity: quantityMatch ? quantityMatch[1].trim() : "",
   };
 }
