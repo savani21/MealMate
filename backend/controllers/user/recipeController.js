@@ -52,14 +52,14 @@ const RECIPE_ALLERGEN_ALIASES = {
   sesame: ["sesame", "sesame seeds", "til", "tahini"],
   fish: ["fish", "salmon", "tuna", "cod", "sardine", "anchovy"],
   shellfish: ["shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "mussel", "clam", "oyster"],
-  "tree nuts": ["almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
+  "tree nuts": ["nut", "nuts", "almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
 };
 
 function recipeHasAllergen(recipe, allergies) {
   const terms = String(allergies || "").split(/[,;\n]/).map((item) =>
     item.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
   ).filter(Boolean);
-  const text = ` ${[recipe.name, ...(recipe.ingredients || [])].join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
+  const text = ` ${[recipe.name, recipe.description, ...(recipe.ingredients || []), ...(recipe.instructions || [])].join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
   return terms.some((term) => {
     const group = Object.entries(RECIPE_ALLERGEN_ALIASES).find(([key, aliases]) =>
       key === term || aliases.includes(term)
