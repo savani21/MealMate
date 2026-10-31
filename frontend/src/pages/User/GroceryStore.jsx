@@ -86,7 +86,7 @@ export default function GroceryStore() {
     }
   };
 
-  const loadStore = async () => {
+  const loadStore = async (requested = []) => {
     try {
       const response = await fetch(`${API}/api/store/products`, {
         headers: authHeaders(),
@@ -257,10 +257,32 @@ export default function GroceryStore() {
     });
   }, [products, searchText, requestedIngredients.join(",")]);
 
+  const normalizeSearchIngredient = (value) => String(value || "")
+    .toLowerCase()
+    .replace(/^as\\s+needed\\s*[:,-]?\\s*/i, "")
+    .replace(/^\\s*[\\d./]+\\s*/, "")
+    .replace(/\\b(?:cups?|tbsp|tsp|kg|g|gm|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\\b/gi, " ")
+    .replace(/\\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|to taste)\\b/gi, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim()
+    .replace(/ies$/, "y")
+    .replace(/s$/, "");
+
+  const productMatchesIngredient = (product, ingredient) => {
+    const productName = normalizeSearchIngredient(product?.name);
+    const ingredientName = normalizeSearchIngredient(ingredient);
+    if (!productName || !ingredientName) return false;
+    if (productName === ingredientName || productName.includes(ingredientName) || ingredientName.includes(productName)) return true;
+    const ignored = new Set(["and", "or", "whole", "white", "fresh"]);
+    const productTokens = productName.split(" ").filter((token) => token.length > 2 && !ignored.has(token));
+    const ingredientTokens = ingredientName.split(" ").filter((token) => token.length > 2 && !ignored.has(token));
+    return ingredientTokens.some((token) => productTokens.includes(token)) &&
+      ingredientTokens.filter((token) => productTokens.includes(token)).length >= Math.min(1, ingredientTokens.length);
+  };
+
   const isRequestedProduct = (product) =>
-    requestedIngredients.some((ingredient) =>
-      product.name.toLowerCase().includes(ingredient) || ingredient.includes(product.name.toLowerCase())
-    );
+    requestedIngredients.some((ingredient) => productMatchesIngredient(product, ingredient));
 
   const matchedRequestedProducts = useMemo(
     () => products.filter(isRequestedProduct),
@@ -268,19 +290,37 @@ export default function GroceryStore() {
   );
 
   const unmatchedRequestedIngredients = requestedIngredients.filter(
-    (ingredient) =>
-      !products.some(
-        (product) =>
-          product.name.toLowerCase().includes(ingredient) ||
-          ingredient.includes(product.name.toLowerCase())
-      )
+    (ingredient) => !products.some((product) => productMatchesIngredient(product, ingredient))
   );
 
+  const [addingRequested, setAddingRequested] = useState(false);
+  const [requestedAddMessage, setRequestedAddMessage] = useState("");
+
   const addAllRequested = async () => {
-    if (!matchedRequestedProducts.length) return;
+    if (!matchedRequestedProducts.length || addingRequested) return;
+    setAddingRequested(true);
+    setRequestedAddMessage("");
+    const failed = [];
     for (const product of matchedRequestedProducts) {
-      await addToCart(product._id);
+      try {
+        const response = await fetch(`${API}/api/store/cart`, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product._id, quantity: 1 }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Could not add item");
+        if (data.cart) setCart(data.cart);
+      } catch (error) {
+        failed.push(product.name);
+      }
     }
+    await loadCart();
+    setRequestedAddMessage(failed.length
+      ? `Added available items. Could not add: ${failed.join(", ")}.`
+      : `Successfully added ${matchedRequestedProducts.length} missing item(s) to your cart.`);
+    setAddingRequested(false);
+    setCartOpen(true);
   };
 
   const cartCount = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
@@ -365,7 +405,7 @@ export default function GroceryStore() {
                     </div>
                     <div className="px-4 py-3 flex flex-wrap gap-2">
                       {group.items.map((item) => {
-                        const matched = products.some((product) => product.name.toLowerCase().includes(item.name.toLowerCase()) || item.name.toLowerCase().includes(product.name.toLowerCase()));
+                        const matched = products.some((product) => productMatchesIngredient(product, item.name));
                         return (
                           <span key={item._id} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${matched ? "bg-green-50 text-green-700 border border-green-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>
                             {item.name}{item.quantity ? ` · ${item.quantity}` : ""}{!matched ? " (Not in store)" : ""}
@@ -382,7 +422,7 @@ export default function GroceryStore() {
               </div>
             )}
 
-            {unmatchedRequestedIngredients.length > 0 && (
+            {requestedAddMessage && <p role="status" className="mt-3 text-sm font-semibold text-primary">{requestedAddMessage}</p>}\n            {unmatchedRequestedIngredients.length > 0 && (
               <p className="text-xs text-amber-600 mt-4">Some ingredients are not sold in the store catalog. Search each missing ingredient below and add a suitable alternative manually. Ingredients already marked “Needed” can be added together using Add All Missing.</p>
             )}
           </div>
