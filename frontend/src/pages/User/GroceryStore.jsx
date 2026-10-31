@@ -176,6 +176,9 @@ export default function GroceryStore() {
 
       setCart({ items: [] });
       setCartOpen(false);
+      // Refresh the selected meal-plan list after checkout so purchased
+      // ingredients disappear immediately instead of being offered again.
+      if (listId) await loadRequestedGroceryList();
       setReceipt({ order: data.order, user: data.user });
     } catch (error) {
       console.error(error);
