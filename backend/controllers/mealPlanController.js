@@ -23,6 +23,61 @@ function cleanList(value) {
     .filter(Boolean);
 }
 
+const ALLERGEN_ALIASES = {
+  peanut: ["peanut", "peanuts", "groundnut", "groundnuts", "peanut oil"],
+  milk: ["milk", "dairy", "whey", "casein", "lactose", "butter", "ghee", "paneer", "cheese", "curd", "yogurt", "yoghurt", "cream", "buttermilk"],
+  egg: ["egg", "eggs", "albumin"],
+  soy: ["soy", "soya", "soybean", "soybeans", "tofu", "tempeh", "edamame"],
+  wheat: ["wheat", "wheat flour", "atta", "maida", "semolina", "suji", "rava", "durum"],
+  gluten: ["wheat", "barley", "rye", "malt", "semolina", "durum", "couscous"],
+  sesame: ["sesame", "sesame seeds", "til", "tahini"],
+  fish: ["fish", "salmon", "tuna", "cod", "sardine", "anchovy"],
+  shellfish: ["shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "mussel", "clam", "oyster"],
+  "tree nuts": ["almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
+};
+
+function normalizeFoodText(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function getAllergyTerms(allergies) {
+  return cleanList(String(allergies || "").replace(/;/g, ","))
+    .map((item) => normalizeFoodText(item))
+    .filter(Boolean);
+}
+
+function findAllergenConflicts(value, allergies) {
+  const text = ` ${normalizeFoodText(value)} `;
+  const conflicts = [];
+  getAllergyTerms(allergies).forEach((allergy) => {
+    const aliases = ALLERGEN_ALIASES[allergy] || [allergy];
+    if (aliases.some((alias) => text.includes(` ${normalizeFoodText(alias)} `))) {
+      conflicts.push(allergy);
+    }
+  });
+  return [...new Set(conflicts)];
+}
+
+function mealAllergyConflicts(meal, allergies) {
+  const conflicts = [];
+  ["breakfast", "lunch", "dinner"].forEach((type) => {
+    const parts = [meal?.[type]];
+    const ingredients = meal?.[type + "Ingredients"];
+    if (Array.isArray(ingredients)) {
+      parts.push(...ingredients.map((item) => typeof item === "string" ? item : item?.name || ""));
+    }
+    const options = Array.isArray(meal?.[type + "Options"]) ? meal[type + "Options"] : [];
+    options.forEach((option) => {
+      parts.push(option?.name);
+      if (Array.isArray(option?.ingredients)) {
+        parts.push(...option.ingredients.map((item) => typeof item === "string" ? item : item?.name || ""));
+      }
+    });
+    parts.forEach((part) => conflicts.push(...findAllergenConflicts(part, allergies)));
+  });
+  return [...new Set(conflicts)];
+}
+
 function mealViolatesDiet(meal, diet) {
   const forbidden = DIET_FORBIDDEN[diet];
   if (!forbidden) return false;
@@ -252,6 +307,23 @@ exports.createMealPlan = async (req, res) => {
       duration,
     } = req.body;
 
+    const allergyList = getAllergyTerms(allergies);
+    const allergyText = allergyList.join(", ");
+
+    if (!["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(diet)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please select a valid diet type.",
+      });
+    }
+
+    if (allergyText.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Please keep allergy information within 500 characters.",
+      });
+    }
+
     if (!goal || !diet || !duration) {
       return res.status(400).json({
         success: false,
@@ -264,6 +336,17 @@ exports.createMealPlan = async (req, res) => {
     const allowedPool = ingredientMode === "recommended"
       ? [...new Set([...available, ...recommended])]
       : available;
+
+    const allergenConflicts = [...new Set(
+      allowedPool.flatMap((ingredient) => findAllergenConflicts(ingredient, allergyText))
+    )];
+    if (allergenConflicts.length) {
+      return res.status(400).json({
+        success: false,
+        message: `Your selected ingredients conflict with these listed allergies: ${allergenConflicts.join(", ")}. Remove them before generating a meal plan.`,
+        allergenConflicts,
+      });
+    }
 
     const invalidAvailableIngredients = available.filter(
       (ingredient) => DIET_FORBIDDEN[diet]?.test(ingredient)
@@ -289,7 +372,7 @@ Create a practical personalized ${duration}-day meal plan.
 User goal: ${goal}
 Diet type: ${diet}
 Diet restriction: ${DIET_RULES[diet] || "Follow the selected diet type exactly."}
-Food allergies: ${allergies || "None"}
+Food allergies (STRICT exclusions; do not use these ingredients or their common forms): ${allergyText || "None"}
 
 Ingredients the user ALREADY HAS in their pantry:
 ${JSON.stringify(available)}
@@ -317,11 +400,12 @@ Rules:
 4. In Only Available mode, use ONLY pantry ingredients.
 5. Never add an ingredient outside the allowed ingredient pool.
 6. Follow the diet restriction strictly.
-7. Do not put the recipe name in its ingredient list.
-8. Keep ingredients specific to the meal.
-9. Quantities should be short and practical.
-10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool and selected diet.
-11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
+7. Never use any listed allergen, including aliases and derived ingredients.
+8. Do not put the recipe name in its ingredient list.
+9. Keep ingredients specific to the meal.
+10. Quantities should be short and practical.
+11. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool, selected diet and allergy restrictions.
+12. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
 {
@@ -412,6 +496,17 @@ Do not include markdown or explanations outside JSON.
       });
     }
 
+    const generatedAllergenConflicts = [...new Set(
+      days.flatMap((day) => mealAllergyConflicts(day, allergyText))
+    )];
+    if (generatedAllergenConflicts.length) {
+      return res.status(422).json({
+        success: false,
+        message: `The generated meal choices contain ingredients that conflict with your listed allergies: ${generatedAllergenConflicts.join(", ")}. No meal plan was saved. Please try again or update your ingredient list.`,
+        allergenConflicts: generatedAllergenConflicts,
+      });
+    }
+
     if (req.body.previewOnly === true) {
       return res.status(200).json({
         success: true,
@@ -426,7 +521,7 @@ Do not include markdown or explanations outside JSON.
       user: req.user.id,
       goal,
       diet,
-      allergies: allergies || "",
+      allergies: allergyText,
       availableIngredients: available.join(", "),
       recommendedIngredients: recommended.join(", "),
       ingredients: allowedPool.join(", "),
