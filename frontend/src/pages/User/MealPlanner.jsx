@@ -154,7 +154,7 @@ export default function MealPlanner() {
   const [recommendationLoading, setRecommendationLoading] = useState(false);
 
   const fetchRecommendedRecipes = async () => {
-    const available = ingredients.split(",").map((item) => item.trim()).filter(Boolean);
+    const available = getAvailableIngredients();
     if (!available.length || !diet) {
       setRecommendedRecipes([]);
       return;
@@ -181,6 +181,11 @@ export default function MealPlanner() {
       setRecommendationLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(fetchRecommendedRecipes, 450);
+    return () => clearTimeout(timer);
+  }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
 
   useEffect(() => {
     const timer = setTimeout(fetchRecommendedRecipes, 450);
