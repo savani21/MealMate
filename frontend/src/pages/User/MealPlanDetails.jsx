@@ -93,10 +93,19 @@ export default function MealPlanDetails() {
     if (!selectedMealName || !selectedDayPlan) { alert("Please select a day and meal first."); return; }
     // Use only the ingredients belonging to the selected meal, never the whole pantry/plan list.
     const selectedIngredients = selectedDayPlan[selectedMealType + "Ingredients"] || [];
-    const ingredientText = selectedIngredients.map((item) => {
-      if (typeof item === "string") return item;
-      return [item?.quantity, item?.name].filter(Boolean).join(" ");
-    }).filter(Boolean).join(", ");
+    // Recipe generation needs ingredient names, not quantity hints such as "as needed".
+    // Normalize prefixes and remove duplicates (including case-only duplicates).
+    const ingredientNames = selectedIngredients
+      .map((item) => {
+        const rawName = typeof item === "string" ? item : item?.name;
+        return String(rawName || "")
+          .replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "")
+          .trim();
+      })
+      .filter(Boolean);
+    const ingredientText = [...new Map(
+      ingredientNames.map((name) => [name.toLowerCase(), name])
+    ).values()].join(", ");
     if (!ingredientText) { alert("No ingredients were saved for this selected meal."); return; }
     const query = new URLSearchParams({
       generate: "1",
