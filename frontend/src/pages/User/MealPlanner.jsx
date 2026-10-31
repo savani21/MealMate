@@ -166,6 +166,7 @@ export default function MealPlanner() {
         recommended: recommendedIngredients.join(","),
         mode: ingredientMode,
         diet,
+        allergies,
       });
       const token = localStorage.getItem("token");
       const response = await fetch("http://localhost:5000/api/recipes/recommended?" + query.toString(), {
