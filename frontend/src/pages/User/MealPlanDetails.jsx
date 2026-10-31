@@ -127,8 +127,8 @@ export default function MealPlanDetails() {
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to create grocery list"); return; }
-      alert("Grocery list created successfully!");
-      setLocation("/user/grocery");
+      if (data.groceryList?._id) setLocation(`/grocery-store?listId=${encodeURIComponent(data.groceryList._id)}`);
+      else setLocation("/user/grocery");
     } catch (error) {
       console.error(error);
       alert("Unable to connect to server.");
@@ -179,7 +179,7 @@ export default function MealPlanDetails() {
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-8">
           <button onClick={() => setShowRecipeSelector(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
-          <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Creating Grocery List..." : "Generate Grocery List"}</button>
+          <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Preparing Cart..." : "Open Grocery Cart"}</button>
         </div>
 
         {showRecipeSelector && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowRecipeSelector(false); }}>
