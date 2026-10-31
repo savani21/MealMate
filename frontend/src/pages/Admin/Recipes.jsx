@@ -263,6 +263,11 @@ export default function Recipes() {
                 <p className="text-sm text-gray-500 mt-2 leading-relaxed line-clamp-3 flex-1">
                   {recipe.description || "No description provided."}
                 </p>
+                <div className="flex items-center gap-1 mt-3 text-xs text-gray-500">
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  <span className="font-semibold text-gray-700">{recipe.averageRating ? recipe.averageRating.toFixed(1) : "No rating"}</span>
+                  <span>({recipe.ratingCount || 0} reviews)</span>
+                </div>
 
                 <div className="flex items-center gap-2 mt-5">
                   <button
