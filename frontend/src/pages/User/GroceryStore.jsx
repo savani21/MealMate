@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  ArrowLeft,
+  ShoppingBasket,
   Minus,
   Plus,
   ShoppingCart,
@@ -298,11 +298,11 @@ export default function GroceryStore() {
             <span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
           </button>
           <nav className="hidden lg:flex items-center gap-1">
-            <NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} />
-            <NavLink label="Meal Planner" onClick={() => setLocation("/meal-planner")} />
-            <NavLink label="Pantry" onClick={() => setLocation("/pantry")} />
-            <NavLink label="Meal Plans" onClick={() => setLocation("/my-meal-plans")} />
-            <NavLink label="Recipes" onClick={() => setLocation("/recipes")} />
+            <button onClick={() => setLocation("/dashboard")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Dashboard</button>
+            <button onClick={() => setLocation("/meal-planner")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Meal Planner</button>
+            <button onClick={() => setLocation("/pantry")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Pantry</button>
+            <button onClick={() => setLocation("/my-meal-plans")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Meal Plans</button>
+            <button onClick={() => setLocation("/recipes")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Recipes</button>
           </nav>
 
           <div className="flex items-center gap-3">
