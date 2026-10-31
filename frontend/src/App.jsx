@@ -14,6 +14,7 @@ import MyMealPlans from "@/pages/User/MyMealPlans";
 import MealPlanDetails from "@/pages/User/MealPlanDetails";
 import GroceryList from "@/pages/User/GroceryList";
 import GroceryStore from "@/pages/User/GroceryStore";
+import Pantry from "@/pages/User/Pantry";
 import Recipes from "@/pages/User/Recipes";
 import RecipeDetails from "@/pages/User/RecipeDetails";
 import Favorites from "@/pages/User/Favorites";
@@ -43,6 +44,7 @@ function Router() {
       <ProtectedRoute path="/meal-plans/:id" component={ MealPlanDetails } allowedRoles={ ["user"] } />
       <ProtectedRoute path="/user/grocery" component={ GroceryList } allowedRoles={ ["user"] } />
       <ProtectedRoute path="/grocery-store" component={ GroceryStore } allowedRoles={ ["user"] } />
+      <ProtectedRoute path="/pantry" component={ Pantry } allowedRoles={ ["user"] } />
 
       <ProtectedRoute path="/admin/users" component={ AdminUsers } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/recipes" component={ AdminRecipes } allowedRoles={ ["admin"] } />

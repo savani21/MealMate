@@ -29,6 +29,7 @@ mongoose
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
 app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
+app.use("/api/user/pantry", require("./routes/user/pantryRoutes"));
 app.use("/api/store", storeRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/favorites", favoriteRoutes);

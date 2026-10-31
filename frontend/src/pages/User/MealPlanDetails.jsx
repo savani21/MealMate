@@ -72,14 +72,49 @@ export default function MealPlanDetails() {
 
   const selectedRecipe = findRecipe(selectedMealName);
 
+  const selectMealOption = async (day, mealType, option) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/api/meal-plans/${plan._id}/selection`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ day, mealType, option }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save meal selection");
+      setPlan(data.mealPlan);
+    } catch (error) {
+      console.error("Meal option selection error:", error);
+      alert(error.message);
+    }
+  };
+
   const generateRecipe = () => {
-    if (!selectedMealName) { alert("Please select a day and meal first."); return; }
+    if (!selectedMealName || !selectedDayPlan) { alert("Please select a day and meal first."); return; }
+    // Use only the ingredients belonging to the selected meal, never the whole pantry/plan list.
+    const selectedIngredients = selectedDayPlan[selectedMealType + "Ingredients"] || [];
+    // Recipe generation needs ingredient names, not quantity hints such as "as needed".
+    // Normalize prefixes and remove duplicates (including case-only duplicates).
+    const ingredientNames = selectedIngredients
+      .map((item) => {
+        const rawName = typeof item === "string" ? item : item?.name;
+        return String(rawName || "")
+          .replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "")
+          .trim();
+      })
+      .filter(Boolean);
+    const ingredientText = [...new Map(
+      ingredientNames.map((name) => [name.toLowerCase(), name])
+    ).values()].join(", ");
+    if (!ingredientText) { alert("No ingredients were saved for this selected meal."); return; }
     const query = new URLSearchParams({
       generate: "1",
       meal: selectedMealName,
-      ingredients: plan.ingredients || "",
+      ingredients: ingredientText,
       return: "meal-plan",
       planId: plan._id,
+      day: selectedDayPlan.day,
+      mealType: selectedMealType,
     });
     setLocation(`/recipes?${query.toString()}`);
   };
@@ -101,8 +136,8 @@ export default function MealPlanDetails() {
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to create grocery list"); return; }
-      alert("Grocery list created successfully!");
-      setLocation("/user/grocery");
+      if (data.groceryList?._id) setLocation(`/grocery-store?listId=${encodeURIComponent(data.groceryList._id)}`);
+      else setLocation("/user/grocery");
     } catch (error) {
       console.error(error);
       alert("Unable to connect to server.");
@@ -146,14 +181,14 @@ export default function MealPlanDetails() {
           {plan.meals.map((day) => <div key={day.day} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8">
             <div className="flex items-center gap-3 mb-6"><div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center"><Utensils className="w-5 h-5 text-primary" /></div><h2 className="text-xl font-black text-gray-900">Day {day.day}</h2></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MealCard title="Breakfast" meal={day.breakfast} /><MealCard title="Lunch" meal={day.lunch} /><MealCard title="Snack" meal={day.snack} /><MealCard title="Dinner" meal={day.dinner} />
+              <MealCard title="Breakfast" meal={day.breakfast} /><MealCard title="Lunch" meal={day.lunch} /><MealCard title="Dinner" meal={day.dinner} />
             </div>
           </div>)}
         </section>
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-8">
           <button onClick={() => setShowRecipeSelector(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
-          <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Creating Grocery List..." : "Generate Grocery List"}</button>
+          <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Preparing Cart..." : "Open Grocery Cart"}</button>
         </div>
 
         {showRecipeSelector && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowRecipeSelector(false); }}>
@@ -161,7 +196,7 @@ export default function MealPlanDetails() {
             <div className="flex items-center justify-between mb-5"><div><h2 className="text-lg font-black text-gray-900">Recipe for a Meal</h2><p className="text-xs text-gray-500 mt-1">Choose a day and meal.</p></div><button onClick={() => setShowRecipeSelector(false)} className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-50" aria-label="Close"><X className="w-5 h-5" /></button></div>
             <div className="space-y-3">
               <label className="block text-sm font-semibold text-gray-700">Day<select value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary">{plan.meals.map((day) => <option key={day.day} value={day.day}>Day {day.day}</option>)}</select></label>
-              <label className="block text-sm font-semibold text-gray-700">Meal<select value={selectedMealType} onChange={(event) => setSelectedMealType(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary"><option value="breakfast">Breakfast — {selectedDayPlan?.breakfast || "Not available"}</option><option value="lunch">Lunch — {selectedDayPlan?.lunch || "Not available"}</option><option value="snack">Snack — {selectedDayPlan?.snack || "Not available"}</option><option value="dinner">Dinner — {selectedDayPlan?.dinner || "Not available"}</option></select></label>
+              <label className="block text-sm font-semibold text-gray-700">Meal<select value={selectedMealType} onChange={(event) => setSelectedMealType(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary"><option value="breakfast">Breakfast — {selectedDayPlan?.breakfast || "Not available"}</option><option value="lunch">Lunch — {selectedDayPlan?.lunch || "Not available"}</option><option value="dinner">Dinner — {selectedDayPlan?.dinner || "Not available"}</option></select></label>
               <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5"><p className="text-[11px] uppercase tracking-wide font-bold text-primary">Selected meal</p><p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{selectedMealName || "Select a meal"}</p></div>
               {selectedRecipe ? <div className="rounded-lg border border-green-100 bg-green-50/60 px-3 py-3"><p className="text-xs font-semibold text-primary">Existing recipe available</p><div className="flex gap-2 mt-2"><button onClick={openExistingRecipe} className="flex-1 py-2 rounded-lg border border-gray-200 bg-white text-gray-700 text-sm font-semibold hover:border-primary hover:text-primary transition">View Recipe</button><button onClick={generateRecipe} className="flex-1 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition">Generate New</button></div></div> : <button onClick={generateRecipe} disabled={!selectedMealName} className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:opacity-90 transition disabled:opacity-50">Generate Recipe</button>}
             </div>
@@ -176,4 +211,12 @@ export default function MealPlanDetails() {
 
 function NavLink({ label, active, onClick }) { return <button onClick={onClick} className={`px-3 py-2 rounded-lg whitespace-nowrap transition ${active ? "bg-green-50 text-primary" : "text-gray-600 hover:bg-gray-50 hover:text-primary"}`}>{label}</button>; }
 function InfoCard({ title, value }) { return <div className="bg-white rounded-2xl border border-gray-100 p-5"><p className="text-sm text-gray-500">{title}</p><p className="text-lg font-bold text-gray-900 capitalize mt-1">{value}</p></div>; }
-function MealCard({ title, meal }) { return <div className="border border-gray-100 rounded-2xl p-5"><p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p><p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p></div>; }
+function MealCard({ title, meal, options = [], groupName, onSelect }) {
+  return <div className="border border-gray-100 rounded-2xl p-5">
+    <p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p>
+    {options.length > 0 ? <div className="mt-3 space-y-3">{options.slice(0, 3).map((option, index) => <label key={option.name || index} className={`flex gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${meal === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}>
+      <input type="radio" name={groupName} checked={meal === option.name} onChange={() => onSelect?.(option)} className="mt-1 accent-green-700" />
+      <span className="min-w-0"><span className="block text-sm font-bold text-gray-900">{option.name}</span>{option.description && <span className="block text-xs text-gray-500 mt-1">{option.description}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-1">{option.prepTime}</span>}</span>
+    </label>)}</div> : <p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p>}
+  </div>;
+}

@@ -1,116 +1,53 @@
 const Recipe = require("../../models/user/Recipe");
 
 async function generateWithOpenRouter(messages, responseFormat) {
-  const response = await fetch(
-    "https://openrouter.ai/api/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "http://localhost:5173",
-        "X-Title": "MealMate AI",
-      },
-      body: JSON.stringify({
-        model: "openrouter/free",
-        messages,
-        ...(responseFormat
-          ? { response_format: responseFormat }
-          : {}),
-      }),
-    }
-  );
-
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "http://localhost:5173",
+      "X-Title": "MealMate AI",
+    },
+    body: JSON.stringify({
+      model: "openrouter/free",
+      messages,
+      ...(responseFormat ? { response_format: responseFormat } : {}),
+    }),
+  });
   const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-        `OpenRouter request failed with status ${response.status}`
-    );
-  }
-
+  if (!response.ok) throw new Error(data?.error?.message || `OpenRouter request failed with status ${response.status}`);
   const content = data?.choices?.[0]?.message?.content;
-
-  if (!content) {
-    throw new Error("OpenRouter returned an empty AI response");
-  }
-
+  if (!content) throw new Error("OpenRouter returned an empty AI response");
   return content;
 }
 
 const chatWithAI = async (req, res) => {
   try {
     const { message, history = [] } = req.body;
-
-    if (!message || !message.trim()) {
-      return res.status(400).json({
-        message: "Message is required",
-      });
-    }
-
-    const messages = [
-      {
-        role: "system",
-        content: `You are MealMate AI, a friendly food and meal assistant.
-
-You help users with:
-- Recipes
-- Meal suggestions
-- Meal planning
-- Ingredients
-- Grocery suggestions
-- Healthy food choices
-- Cooking ideas
-
-Remember previous messages and use them to give relevant follow-up answers.
-Keep responses simple, practical and friendly.
-If the user asks something unrelated to food or MealMate, politely explain that you specialize in MealMate assistance.
-Do not provide medical diagnosis.`,
-      },
-    ];
-
+    if (!message || !message.trim()) return res.status(400).json({ message: "Message is required" });
+    const messages = [{
+      role: "system",
+      content: `You are MealMate AI, a friendly food and meal assistant.
+Help users with recipes, meal suggestions, meal planning, ingredients, grocery suggestions, healthy food choices and cooking ideas.
+Keep responses simple, practical and friendly. If asked about unrelated topics, explain that you specialize in MealMate assistance. Do not provide medical diagnosis.`,
+    }];
     history.forEach((msg) => {
-      if (!msg.text) return;
-
-      messages.push({
-        role: msg.role === "user" ? "user" : "assistant",
-        content: msg.text,
-      });
+      if (msg.text) messages.push({ role: msg.role === "user" ? "user" : "assistant", content: msg.text });
     });
-
-    messages.push({
-      role: "user",
-      content: message,
-    });
-
+    messages.push({ role: "user", content: message });
     const reply = await generateWithOpenRouter(messages);
-
     res.status(200).json({ reply });
   } catch (error) {
     console.error("OpenRouter AI Error:", error);
-
-    res.status(500).json({
-      message: "Failed to get AI response",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Failed to get AI response", error: error.message });
   }
 };
 
 const generateRecipe = async (req, res) => {
   try {
-    const {
-      ingredients,
-      diet = "Any",
-      category = "Other",
-      mealName = "",
-    } = req.body;
-
-    if (!ingredients || !ingredients.trim()) {
-      return res.status(400).json({
-        message: "Ingredients are required",
-      });
-    }
+    const { ingredients, diet = "Any", category = "Other", mealName = "" } = req.body;
+    if (!ingredients || !ingredients.trim()) return res.status(400).json({ message: "Ingredients are required" });
 
     const mealInstruction = mealName.trim()
       ? `The recipe should be specifically suitable for this planned meal: ${mealName}.`
@@ -118,44 +55,43 @@ const generateRecipe = async (req, res) => {
 
     const prompt = `
 Create one practical recipe using these ingredients: ${ingredients}.
-Diet preference: ${diet}.
-Category: ${category}.
+Diet preference: ${diet}. Category: ${category}.
 ${mealInstruction}
 
-Return ONLY valid JSON. Do not use markdown or code fences.
+Cuisine guidance:
+- Prefer Indian home-style and regional Indian recipes by default whenever the supplied ingredients support them.
+- Consider suitable options such as poha, upma, idli, dosa, paratha, thepla, dal, khichdi, pulao, rajma, chole, sabzi, paneer preparations, and Indian-style snacks.
+- Treat these as examples, not a fixed list. Choose a recipe that genuinely fits the provided ingredients, meal category, diet preference, and allergies.
+- Do not add unavailable ingredients just to make a dish Indian. If the ingredients do not suit an Indian recipe, create the best practical recipe from the supplied ingredients instead.
+- Use familiar Indian cooking methods and flavors where appropriate, and avoid suggesting the same generic recipe repeatedly.
 
-Use exactly this structure:
+Return ONLY valid JSON with this exact structure:
 {
   "name": "Recipe name",
   "description": "Short description",
+  "slogan": "A creative recipe-specific tagline of 5 to 12 words",
   "category": "Category",
   "diet": "Diet",
   "ingredients": ["ingredient with quantity"],
   "instructions": ["step 1", "step 2"],
   "prepTime": "30 minutes"
 }
-
-Do not invent medical claims.
-Keep the recipe realistic and easy to prepare.
+The slogan must be original, specific to this recipe, friendly and no more than 12 words.
+Do not invent medical claims. Keep the recipe realistic and easy to prepare.
 `;
 
-    const raw = await generateWithOpenRouter(
-      [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      {
-        type: "json_object",
-      }
-    );
-
+    const raw = await generateWithOpenRouter([{ role: "user", content: prompt }], { type: "json_object" });
     const recipeData = JSON.parse(raw);
+    // Do not make a second AI request just to create a slogan.
+    // A deterministic fallback keeps recipe generation to one model call.
+    const slogan = String(
+      recipeData.slogan || `A delicious way to enjoy ${recipeData.name || "everyday meals"}!`
+    ).trim().split(/\s+/).slice(0, 12).join(" ");
 
     const recipe = await Recipe.create({
       name: recipeData.name,
       description: recipeData.description || "",
+      slogan,
       category: recipeData.category || category,
       diet: recipeData.diet || diet,
       ingredients: recipeData.ingredients || [],
@@ -165,21 +101,11 @@ Keep the recipe realistic and easy to prepare.
       createdBy: req.user.id,
     });
 
-    res.status(201).json({
-      message: "Recipe generated successfully",
-      recipe,
-    });
+    res.status(201).json({ message: "Recipe generated successfully", recipe });
   } catch (error) {
     console.error("Recipe Generation Error:", error);
-
-    res.status(500).json({
-      message: "Failed to generate recipe",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Failed to generate recipe", error: error.message });
   }
 };
 
-module.exports = {
-  chatWithAI,
-  generateRecipe,
-};
+module.exports = { chatWithAI, generateRecipe };

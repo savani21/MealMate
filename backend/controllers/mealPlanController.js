@@ -27,14 +27,16 @@ function mealViolatesDiet(meal, diet) {
   const forbidden = DIET_FORBIDDEN[diet];
   if (!forbidden) return false;
 
-  return ["breakfast", "lunch", "snack", "dinner"].some((type) => {
+  return ["breakfast", "lunch", "dinner"].some((type) => {
     const name = String(meal?.[type] || "");
     const ingredients = Array.isArray(meal?.[type + "Ingredients"])
       ? meal[type + "Ingredients"]
           .map((item) => typeof item === "string" ? item : item?.name || "")
           .join(" ")
       : "";
-    return forbidden.test(name + " " + ingredients);
+    const options = Array.isArray(meal?.[type + "Options"]) ? meal[type + "Options"] : [];
+    const optionText = options.map((option) => `${option?.name || ""} ${(option?.ingredients || []).map((item) => typeof item === "string" ? item : item?.name || "").join(" ")}`).join(" ");
+    return forbidden.test(name + " " + ingredients + " " + optionText);
   });
 }
 
@@ -129,79 +131,115 @@ function localMeal(name, pool, keywords, count = 3) {
   };
 }
 
-function generateLocalMealPlan({ duration, diet, allowedPool }) {
-  const pool = allowedPool.filter(
-    (item) => !DIET_FORBIDDEN[diet]?.test(item)
-  );
-
-  if (!pool.length) {
-    throw new Error(
-      `No allowed ingredients are available for the selected ${diet} diet.`
+function buildLocalOptions(pool, type, dayNumber) {
+  const templates = {
+    breakfast: [
+      ["Poha", ["poha", "flattened rice", "onion", "potato", "peanut"]],
+      ["Aloo Paratha", ["wheat", "atta", "flour", "potato", "curd"]],
+      ["Vegetable Upma", ["rava", "sooji", "semolina", "onion", "vegetable"]],
+      ["Besan Chilla", ["besan", "gram flour", "onion", "tomato"]],
+      ["Idli Sambar", ["idli", "batter", "urad", "dal", "rice"]],
+      ["Sweet Wheat Porridge", ["wheat", "atta", "flour", "sugar", "milk"]],
+      ["Banana Milk Smoothie", ["banana", "milk", "curd"]],
+      ["Paneer Sandwich", ["bread", "paneer", "tomato", "onion"]],
+    ],
+    lunch: [
+      ["Vegetable Pulao", ["rice", "vegetable", "carrot", "peas", "onion"]],
+      ["Dal Rice", ["rice", "dal", "lentil", "tomato"]],
+      ["Chana Masala", ["chana", "chickpea", "tomato", "onion"]],
+      ["Paneer Bhurji with Roti", ["paneer", "wheat", "atta", "flour", "tomato"]],
+      ["Tomato Rice", ["rice", "tomato", "onion"]],
+      ["Aloo Roti", ["potato", "wheat", "atta", "flour"]],
+      ["Vegetable Khichdi", ["rice", "dal", "lentil", "vegetable"]],
+    ],
+    dinner: [
+      ["Dal Khichdi", ["rice", "dal", "lentil", "turmeric"]],
+      ["Roti with Aloo Sabzi", ["wheat", "atta", "flour", "potato", "tomato"]],
+      ["Paneer Rice Bowl", ["paneer", "rice", "tomato", "onion"]],
+      ["Tomato Pulao", ["rice", "tomato", "onion"]],
+      ["Vegetable Dalia", ["dalia", "broken wheat", "vegetable", "onion"]],
+      ["Curd Rice", ["rice", "curd", "yogurt"]],
+    ],
+  };
+  const normalized = pool.map((item) => item.toLowerCase());
+  const candidates = templates[type] || templates.lunch;
+  const ranked = candidates.map(([name, keywords], index) => {
+    const matched = pool.filter((item, i) =>
+      keywords.some((keyword) => normalized[i].includes(keyword))
     );
+    return { name, keywords, matched, score: matched.length, index };
+  }).sort((a, b) => b.score - a.score || a.index - b.index);
+
+  const chosen = [];
+  for (const candidate of ranked) {
+    if (chosen.length === 3) break;
+    if (candidate.score > 0 && !chosen.some((item) => item.name === candidate.name)) {
+      chosen.push(candidate);
+    }
   }
 
-  const lower = pool.map((item) => item.toLowerCase());
-  const has = (term) => lower.some((item) => item.includes(term));
+  // Always return three distinct, usable options, even when the pantry is sparse.
+  const fallbacks = [
+    ["Indian Masala Bowl", ["rice", "potato", "tomato", "onion"]],
+    ["Homestyle Spiced Roti", ["wheat", "atta", "flour", "potato", "tomato"]],
+    ["Simple Indian Veggie Mix", ["vegetable", "potato", "tomato", "onion"]],
+  ];
+  for (const [name, keywords] of fallbacks) {
+    if (chosen.length >= 3) break;
+    if (!chosen.some((item) => item.name === name)) {
+      chosen.push({
+        name,
+        keywords,
+        matched: pool.filter((item) => keywords.some((keyword) => item.toLowerCase().includes(keyword))),
+        score: 0,
+      });
+    }
+  }
 
-  const breakfast = has("oat")
-    ? localMeal("Oatmeal Bowl", pool, ["oat", "milk", "banana", "salt"])
-    : has("bread")
-      ? localMeal("Healthy Bread Sandwich", pool, ["bread", "tomato", "onion", "paneer"])
-      : has("banana") && has("milk")
-        ? localMeal("Banana Milk Smoothie", pool, ["banana", "milk"])
-        : localMeal("Healthy Ingredient Bowl", pool, ["fruit", "milk", "oat", "bread"]);
+  return chosen.slice(0, 3).map((candidate, index) => {
+    const picked = candidate.matched.length
+      ? candidate.matched.slice(0, 4)
+      : pool.slice(index % pool.length, index % pool.length + 3);
+    const ingredients = (picked.length ? picked : pool.slice(0, 3)).map((name) => ({
+      name,
+      quantity: "as needed",
+    }));
+    return {
+      name: candidate.name,
+      description: "A quick Indian home-style meal using your selected ingredients.",
+      prepTime: index === 0 ? "20 minutes" : "25 minutes",
+      ingredients,
+    };
+  });
+}
 
-  const lunch = has("rice") && has("dal")
-    ? localMeal("Dal Rice", pool, ["rice", "dal", "tomato", "onion"])
-    : has("rice")
-      ? localMeal("Vegetable Rice Bowl", pool, ["rice", "vegetable", "onion", "tomato"])
-      : has("roti") || has("atta") || has("wheat")
-        ? localMeal("Roti with Mixed Vegetables", pool, ["roti", "atta", "wheat", "vegetable", "tomato"])
-        : has("paneer")
-          ? localMeal("Paneer Stir-Fry", pool, ["paneer", "capsicum", "onion", "tomato"])
-          : localMeal("Mixed Ingredient Bowl", pool, ["vegetable", "onion", "tomato"]);
+function generateLocalMealPlan({ duration, diet, allowedPool }) {
+  const pool = [...new Set(allowedPool)].filter(
+    (item) => !DIET_FORBIDDEN[diet]?.test(item)
+  );
+  if (!pool.length) {
+    throw new Error(`No allowed ingredients are available for the selected ${diet} diet.`);
+  }
 
-  const dinner = has("paneer")
-    ? localMeal("Paneer and Vegetable Stir-Fry", pool, ["paneer", "capsicum", "onion", "tomato"])
-    : has("rice") && has("dal")
-      ? localMeal("Simple Khichdi", pool, ["rice", "dal", "salt", "turmeric"])
-      : has("bread")
-        ? localMeal("Light Vegetable Sandwich", pool, ["bread", "tomato", "onion", "vegetable"])
-        : localMeal("Simple Dinner Bowl", pool, ["vegetable", "rice", "dal", "paneer"]);
-
-  const snack = has("banana")
-    ? localMeal("Banana Snack", pool, ["banana", "milk", "oat"])
-    : has("fruit")
-      ? localMeal("Fresh Fruit Snack", pool, ["fruit"])
-      : has("bread")
-        ? localMeal("Light Toast", pool, ["bread"])
-        : localMeal("Simple Snack", pool, pool.slice(0, 2), 2);
-
-  const templates = [breakfast, lunch, dinner, snack];
   const days = [];
-
   for (let day = 1; day <= Number(duration); day += 1) {
-    const offset = (day - 1) % templates.length;
-    const get = (index) => templates[(index + offset) % templates.length];
-
-    const b = get(0);
-    const l = get(1);
-    const d = get(2);
-    const s = get(3);
+    const breakfastOptions = buildLocalOptions(pool, "breakfast", day);
+    const lunchOptions = buildLocalOptions(pool, "lunch", day);
+    const dinnerOptions = buildLocalOptions(pool, "dinner", day);
 
     days.push({
       day,
-      breakfast: b.name,
-      breakfastIngredients: b.ingredients,
-      lunch: l.name,
-      lunchIngredients: l.ingredients,
-      dinner: d.name,
-      dinnerIngredients: d.ingredients,
-      snack: s.name,
-      snackIngredients: s.ingredients,
+      breakfast: breakfastOptions[0].name,
+      breakfastIngredients: breakfastOptions[0].ingredients,
+      breakfastOptions,
+      lunch: lunchOptions[0].name,
+      lunchIngredients: lunchOptions[0].ingredients,
+      lunchOptions,
+      dinner: dinnerOptions[0].name,
+      dinnerIngredients: dinnerOptions[0].ingredients,
+      dinnerOptions,
     });
   }
-
   return { days };
 }
 
@@ -257,6 +295,14 @@ ${JSON.stringify(allowedPool)}
 
 Planning mode: ${ingredientMode === "recommended" ? "Available + Recommended Ingredients" : "Only Available Ingredients"}
 
+Cuisine preference:
+- Prefer Indian cuisine and familiar Indian home-style dishes by default, whenever they can be made realistically from the allowed ingredients.
+- Suggest a varied mix of regional Indian dishes rather than repeating the same generic rice or vegetable bowl.
+- Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
+- These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet and allergies.
+- Do not invent missing ingredients or force an Indian dish when the available ingredients do not support one. In that case, suggest the closest practical recipe and retain Indian flavors where appropriate.
+- Keep the three choices in each meal category meaningfully different from one another.
+
 Rules:
 1. Every meal must have its own complete ingredient list.
 2. Use pantry ingredients first whenever practical.
@@ -267,39 +313,83 @@ Rules:
 7. Do not put the recipe name in its ingredient list.
 8. Keep ingredients specific to the meal.
 9. Quantities should be short and practical.
+10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool and selected diet.
+11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
 {
   "days": [
     {
       "day": 1,
-      "breakfast": "meal name",
+      "breakfast": "selected recipe name (same as first option)",
       "breakfastIngredients": [{"name": "ingredient", "quantity": "quantity"}],
-      "lunch": "meal name",
+      "breakfastOptions": [{"name":"recipe name","description":"short description","prepTime":"15 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
+      "lunch": "selected recipe name (same as first option)",
       "lunchIngredients": [{"name": "ingredient", "quantity": "quantity"}],
-      "dinner": "meal name",
+      "lunchOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
+      "dinner": "selected recipe name (same as first option)",
       "dinnerIngredients": [{"name": "ingredient", "quantity": "quantity"}],
-      "snack": "meal name",
-      "snackIngredients": [{"name": "ingredient", "quantity": "quantity"}]
+      "dinnerOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}]
     }
   ]
 }
 Do not include markdown or explanations outside JSON.
 `;
 
-    let generatedMeals = await generateWithOpenRouter(prompt);
+    // A preview request returns recipe choices without saving a meal plan.
+    // The final save request sends the exact selected options back to this endpoint.
+    let generatedMeals;
     let generatedBy = "openrouter";
-
-    if (!generatedMeals) {
-      generatedMeals = generateLocalMealPlan({
-        duration,
-        diet,
-        allowedPool,
-      });
-      generatedBy = "local-fallback";
+    if (Array.isArray(req.body.selectedDays) && req.body.selectedDays.length) {
+      generatedMeals = { days: req.body.selectedDays };
+      generatedBy = "user-selected";
+    } else {
+      // Preview must be fast and predictable: use local Indian meal templates
+      // instead of waiting on variable-latency free AI model routing.
+      if (req.body.previewOnly === true) {
+        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+        generatedBy = "local-fast";
+      } else {
+        generatedMeals = await generateWithOpenRouter(prompt);
+        if (!generatedMeals) {
+          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+          generatedBy = "local-fallback";
+        }
+      }
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+
+    // Keep the legacy selected-meal fields in sync with the first suggested option.
+    // Older saved meal plans without option arrays remain fully compatible.
+    days.forEach((day) => {
+      ["breakfast", "lunch", "dinner"].forEach((type) => {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"].filter((item) => item?.name && Array.isArray(item.ingredients)) : [];
+        if (options.length) {
+          day[type + "Options"] = options.slice(0, 3);
+          const selected = options.find((item) => item.name === day[type]) || options[0];
+          day[type] = selected.name;
+          day[type + "Ingredients"] = selected.ingredients;
+        } else {
+          day[type + "Options"] = [{
+            name: day[type] || "Meal option",
+            description: "Current generated meal",
+            prepTime: "",
+            ingredients: day[type + "Ingredients"] || [],
+          }];
+        }
+      });
+    });
+
+    if (days.some((day) => ["breakfast", "lunch", "dinner"].some((type) => {
+      const options = day[type + "Options"] || [];
+      return options.length < 2;
+    }))) {
+      return res.status(422).json({
+        success: false,
+        message: "MealMate could not create at least two choices for every meal. Please try generating the options again.",
+      });
+    }
 
     if (!days.length) {
       return res.status(422).json({
@@ -312,6 +402,16 @@ Do not include markdown or explanations outside JSON.
       return res.status(422).json({
         success: false,
         message: `The generated meal plan does not match the selected ${diet} diet. Please generate the plan again.`,
+      });
+    }
+
+    if (req.body.previewOnly === true) {
+      return res.status(200).json({
+        success: true,
+        preview: true,
+        generatedBy,
+        days,
+        message: "Choose one recipe for breakfast, lunch and dinner.",
       });
     }
 
@@ -450,5 +550,30 @@ exports.deleteMyMealPlan = async (req, res) => {
   } catch (err) {
     console.error("Delete Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.updateMealSelection = async (req, res) => {
+  try {
+    const { day, mealType, option } = req.body;
+    const allowedTypes = ["breakfast", "lunch", "dinner"];
+    if (!allowedTypes.includes(mealType) || !option || !option.name || !Array.isArray(option.ingredients)) {
+      return res.status(400).json({ success: false, message: "A valid meal type and recipe option are required." });
+    }
+    const mealPlan = await MealPlan.findOne({ _id: req.params.id, user: req.user.id });
+    if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
+    const dayPlan = mealPlan.meals.find((item) => Number(item.day) === Number(day));
+    if (!dayPlan) return res.status(404).json({ success: false, message: "Meal-plan day not found." });
+    const options = dayPlan[mealType + "Options"] || [];
+    const selected = options.find((item) => item.name === option.name);
+    if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
+    dayPlan[mealType] = selected.name;
+    dayPlan[mealType + "Ingredients"] = selected.ingredients;
+    mealPlan.markModified("meals");
+    await mealPlan.save();
+    res.json({ success: true, message: "Meal selection saved.", mealPlan });
+  } catch (error) {
+    console.error("UPDATE MEAL SELECTION ERROR:", error);
+    res.status(500).json({ success: false, message: "Failed to save meal selection." });
   }
 };

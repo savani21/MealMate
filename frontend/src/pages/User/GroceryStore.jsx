@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  ArrowLeft,
+  ShoppingBasket,
   Minus,
   Plus,
   ShoppingCart,
@@ -86,7 +86,7 @@ export default function GroceryStore() {
     }
   };
 
-  const loadStore = async () => {
+  const loadStore = async (requested = []) => {
     try {
       const response = await fetch(`${API}/api/store/products`, {
         headers: authHeaders(),
@@ -176,6 +176,9 @@ export default function GroceryStore() {
 
       setCart({ items: [] });
       setCartOpen(false);
+      // Refresh the selected meal-plan list after checkout so purchased
+      // ingredients disappear immediately instead of being offered again.
+      if (listId) await loadRequestedGroceryList();
       setReceipt({ order: data.order, user: data.user });
     } catch (error) {
       console.error(error);
@@ -257,30 +260,77 @@ export default function GroceryStore() {
     });
   }, [products, searchText, requestedIngredients.join(",")]);
 
+  const normalizeSearchIngredient = (value) => String(value || "")
+    .toLowerCase()
+    .replace(/^as\\s+needed\\s*[:,-]?\\s*/i, "")
+    .replace(/^\\s*[\\d./]+\\s*/, "")
+    .replace(/\\b(?:cups?|tbsp|tsp|kg|g|gm|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\\b/gi, " ")
+    .replace(/\\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|to taste)\\b/gi, " ")
+    .replace(/[^a-z0-9 ]/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim()
+    .replace(/ies$/, "y")
+    .replace(/s$/, "");
+
+  const productMatchesIngredient = (product, ingredient) => {
+    const productName = normalizeSearchIngredient(product?.name);
+    const ingredientName = normalizeSearchIngredient(ingredient);
+    if (!productName || !ingredientName) return false;
+    if (productName === ingredientName || productName.includes(ingredientName) || ingredientName.includes(productName)) return true;
+    const ignored = new Set(["and", "or", "whole", "white", "fresh"]);
+    const productTokens = productName.split(" ").filter((token) => token.length > 2 && !ignored.has(token));
+    const ingredientTokens = ingredientName.split(" ").filter((token) => token.length > 2 && !ignored.has(token));
+    return ingredientTokens.some((token) => productTokens.includes(token)) &&
+      ingredientTokens.filter((token) => productTokens.includes(token)).length >= Math.min(1, ingredientTokens.length);
+  };
+
   const isRequestedProduct = (product) =>
-    requestedIngredients.some((ingredient) =>
-      product.name.toLowerCase().includes(ingredient) || ingredient.includes(product.name.toLowerCase())
+    requestedIngredients.some((ingredient) => productMatchesIngredient(product, ingredient));
+
+  const isProductInCart = (product) =>
+    (cart.items || []).some((item) =>
+      String(item.product?._id || item.product || item.productId || "") === String(product._id)
     );
 
+  // Only show products that are still missing from the cart.
   const matchedRequestedProducts = useMemo(
-    () => products.filter(isRequestedProduct),
-    [products, requestedIngredients.join(",")]
+    () => products.filter((product) => isRequestedProduct(product) && !isProductInCart(product)),
+    [products, requestedIngredients.join(","), cart.items]
   );
 
   const unmatchedRequestedIngredients = requestedIngredients.filter(
-    (ingredient) =>
-      !products.some(
-        (product) =>
-          product.name.toLowerCase().includes(ingredient) ||
-          ingredient.includes(product.name.toLowerCase())
-      )
+    (ingredient) => !products.some((product) => productMatchesIngredient(product, ingredient))
   );
 
+  const [addingRequested, setAddingRequested] = useState(false);
+  const [requestedAddMessage, setRequestedAddMessage] = useState("");
+
   const addAllRequested = async () => {
-    if (!matchedRequestedProducts.length) return;
-    for (const product of matchedRequestedProducts) {
-      await addToCart(product._id);
+    const productsToAdd = matchedRequestedProducts;
+    if (!productsToAdd.length || addingRequested) return;
+    setAddingRequested(true);
+    setRequestedAddMessage("");
+    const failed = [];
+    for (const product of productsToAdd) {
+      try {
+        const response = await fetch(`${API}/api/store/cart`, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: product._id, quantity: 1 }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Could not add item");
+        if (data.cart) setCart(data.cart);
+      } catch (error) {
+        failed.push(product.name);
+      }
     }
+    await loadCart();
+    setRequestedAddMessage(failed.length
+      ? `Added available items. Could not add: ${failed.join(", ")}.`
+      : `Successfully added ${productsToAdd.length} missing item(s) to your cart.`);
+    setAddingRequested(false);
+    setCartOpen(true);
   };
 
   const cartCount = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
@@ -291,15 +341,19 @@ export default function GroceryStore() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="bg-white border-b border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <button
-            onClick={() => setLocation("/user/grocery")}
-            className="flex items-center gap-2 text-gray-600 hover:text-primary transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Grocery List
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
+        <div className="w-full h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center"><ShoppingBasket className="w-5 h-5 text-primary" /></span>
+            <span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
           </button>
+          <nav className="hidden lg:flex items-center gap-1">
+            <button onClick={() => setLocation("/dashboard")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Dashboard</button>
+            <button onClick={() => setLocation("/meal-planner")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Meal Planner</button>
+            <button onClick={() => setLocation("/pantry")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Pantry</button>
+            <button onClick={() => setLocation("/my-meal-plans")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Meal Plans</button>
+            <button onClick={() => setLocation("/recipes")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Recipes</button>
+          </nav>
 
           <div className="flex items-center gap-3">
             <button
@@ -345,8 +399,8 @@ export default function GroceryStore() {
                 <p className="text-sm text-gray-500 mt-1">Only missing ingredients are shown, organized by the meal that needs them.</p>
               </div>
               {matchedRequestedProducts.length > 0 && (
-                <button onClick={addAllRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 transition">
-                  <ShoppingCart className="w-4 h-4" /> Add All Missing ({matchedRequestedProducts.length})
+                <button onClick={addAllRequested} disabled={addingRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-60 transition">
+                  <ShoppingCart className="w-4 h-4" /> {addingRequested ? "Adding..." : `Add All Missing (${matchedRequestedProducts.length})`}
                 </button>
               )}
             </div>
@@ -359,15 +413,17 @@ export default function GroceryStore() {
                       <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
                       <p className="font-bold text-gray-900 mt-1">{group.mealName}</p>
                     </div>
-                    <div className="px-4 py-3 flex flex-wrap gap-2">
-                      {group.items.map((item) => {
-                        const matched = products.some((product) => product.name.toLowerCase().includes(item.name.toLowerCase()) || item.name.toLowerCase().includes(product.name.toLowerCase()));
-                        return (
-                          <span key={item._id} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${matched ? "bg-green-50 text-green-700 border border-green-100" : "bg-amber-50 text-amber-700 border border-amber-100"}`}>
-                            {item.name}{item.quantity ? ` · ${item.quantity}` : ""}{!matched ? " (Not in store)" : ""}
+                    <div className="px-4 py-3">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">
+                        Items needed: {group.items.map((item) => item.name).join(", ")}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.items.filter((item) => !products.some((product) => productMatchesIngredient(product, item.name))).map((item) => (
+                          <span key={item._id} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                            {item.name} (Not in store)
                           </span>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -378,8 +434,9 @@ export default function GroceryStore() {
               </div>
             )}
 
+            {requestedAddMessage && <p role="status" className="mt-3 text-sm font-semibold text-primary">{requestedAddMessage}</p>}
             {unmatchedRequestedIngredients.length > 0 && (
-              <p className="text-xs text-amber-600 mt-4">Some required ingredients are not currently in the store catalog. Use the search box below for alternatives.</p>
+              <p className="text-xs text-amber-600 mt-4">Some ingredients are not sold in the store catalog. Search each missing ingredient below and add a suitable alternative manually. Ingredients already marked “Needed” can be added together using Add All Missing.</p>
             )}
           </div>
         )}
@@ -410,11 +467,15 @@ export default function GroceryStore() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-primary font-semibold uppercase">{product.category}</p>
-                  {isRequestedProduct(product) && (
+                  {isProductInCart(product) ? (
+                    <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-blue-50 text-blue-700">
+                      In Cart
+                    </span>
+                  ) : isRequestedProduct(product) ? (
                     <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-green-50 text-primary">
                       Needed
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <h2 className="text-lg font-bold text-gray-900 mt-2">{product.name}</h2>
                 <p className="text-sm text-gray-500 mt-1">{product.unit}</p>
