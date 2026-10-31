@@ -1,9 +1,38 @@
 const Recipe = require("../../models/user/Recipe");
+const RecipeReview = require("../../models/user/RecipeReview");
 
 const getRecipes = async (req, res) => {
   try {
-    const recipes = await Recipe.find().sort({ createdAt: -1 });
-    res.status(200).json({ success: true, recipes });
+    const [recipes, reviewStats] = await Promise.all([
+      Recipe.find().sort({ createdAt: -1 }).lean(),
+      RecipeReview.aggregate([
+        {
+          $group: {
+            _id: "$recipe",
+            ratingCount: { $sum: 1 },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ]),
+    ]);
+
+    const statsByRecipe = Object.fromEntries(
+      reviewStats.map((item) => [
+        item._id.toString(),
+        {
+          ratingCount: item.ratingCount,
+          averageRating: Number(item.averageRating.toFixed(1)),
+        },
+      ])
+    );
+
+    const recipesWithRatings = recipes.map((recipe) => ({
+      ...recipe,
+      ratingCount: statsByRecipe[recipe._id.toString()]?.ratingCount || 0,
+      averageRating: statsByRecipe[recipe._id.toString()]?.averageRating || 0,
+    }));
+
+    res.status(200).json({ success: true, recipes: recipesWithRatings });
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Failed to get recipes" });
@@ -69,6 +98,7 @@ const deleteRecipe = async (req, res) => {
     if (!recipe) {
       return res.status(404).json({ success: false, message: "Recipe not found" });
     }
+    await RecipeReview.deleteMany({ recipe: recipe._id });
     res.status(200).json({ success: true, message: "Recipe deleted successfully" });
   } catch (error) {
     console.error(error);
