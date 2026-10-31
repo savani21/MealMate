@@ -151,7 +151,6 @@ export default function MealPlanner() {
 
 
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
-  const [recommendationLoading, setRecommendationLoading] = useState(false);
 
   const fetchRecommendedRecipes = async () => {
     const available = getAvailableIngredients();
@@ -187,10 +186,6 @@ export default function MealPlanner() {
     return () => clearTimeout(timer);
   }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
 
-  useEffect(() => {
-    const timer = setTimeout(fetchRecommendedRecipes, 450);
-    return () => clearTimeout(timer);
-  }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
