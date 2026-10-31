@@ -214,19 +214,15 @@ function buildLocalOptions(pool, type, dayNumber) {
 }
 
 function generateLocalMealPlan({ duration, diet, allowedPool }) {
-  const pool = [...new Set(allowedPool)].filter(
-    (item) => !DIET_FORBIDDEN[diet]?.test(item)
-  );
+  const pool = [...new Set(allowedPool)].filter((item) => !DIET_FORBIDDEN[diet]?.test(item));
   if (!pool.length) {
     throw new Error(`No allowed ingredients are available for the selected ${diet} diet.`);
   }
-
   const days = [];
   for (let day = 1; day <= Number(duration); day += 1) {
     const breakfastOptions = buildLocalOptions(pool, "breakfast", day);
     const lunchOptions = buildLocalOptions(pool, "lunch", day);
     const dinnerOptions = buildLocalOptions(pool, "dinner", day);
-
     days.push({
       day,
       breakfast: breakfastOptions[0].name,
