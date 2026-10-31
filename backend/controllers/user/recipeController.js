@@ -1,5 +1,6 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
+const RecipeReview = require("../../models/user/RecipeReview");
 
 const HIGHLY_LIKED_MIN_LIKES = Math.max(1, Number(process.env.HIGHLY_LIKED_MIN_LIKES) || 5);
 
@@ -26,42 +27,42 @@ function attachEngagement(recipe, counts, likedIds = []) {
 
 const getRecipes = async (req, res) => {
   try {
-    const [recipes, likeCounts] = await Promise.all([Recipe.find().sort({ createdAt: -1 }).lean(), buildLikeCounts()]);
-    res.status(200).json({ recipes: recipes.map((recipe) => attachEngagement(recipe, likeCounts)) });
+    const [recipes, reviewStats] = await Promise.all([
+      Recipe.find().sort({ createdAt: -1 }).lean(),
+      RecipeReview.aggregate([
+        {
+          $group: {
+            _id: "$recipe",
+            ratingCount: { $sum: 1 },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ]),
+    ]);
+
+    const statsByRecipe = Object.fromEntries(
+      reviewStats.map((item) => [
+        item._id.toString(),
+        {
+          ratingCount: item.ratingCount,
+          averageRating: Number(item.averageRating.toFixed(1)),
+        },
+      ])
+    );
+
+    const recipesWithRatings = recipes.map((recipe) => ({
+      ...recipe,
+      ratingCount: statsByRecipe[recipe._id.toString()]?.ratingCount || 0,
+      averageRating: statsByRecipe[recipe._id.toString()]?.averageRating || 0,
+    }));
+
+    res.status(200).json({ recipes: recipesWithRatings });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipes" });
   }
 };
 
-const normalizeIngredient = (value) =>
-  String(value || "")
-    .toLowerCase()
-    .replace(/^[\s\d./-]+/, "")
-    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?)\s+/i, "")
-    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/[.,;:]+$/, "")
-    .replace(/\b(\w+)s$/, "$1");
-
-const cleanIngredients = (value) =>
-  String(value || "")
-    .split(",")
-    .map((item) => normalizeIngredient(item))
-    .filter(Boolean);
-
-const getDietInvalidIngredients = (diet, ingredients) => {
-  const forbidden = RECIPE_FORBIDDEN[diet];
-  if (!forbidden) return [];
-  return ingredients.filter((ingredient) => forbidden.test(ingredient));
-};
-
-const RECIPE_FORBIDDEN = {
-  vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
-  vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
-  eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
-};
 
 const getRecommendedRecipes = async (req, res) => {
   try {
@@ -222,14 +223,38 @@ const getRecommendedRecipes = async (req, res) => {
 
 const getRecipeById = async (req, res) => {
   try {
-    const [recipe, likeCounts] = await Promise.all([Recipe.findById(req.params.id).lean(), buildLikeCounts()]);
-    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
-    res.status(200).json({ recipe: attachEngagement(recipe, likeCounts) });
+    const recipe = await Recipe.findById(req.params.id).lean();
+
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    const reviewStats = await RecipeReview.aggregate([
+      { $match: { recipe: recipe._id } },
+      {
+        $group: {
+          _id: "$recipe",
+          ratingCount: { $sum: 1 },
+          averageRating: { $avg: "$rating" },
+        },
+      },
+    ]);
+
+    const rating = reviewStats[0];
+
+    res.status(200).json({
+      recipe: {
+        ...recipe,
+        ratingCount: rating?.ratingCount || 0,
+        averageRating: rating ? Number(rating.averageRating.toFixed(1)) : 0,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipe" });
   }
 };
+
 
 const createRecipe = async (req, res) => {
   try {
