@@ -23,61 +23,6 @@ function cleanList(value) {
     .filter(Boolean);
 }
 
-const ALLERGEN_ALIASES = {
-  peanut: ["peanut", "peanuts", "groundnut", "groundnuts", "peanut oil"],
-  milk: ["milk", "dairy", "whey", "casein", "lactose", "butter", "ghee", "paneer", "cheese", "curd", "yogurt", "yoghurt", "cream", "buttermilk"],
-  egg: ["egg", "eggs", "albumin"],
-  soy: ["soy", "soya", "soybean", "soybeans", "tofu", "tempeh", "edamame"],
-  wheat: ["wheat", "wheat flour", "atta", "maida", "semolina", "suji", "rava", "durum"],
-  gluten: ["wheat", "barley", "rye", "malt", "semolina", "durum", "couscous"],
-  sesame: ["sesame", "sesame seeds", "til", "tahini"],
-  fish: ["fish", "salmon", "tuna", "cod", "sardine", "anchovy"],
-  shellfish: ["shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "mussel", "clam", "oyster"],
-  "tree nuts": ["nut", "nuts", "almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
-};
-
-function normalizeFoodText(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-}
-
-function getAllergyTerms(allergies) {
-  return cleanList(String(allergies || "").replace(/;/g, ","))
-    .map((item) => normalizeFoodText(item))
-    .filter(Boolean);
-}
-
-function findAllergenConflicts(value, allergies) {
-  const text = ` ${normalizeFoodText(value)} `;
-  const conflicts = [];
-  getAllergyTerms(allergies).forEach((allergy) => {
-    const aliases = ALLERGEN_ALIASES[allergy] || [allergy];
-    if (aliases.some((alias) => text.includes(` ${normalizeFoodText(alias)} `))) {
-      conflicts.push(allergy);
-    }
-  });
-  return [...new Set(conflicts)];
-}
-
-function mealAllergyConflicts(meal, allergies) {
-  const conflicts = [];
-  ["breakfast", "lunch", "dinner"].forEach((type) => {
-    const parts = [meal?.[type]];
-    const ingredients = meal?.[type + "Ingredients"];
-    if (Array.isArray(ingredients)) {
-      parts.push(...ingredients.map((item) => typeof item === "string" ? item : item?.name || ""));
-    }
-    const options = Array.isArray(meal?.[type + "Options"]) ? meal[type + "Options"] : [];
-    options.forEach((option) => {
-      parts.push(option?.name, option?.description);
-      if (Array.isArray(option?.ingredients)) {
-        parts.push(...option.ingredients.map((item) => typeof item === "string" ? item : item?.name || ""));
-      }
-    });
-    parts.forEach((part) => conflicts.push(...findAllergenConflicts(part, allergies)));
-  });
-  return [...new Set(conflicts)];
-}
-
 function mealViolatesDiet(meal, diet) {
   const forbidden = DIET_FORBIDDEN[diet];
   if (!forbidden) return false;
@@ -186,7 +131,7 @@ function localMeal(name, pool, keywords, count = 3) {
   };
 }
 
-function buildLocalOptions(pool, type, dayNumber, diet, allergies) {
+function buildLocalOptions(pool, type, dayNumber, diet) {
   const templates = {
     breakfast: [
       ["Poha", ["poha", "flattened rice", "onion", "potato", "peanut"]],
@@ -218,7 +163,7 @@ function buildLocalOptions(pool, type, dayNumber, diet, allergies) {
   };
   const normalized = pool.map((item) => item.toLowerCase());
   const candidates = (templates[type] || templates.lunch).filter(([name]) =>
-    !DIET_FORBIDDEN[diet]?.test(name) && findAllergenConflicts(name, allergies).length === 0
+    !DIET_FORBIDDEN[diet]?.test(name)
   );
   const ranked = candidates.map(([name, keywords], index) => {
     const matched = pool.filter((item, i) =>
@@ -270,18 +215,18 @@ function buildLocalOptions(pool, type, dayNumber, diet, allergies) {
   });
 }
 
-function generateLocalMealPlan({ duration, diet, allowedPool, allergies }) {
+function generateLocalMealPlan({ duration, diet, allowedPool }) {
   const pool = [...new Set(allowedPool)].filter((item) =>
-    !DIET_FORBIDDEN[diet]?.test(item) && findAllergenConflicts(item, allergies).length === 0
+    !DIET_FORBIDDEN[diet]?.test(item)
   );
   if (!pool.length) {
     throw new Error(`No allowed ingredients are available for the selected ${diet} diet.`);
   }
   const days = [];
   for (let day = 1; day <= Number(duration); day += 1) {
-    const breakfastOptions = buildLocalOptions(pool, "breakfast", day, diet, allergies);
-    const lunchOptions = buildLocalOptions(pool, "lunch", day, diet, allergies);
-    const dinnerOptions = buildLocalOptions(pool, "dinner", day, diet, allergies);
+    const breakfastOptions = buildLocalOptions(pool, "breakfast", day, diet);
+    const lunchOptions = buildLocalOptions(pool, "lunch", day, diet);
+    const dinnerOptions = buildLocalOptions(pool, "dinner", day, diet);
     days.push({
       day,
       breakfast: breakfastOptions[0].name,
@@ -303,16 +248,12 @@ exports.createMealPlan = async (req, res) => {
     const {
       goal,
       diet,
-      allergies,
       ingredients,
       availableIngredients,
       recommendedIngredients,
       ingredientMode,
       duration,
     } = req.body;
-
-    const allergyList = getAllergyTerms(allergies);
-    const allergyText = allergyList.join(", ");
 
     if (!["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(diet)) {
       return res.status(400).json({
@@ -341,17 +282,6 @@ exports.createMealPlan = async (req, res) => {
       ? [...new Set([...available, ...recommended])]
       : available;
 
-    const allergenConflicts = [...new Set(
-      allowedPool.flatMap((ingredient) => findAllergenConflicts(ingredient, allergyText))
-    )];
-    if (allergenConflicts.length) {
-      return res.status(400).json({
-        success: false,
-        message: `Your selected ingredients conflict with these listed allergies: ${allergenConflicts.join(", ")}. Remove them before generating a meal plan.`,
-        allergenConflicts,
-      });
-    }
-
     const invalidDietIngredients = allowedPool.filter(
       (ingredient) => DIET_FORBIDDEN[diet]?.test(ingredient)
     );
@@ -376,7 +306,6 @@ Create a practical personalized ${duration}-day meal plan.
 User goal: ${goal}
 Diet type: ${diet}
 Diet restriction: ${DIET_RULES[diet] || "Follow the selected diet type exactly."}
-Food allergies (STRICT exclusions; do not use these ingredients or their common forms): ${allergyText || "None"}
 
 Ingredients the user ALREADY HAS in their pantry:
 ${JSON.stringify(available)}
@@ -442,7 +371,7 @@ Do not include markdown or explanations outside JSON.
       // Preview must be fast and predictable: use local Indian meal templates
       // instead of waiting on variable-latency free AI model routing.
       if (req.body.previewOnly === true) {
-        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool, allergies: allergyText });
+        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
         generatedBy = "local-fast";
       } else {
         generatedMeals = await generateWithOpenRouter(prompt);
@@ -500,17 +429,6 @@ Do not include markdown or explanations outside JSON.
       });
     }
 
-    const generatedAllergenConflicts = [...new Set(
-      days.flatMap((day) => mealAllergyConflicts(day, allergyText))
-    )];
-    if (generatedAllergenConflicts.length) {
-      return res.status(422).json({
-        success: false,
-        message: `The generated meal choices contain ingredients that conflict with your listed allergies: ${generatedAllergenConflicts.join(", ")}. No meal plan was saved. Please try again or update your ingredient list.`,
-        allergenConflicts: generatedAllergenConflicts,
-      });
-    }
-
     if (req.body.previewOnly === true) {
       return res.status(200).json({
         success: true,
@@ -525,7 +443,6 @@ Do not include markdown or explanations outside JSON.
       user: req.user.id,
       goal,
       diet,
-      allergies: allergyText,
       availableIngredients: available.join(", "),
       recommendedIngredients: recommended.join(", "),
       ingredients: allowedPool.join(", "),
