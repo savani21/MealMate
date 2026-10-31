@@ -140,7 +140,7 @@ Use simple shopping ingredient names. Include salt when it is normally required.
 }
 
 async function buildGroceryItems(mealPlan) {
-  const mealTypes = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["snack", "Snack"], ["dinner", "Dinner"]];
+  const mealTypes = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"]];
   const mealNames = [];
 
   for (const day of mealPlan.meals || []) {
