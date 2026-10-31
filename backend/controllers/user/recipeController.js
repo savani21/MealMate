@@ -42,6 +42,33 @@ const cleanIngredients = (value) =>
     .map((item) => normalizeIngredient(item))
     .filter(Boolean);
 
+const RECIPE_ALLERGEN_ALIASES = {
+  peanut: ["peanut", "peanuts", "groundnut", "groundnuts", "peanut oil"],
+  milk: ["milk", "dairy", "whey", "casein", "lactose", "butter", "ghee", "paneer", "cheese", "curd", "yogurt", "yoghurt", "cream", "buttermilk"],
+  egg: ["egg", "eggs", "albumin"],
+  soy: ["soy", "soya", "soybean", "soybeans", "tofu", "tempeh", "edamame"],
+  wheat: ["wheat", "wheat flour", "atta", "maida", "semolina", "suji", "rava", "durum"],
+  gluten: ["wheat", "barley", "rye", "malt", "semolina", "durum", "couscous"],
+  sesame: ["sesame", "sesame seeds", "til", "tahini"],
+  fish: ["fish", "salmon", "tuna", "cod", "sardine", "anchovy"],
+  shellfish: ["shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "mussel", "clam", "oyster"],
+  "tree nuts": ["almond", "almonds", "cashew", "cashews", "walnut", "walnuts", "pistachio", "pistachios", "hazelnut", "pecan", "brazil nut", "macadamia"],
+};
+
+function recipeHasAllergen(recipe, allergies) {
+  const terms = String(allergies || "").split(/[,;\n]/).map((item) =>
+    item.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
+  ).filter(Boolean);
+  const text = ` ${[recipe.name, ...(recipe.ingredients || [])].join(" ").toLowerCase().replace(/[^a-z0-9]+/g, " ")} `;
+  return terms.some((term) => {
+    const group = Object.entries(RECIPE_ALLERGEN_ALIASES).find(([key, aliases]) =>
+      key === term || aliases.includes(term)
+    );
+    const aliases = group ? group[1] : [term];
+    return aliases.some((alias) => text.includes(` ${alias} `));
+  });
+}
+
 const getDietInvalidIngredients = (diet, ingredients) => {
   const forbidden = RECIPE_FORBIDDEN[diet];
   if (!forbidden) return [];
@@ -95,12 +122,14 @@ const getRecommendedRecipes = async (req, res) => {
     ]));
     const available = cleanIngredients(req.query.available);
     const recommended = cleanIngredients(req.query.recommended);
+    const allergies = req.query.allergies || "";
     const diet = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(req.query.diet) ? req.query.diet : "";
     const mode = req.query.mode === "recommended" ? "recommended" : "available";
     const invalid = getDietInvalidIngredients(diet, available);
     if (invalid.length) return res.status(400).json({ message: "Some available ingredients do not match the selected diet.", invalidIngredients: invalid });
     const allowed = new Set(mode === "recommended" ? [...new Set([...available, ...recommended])] : available);
     const ranked = recipes.map((recipe) => {
+      if (recipeHasAllergen(recipe, allergies)) return null;
       const recipeIngredients = [...new Set((recipe.ingredients || []).map(normalizeIngredient).filter(Boolean))];
       const recipeDiet = normalizeIngredient(recipe.diet);
       const incompatible = (diet === "vegetarian" && ["non-vegetarian", "eggetarian"].includes(recipeDiet)) ||
