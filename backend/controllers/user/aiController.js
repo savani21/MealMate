@@ -82,18 +82,11 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
 
     const raw = await generateWithOpenRouter([{ role: "user", content: prompt }], { type: "json_object" });
     const recipeData = JSON.parse(raw);
-    let slogan = String(recipeData.slogan || "").trim();
-    if (!slogan) {
-      try {
-        const sloganRaw = await generateWithOpenRouter(
-          [{ role: "user", content: `Write one original 5-12 word slogan for the recipe "${recipeData.name}" made with ${JSON.stringify(recipeData.ingredients || [])}. Return only the slogan text.` }]
-        );
-        slogan = sloganRaw.replace(/^["']|["']$/g, "").trim().split(/\s+/).slice(0, 12).join(" ");
-      } catch (sloganError) {
-        console.warn("Slogan generation unavailable; using safe fallback:", sloganError.message);
-        slogan = `A delicious new way to enjoy ${recipeData.name || "everyday meals"}!`;
-      }
-    }
+    // Do not make a second AI request just to create a slogan.
+    // A deterministic fallback keeps recipe generation to one model call.
+    const slogan = String(
+      recipeData.slogan || `A delicious way to enjoy ${recipeData.name || "everyday meals"}!`
+    ).trim().split(/\s+/).slice(0, 12).join(" ");
 
     const recipe = await Recipe.create({
       name: recipeData.name,
