@@ -9,6 +9,7 @@ import {
   X,
   Search,
   Sparkles,
+  Star,
 } from "lucide-react";
 
 const EMPTY_FORM = {
