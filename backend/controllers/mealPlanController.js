@@ -262,13 +262,6 @@ exports.createMealPlan = async (req, res) => {
       });
     }
 
-    if (allergyText.length > 500) {
-      return res.status(400).json({
-        success: false,
-        message: "Please keep allergy information within 500 characters.",
-      });
-    }
-
     if (!goal || !diet || !duration) {
       return res.status(400).json({
         success: false,
@@ -322,7 +315,7 @@ Cuisine preference:
 - Prefer Indian cuisine and familiar Indian home-style dishes by default, whenever they can be made realistically from the allowed ingredients.
 - Suggest a varied mix of regional Indian dishes rather than repeating the same generic rice or vegetable bowl.
 - Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
-- These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet and allergies.
+- These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet.
 - Do not invent missing ingredients or force an Indian dish when the available ingredients do not support one. In that case, suggest the closest practical recipe and retain Indian flavors where appropriate.
 - Keep the three choices in each meal category meaningfully different from one another.
 
@@ -333,12 +326,11 @@ Rules:
 4. In Only Available mode, use ONLY pantry ingredients.
 5. Never add an ingredient outside the allowed ingredient pool.
 6. Follow the diet restriction strictly.
-7. Never use any listed allergen, including aliases and derived ingredients.
-8. Do not put the recipe name in its ingredient list.
-9. Keep ingredients specific to the meal.
-10. Quantities should be short and practical.
-11. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool, selected diet and allergy restrictions.
-12. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
+7. Do not put the recipe name in its ingredient list.
+8. Keep ingredients specific to the meal.
+9. Quantities should be short and practical.
+10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool and selected diet.
+11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
 {
@@ -376,7 +368,7 @@ Do not include markdown or explanations outside JSON.
       } else {
         generatedMeals = await generateWithOpenRouter(prompt);
         if (!generatedMeals) {
-          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool, allergies: allergyText });
+          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
           generatedBy = "local-fallback";
         }
       }
