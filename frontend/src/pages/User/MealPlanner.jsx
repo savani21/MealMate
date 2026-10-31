@@ -186,7 +186,7 @@ export default function MealPlanner() {
   useEffect(() => {
     const timer = setTimeout(fetchRecommendedRecipes, 450);
     return () => clearTimeout(timer);
-  }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
+  }, [ingredients, diet, allergies, ingredientMode, recommendedIngredients.join(",")]);
 
 
   return (
