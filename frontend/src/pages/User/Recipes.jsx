@@ -8,7 +8,7 @@ export default function Recipes() {
   const returnToPlanner = params.get("return") === "meal-planner"; const returnToMealPlan = params.get("return") === "meal-plan"; const planId = params.get("planId") || ""; const mealName = params.get("meal") || ""; const mealDay = params.get("day") || ""; const mealType = params.get("mealType") || "Recipe"; const initialIngredients = [...new Map(
     (params.get("ingredients") || "")
       .split(",")
-      .map((item) => item.replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "").trim())
+      .map((item) => item.replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "").trim())
       .filter(Boolean)
       .map((item) => [item.toLowerCase(), item])
   ).values()].join(", "); const available = params.get("available") || ""; const recommended = params.get("recommended") || ""; const mode = params.get("mode") || "available";
