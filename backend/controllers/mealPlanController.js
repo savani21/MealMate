@@ -265,6 +265,17 @@ exports.createMealPlan = async (req, res) => {
       ? [...new Set([...available, ...recommended])]
       : available;
 
+    const invalidAvailableIngredients = available.filter(
+      (ingredient) => DIET_FORBIDDEN[diet]?.test(ingredient)
+    );
+    if (invalidAvailableIngredients.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `These available ingredients are not allowed with the selected ${diet} diet: ${invalidAvailableIngredients.join(", ")}.`,
+        invalidIngredients: invalidAvailableIngredients,
+      });
+    }
+
     if (!available.length) {
       return res.status(400).json({
         success: false,
