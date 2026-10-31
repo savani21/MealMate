@@ -112,6 +112,86 @@ const getRecommendedRecipes = async (req, res) => {
 
 const getRecipes = async (req, res) => {
   try {
+    const [recipes, reviewStats, likeCounts] = await Promise.all([
+      Recipe.find().sort({ createdAt: -1 }).lean(),
+      RecipeReview.aggregate([
+        { $group: { _id: "$recipe", ratingCount: { $sum: 1 }, averageRating: { $avg: "$rating" } } },
+      ]),
+      buildLikeCounts(),
+    ]);
+    const stats = Object.fromEntries(reviewStats.map((item) => [
+      item._id.toString(),
+      { ratingCount: item.ratingCount, averageRating: Number(item.averageRating.toFixed(1)) },
+    ]));
+    const recipesWithMeta = recipes.map((recipe) => ({
+      ...attachEngagement(recipe, likeCounts),
+      ratingCount: stats[recipe._id.toString()]?.ratingCount || 0,
+      averageRating: stats[recipe._id.toString()]?.averageRating || 0,
+    }));
+    res.status(200).json({ recipes: recipesWithMeta });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to get recipes" });
+  }
+};
+
+const getRecommendedRecipes = async (req, res) => {
+  try {
+    const [recipes, reviewStats] = await Promise.all([
+      Recipe.find().lean(),
+      RecipeReview.aggregate([
+        { $group: { _id: "$recipe", ratingCount: { $sum: 1 }, averageRating: { $avg: "$rating" } } },
+      ]),
+    ]);
+    const ratingStats = Object.fromEntries(reviewStats.map((item) => [
+      item._id.toString(),
+      { ratingCount: item.ratingCount, averageRating: Number(item.averageRating.toFixed(1)) },
+    ]));
+    const available = cleanIngredients(req.query.available);
+    const recommended = cleanIngredients(req.query.recommended);
+    const diet = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(req.query.diet) ? req.query.diet : "";
+    const mode = req.query.mode === "recommended" ? "recommended" : "available";
+    const invalid = getDietInvalidIngredients(diet, available);
+    if (invalid.length) return res.status(400).json({ message: "Some available ingredients do not match the selected diet.", invalidIngredients: invalid });
+    const allowed = new Set(mode === "recommended" ? [...new Set([...available, ...recommended])] : available);
+    const ranked = recipes.map((recipe) => {
+      const recipeIngredients = [...new Set((recipe.ingredients || []).map(normalizeIngredient).filter(Boolean))];
+      const recipeDiet = normalizeIngredient(recipe.diet);
+      const incompatible = (diet === "vegetarian" && ["non-vegetarian", "eggetarian"].includes(recipeDiet)) ||
+        (diet === "vegan" && ["vegetarian", "non-vegetarian", "eggetarian"].includes(recipeDiet)) ||
+        (diet === "eggetarian" && recipeDiet === "non-vegetarian");
+      const violates = incompatible || Boolean(RECIPE_FORBIDDEN[diet]?.test(recipe.name)) ||
+        recipeIngredients.some((item) => RECIPE_FORBIDDEN[diet]?.test(item));
+      if (violates) return null;
+      const matchedAvailableIngredients = recipeIngredients.filter((item) => available.some((allowedItem) =>
+        item === allowedItem || item.includes(allowedItem) || allowedItem.includes(item)));
+      const matchedIngredients = recipeIngredients.filter((item) => [...allowed].some((allowedItem) =>
+        item === allowedItem || item.includes(allowedItem) || allowedItem.includes(item)));
+      const missingIngredients = recipeIngredients.filter((item) => !matchedAvailableIngredients.includes(item));
+      const matchPercentage = recipeIngredients.length ? matchedIngredients.length / recipeIngredients.length : 0;
+      const ratingCount = ratingStats[recipe._id.toString()]?.ratingCount || 0;
+      const averageRating = ratingStats[recipe._id.toString()]?.averageRating || 0;
+      return {
+        ...recipe, ratingCount, averageRating, matchedIngredients, matchedAvailableIngredients,
+        missingIngredients, matchCount: matchedIngredients.length,
+        matchPercentage: Math.round(matchPercentage * 100),
+        canCookWithAvailable: missingIngredients.length === 0,
+        recommendationScore: matchPercentage * 100 + matchedIngredients.length * 5 + averageRating * 4 + ratingCount * 2,
+      };
+    }).filter(Boolean)
+      .filter((recipe) => allowed.size === 0 || recipe.matchCount > 0)
+      .sort((a,b) => b.ratingCount-a.ratingCount || b.averageRating-a.averageRating || b.recommendationScore-a.recommendationScore || b.matchPercentage-a.matchPercentage);
+    const topRecipes = ranked.slice(0,3);
+    const ingredients = [...new Set(ranked.slice(0,10).flatMap((recipe) => recipe.ingredients || []).map((item) => String(item).trim()).filter(Boolean))].slice(0,15);
+    res.status(200).json({ recipes: topRecipes, ingredients, mode, diet, availableIngredients: available, recommendedIngredients: recommended });
+  } catch (error) {
+    console.error("RECOMMENDED RECIPES ERROR:", error);
+    res.status(500).json({ message: "Failed to get recommended recipes" });
+  }
+};
+
+const getRecipes = async (req, res) => {
+  try {
     const [recipes, reviewStats] = await Promise.all([
       Recipe.find().sort({ createdAt: -1 }).lean(),
       RecipeReview.aggregate([
