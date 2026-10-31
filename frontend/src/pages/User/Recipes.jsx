@@ -5,7 +5,13 @@ import { Search, ChefHat, Clock, Heart, Utensils, Sparkles, X } from "lucide-rea
 export default function Recipes() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
-  const returnToPlanner = params.get("return") === "meal-planner"; const returnToMealPlan = params.get("return") === "meal-plan"; const planId = params.get("planId") || ""; const mealName = params.get("meal") || ""; const mealDay = params.get("day") || ""; const mealType = params.get("mealType") || "Recipe"; const initialIngredients = params.get("ingredients") || ""; const available = params.get("available") || ""; const recommended = params.get("recommended") || ""; const mode = params.get("mode") || "available";
+  const returnToPlanner = params.get("return") === "meal-planner"; const returnToMealPlan = params.get("return") === "meal-plan"; const planId = params.get("planId") || ""; const mealName = params.get("meal") || ""; const mealDay = params.get("day") || ""; const mealType = params.get("mealType") || "Recipe"; const initialIngredients = [...new Map(
+    (params.get("ingredients") || "")
+      .split(",")
+      .map((item) => item.replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "").trim())
+      .filter(Boolean)
+      .map((item) => [item.toLowerCase(), item])
+  ).values()].join(", "); const available = params.get("available") || ""; const recommended = params.get("recommended") || ""; const mode = params.get("mode") || "available";
   const [recipes, setRecipes] = useState([]); const [search, setSearch] = useState(initialIngredients); const [category, setCategory] = useState("All"); const [loading, setLoading] = useState(true); const [favorites, setFavorites] = useState([]); const [showGenerator, setShowGenerator] = useState(params.get("generate") === "1"); const [generating, setGenerating] = useState(false);
   useEffect(() => { fetchRecipes(); fetchFavorites(); }, []);
   const fetchRecipes = async () => { try { const response = await fetch("http://localhost:5000/api/recipes"); const data = await response.json(); if (!response.ok) { alert(data.message || "Failed to load recipes"); return; } setRecipes(data.recipes || []); } catch (error) { console.error(error); alert("Unable to connect to server."); } finally { setLoading(false); } };
