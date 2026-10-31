@@ -186,7 +186,7 @@ function localMeal(name, pool, keywords, count = 3) {
   };
 }
 
-function buildLocalOptions(pool, type, dayNumber) {
+function buildLocalOptions(pool, type, dayNumber, diet, allergies) {
   const templates = {
     breakfast: [
       ["Poha", ["poha", "flattened rice", "onion", "potato", "peanut"]],
@@ -217,7 +217,9 @@ function buildLocalOptions(pool, type, dayNumber) {
     ],
   };
   const normalized = pool.map((item) => item.toLowerCase());
-  const candidates = templates[type] || templates.lunch;
+  const candidates = (templates[type] || templates.lunch).filter(([name]) =>
+    !DIET_FORBIDDEN[diet]?.test(name) && findAllergenConflicts(name, allergies).length === 0
+  );
   const ranked = candidates.map(([name, keywords], index) => {
     const matched = pool.filter((item, i) =>
       keywords.some((keyword) => normalized[i].includes(keyword))
@@ -268,16 +270,18 @@ function buildLocalOptions(pool, type, dayNumber) {
   });
 }
 
-function generateLocalMealPlan({ duration, diet, allowedPool }) {
-  const pool = [...new Set(allowedPool)].filter((item) => !DIET_FORBIDDEN[diet]?.test(item));
+function generateLocalMealPlan({ duration, diet, allowedPool, allergies }) {
+  const pool = [...new Set(allowedPool)].filter((item) =>
+    !DIET_FORBIDDEN[diet]?.test(item) && findAllergenConflicts(item, allergies).length === 0
+  );
   if (!pool.length) {
     throw new Error(`No allowed ingredients are available for the selected ${diet} diet.`);
   }
   const days = [];
   for (let day = 1; day <= Number(duration); day += 1) {
-    const breakfastOptions = buildLocalOptions(pool, "breakfast", day);
-    const lunchOptions = buildLocalOptions(pool, "lunch", day);
-    const dinnerOptions = buildLocalOptions(pool, "dinner", day);
+    const breakfastOptions = buildLocalOptions(pool, "breakfast", day, diet, allergies);
+    const lunchOptions = buildLocalOptions(pool, "lunch", day, diet, allergies);
+    const dinnerOptions = buildLocalOptions(pool, "dinner", day, diet, allergies);
     days.push({
       day,
       breakfast: breakfastOptions[0].name,
@@ -348,14 +352,14 @@ exports.createMealPlan = async (req, res) => {
       });
     }
 
-    const invalidAvailableIngredients = available.filter(
+    const invalidDietIngredients = allowedPool.filter(
       (ingredient) => DIET_FORBIDDEN[diet]?.test(ingredient)
     );
-    if (invalidAvailableIngredients.length > 0) {
+    if (invalidDietIngredients.length > 0) {
       return res.status(400).json({
         success: false,
-        message: `These available ingredients are not allowed with the selected ${diet} diet: ${invalidAvailableIngredients.join(", ")}.`,
-        invalidIngredients: invalidAvailableIngredients,
+        message: `These selected ingredients are not allowed with the selected ${diet} diet: ${invalidDietIngredients.join(", ")}.`,
+        invalidIngredients: invalidDietIngredients,
       });
     }
 
@@ -438,12 +442,12 @@ Do not include markdown or explanations outside JSON.
       // Preview must be fast and predictable: use local Indian meal templates
       // instead of waiting on variable-latency free AI model routing.
       if (req.body.previewOnly === true) {
-        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool, allergies: allergyText });
         generatedBy = "local-fast";
       } else {
         generatedMeals = await generateWithOpenRouter(prompt);
         if (!generatedMeals) {
-          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool, allergies: allergyText });
           generatedBy = "local-fallback";
         }
       }
