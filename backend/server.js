@@ -7,12 +7,14 @@ require("dotenv").config();
 
 const app = express();
 const recipeRoutes = require("./routes/user/recipeRoutes");
+const recipeReviewRoutes = require("./routes/user/recipeReviewRoutes");
 const favoriteRoutes = require("./routes/user/favoriteRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
 const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
+const adminRecipeReviewRoutes = require("./routes/admin/recipeReviewRoutes");
 const adminMealPlanRoutes = require("./routes/admin/mealPlanRoutes");
 const adminAnalyticsRoutes = require("./routes/admin/analyticsRoutes");
 const adminAiRoutes = require("./routes/admin/aiRoutes");
@@ -32,11 +34,13 @@ app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
 app.use("/api/user/pantry", require("./routes/user/pantryRoutes"));
 app.use("/api/store", storeRoutes);
 app.use("/api/recipes", recipeRoutes);
+app.use("/api/recipe-reviews", recipeReviewRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/ai", aiRoutes);
 
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/admin/recipes", adminRecipeRoutes);
+app.use("/api/admin/recipe-reviews", adminRecipeReviewRoutes);
 app.use("/api/admin/meal-plans", adminMealPlanRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
