@@ -34,45 +34,191 @@ const getRecipes = async (req, res) => {
   }
 };
 
+const normalizeIngredient = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/^[\s\d./-]+/, "")
+    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?)\s+/i, "")
+    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[.,;:]+$/, "")
+    .replace(/\b(\w+)s$/, "$1");
+
+const cleanIngredients = (value) =>
+  String(value || "")
+    .split(",")
+    .map((item) => normalizeIngredient(item))
+    .filter(Boolean);
+
+const getDietInvalidIngredients = (diet, ingredients) => {
+  const forbidden = RECIPE_FORBIDDEN[diet];
+  if (!forbidden) return [];
+  return ingredients.filter((ingredient) => forbidden.test(ingredient));
+};
+
+const RECIPE_FORBIDDEN = {
+  vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
+  vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
+  eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
+};
+
 const getRecommendedRecipes = async (req, res) => {
   try {
-    const [allRecipes, likeCounts, currentUser] = await Promise.all([
+    const [recipes, reviewStats] = await Promise.all([
       Recipe.find().lean(),
-      buildLikeCounts(),
-      req.user?.id ? User.findById(req.user.id, { favorites: 1 }).lean() : null,
+      RecipeReview.aggregate([
+        {
+          $group: {
+            _id: "$recipe",
+            ratingCount: { $sum: 1 },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ]),
     ]);
-    const likedIds = (currentUser?.favorites || []).map((id) => id.toString());
-    const likedRecipes = allRecipes.filter((recipe) => likedIds.includes(recipe._id.toString()));
-    const likedTokens = new Set(likedRecipes.flatMap((recipe) => [
-      String(recipe.category || "").toLowerCase(),
-      ...(recipe.ingredients || []).map((item) => String(item).toLowerCase().replace(/[0-9.,]/g, "").trim()),
-    ]).filter(Boolean));
 
-    const ranked = allRecipes
-      .filter((recipe) => !likedIds.includes(recipe._id.toString()))
+    const ratingStats = Object.fromEntries(
+      reviewStats.map((item) => [
+        item._id.toString(),
+        {
+          ratingCount: item.ratingCount,
+          averageRating: Number(item.averageRating.toFixed(1)),
+        },
+      ])
+    );
+
+    const available = cleanIngredients(req.query.available);
+    const recommended = cleanIngredients(req.query.recommended);
+    const diet = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(req.query.diet)
+      ? req.query.diet
+      : "";
+    const mode = req.query.mode === "recommended" ? "recommended" : "available";
+
+    const invalidAvailableIngredients = getDietInvalidIngredients(diet, available);
+    if (invalidAvailableIngredients.length > 0) {
+      return res.status(400).json({
+        message: `These available ingredients are not allowed for the selected Food Preference: ${invalidAvailableIngredients.join(", ")}. Choose Eggetarian for eggs or remove the incompatible ingredient.`,
+        invalidIngredients: invalidAvailableIngredients,
+      });
+    }
+
+    const allowedIngredients = new Set(
+      mode === "recommended"
+        ? [...new Set([...available, ...recommended])]
+        : available
+    );
+
+    const ranked = recipes
       .map((recipe) => {
-        const tokens = [
-          String(recipe.category || "").toLowerCase(),
-          ...(recipe.ingredients || []).map((item) => String(item).toLowerCase().replace(/[0-9.,]/g, "").trim()),
-        ].filter(Boolean);
-        const similarity = tokens.reduce((score, token) => score + (likedTokens.has(token) ? 1 : 0), 0);
-        const likes = likeCounts[recipe._id.toString()] || 0;
-        return { recipe, score: similarity * 2 + Math.log1p(likes), similarity, likes };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+        const recipeIngredients = [
+          ...new Set((recipe.ingredients || []).map(normalizeIngredient).filter(Boolean)),
+        ];
 
-    const recipes = ranked.map(({ recipe }) => attachEngagement(recipe, likeCounts, likedIds));
-    const ingredientNames = recipes.flatMap((recipe) => recipe.ingredients || []).map((item) =>
-      String(item).replace(/^\s*[\d./-]+\s*/, "").trim()
-    ).filter(Boolean);
-    const ingredients = [...new Set(ingredientNames)].slice(0, 15);
-    res.status(200).json({ recipes, ingredients, highlyLikedThreshold: HIGHLY_LIKED_MIN_LIKES });
+        const recipeDiet = normalizeIngredient(recipe.diet);
+        const incompatibleRecipeDiet =
+          diet === "vegetarian" &&
+          ["non-vegetarian", "eggetarian"].includes(recipeDiet)
+            ? true
+            : diet === "vegan" &&
+              ["vegetarian", "non-vegetarian", "eggetarian"].includes(recipeDiet)
+              ? true
+              : diet === "eggetarian" &&
+                recipeDiet === "non-vegetarian"
+                ? true
+                : false;
+
+        const violatesDiet =
+          incompatibleRecipeDiet ||
+          Boolean(RECIPE_FORBIDDEN[diet]?.test(recipe.name)) ||
+          recipeIngredients.some((ingredient) => RECIPE_FORBIDDEN[diet]?.test(ingredient));
+
+        if (violatesDiet) return null;
+
+        const matchedAvailableIngredients = recipeIngredients.filter((ingredient) =>
+          available.some(
+            (allowed) =>
+              ingredient === allowed ||
+              ingredient.includes(allowed) ||
+              allowed.includes(ingredient)
+          )
+        );
+
+        const matchedIngredients = recipeIngredients.filter((ingredient) =>
+          [...allowedIngredients].some(
+            (allowed) =>
+              ingredient === allowed ||
+              ingredient.includes(allowed) ||
+              allowed.includes(ingredient)
+          )
+        );
+
+        const missingIngredients = recipeIngredients.filter(
+          (ingredient) => !matchedAvailableIngredients.includes(ingredient)
+        );
+
+        const matchPercentage = recipeIngredients.length
+          ? matchedIngredients.length / recipeIngredients.length
+          : 0;
+        const ratingCount = ratingStats[recipe._id.toString()]?.ratingCount || 0;
+        const averageRating = ratingStats[recipe._id.toString()]?.averageRating || 0;
+
+        const recommendationScore =
+          matchPercentage * 100 +
+          matchedIngredients.length * 5 +
+          averageRating * 4 +
+          ratingCount * 2;
+
+        return {
+          ...recipe,
+          ratingCount,
+          averageRating,
+          matchedIngredients,
+          matchedAvailableIngredients,
+          missingIngredients,
+          matchCount: matchedIngredients.length,
+          matchPercentage: Math.round(matchPercentage * 100),
+          canCookWithAvailable: missingIngredients.length === 0,
+          recommendationScore,
+        };
+      })
+      .filter(Boolean)
+      .filter((recipe) => allowedIngredients.size === 0 || recipe.matchCount > 0)
+      .sort((a, b) =>
+        b.ratingCount - a.ratingCount ||
+        b.averageRating - a.averageRating ||
+        b.recommendationScore - a.recommendationScore ||
+        b.matchPercentage - a.matchPercentage
+      );
+
+    const topRecipes = ranked.slice(0, 3);
+
+    // Keep the existing recommended-ingredient response compatible with the
+    // Meal Planner while making it reflect the highest-ranked recipes.
+    const ingredients = [
+      ...new Set(
+        ranked
+          .slice(0, 10)
+          .flatMap((recipe) => recipe.ingredients || [])
+          .map((ingredient) => String(ingredient).trim())
+          .filter(Boolean)
+      ),
+    ].slice(0, 15);
+
+    res.status(200).json({
+      recipes: topRecipes,
+      ingredients,
+      mode,
+      diet,
+      availableIngredients: available,
+      recommendedIngredients: recommended,
+    });
   } catch (error) {
     console.error("RECOMMENDED RECIPES ERROR:", error);
     res.status(500).json({ message: "Failed to get recommended recipes" });
   }
 };
+
 
 const getRecipeById = async (req, res) => {
   try {
