@@ -27,7 +27,7 @@ function mealViolatesDiet(meal, diet) {
   const forbidden = DIET_FORBIDDEN[diet];
   if (!forbidden) return false;
 
-  return ["breakfast", "lunch", "snack", "dinner"].some((type) => {
+  return ["breakfast", "lunch", "dinner"].some((type) => {
     const name = String(meal?.[type] || "");
     const ingredients = Array.isArray(meal?.[type + "Ingredients"])
       ? meal[type + "Ingredients"]
@@ -226,9 +226,6 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
     const breakfastOptions = buildLocalOptions(pool, "breakfast", day);
     const lunchOptions = buildLocalOptions(pool, "lunch", day);
     const dinnerOptions = buildLocalOptions(pool, "dinner", day);
-    const snackName = pool.some((item) => /banana|apple|fruit|milk|curd|yogurt/i.test(item))
-      ? "Indian Fruit or Curd Snack"
-      : "Roasted Masala Ingredient Snack";
 
     days.push({
       day,
@@ -241,8 +238,6 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
       dinner: dinnerOptions[0].name,
       dinnerIngredients: dinnerOptions[0].ingredients,
       dinnerOptions,
-      snack: snackName,
-      snackIngredients: pool.slice(0, Math.min(2, pool.length)).map((name) => ({ name, quantity: "as needed" })),
     });
   }
   return { days };
@@ -334,9 +329,7 @@ Return ONLY valid JSON in exactly this structure:
       "lunchOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
       "dinner": "selected recipe name (same as first option)",
       "dinnerIngredients": [{"name": "ingredient", "quantity": "quantity"}],
-      "dinnerOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}],
-      "snack": "meal name",
-      "snackIngredients": [{"name": "ingredient", "quantity": "quantity"}]
+      "dinnerOptions": [{"name":"recipe name","description":"short description","prepTime":"30 minutes","ingredients":[{"name":"ingredient","quantity":"quantity"}]}]
     }
   ]
 }
