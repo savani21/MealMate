@@ -7,6 +7,7 @@ const admin = require("../middleware/admin");
 const {
   register,
   login,
+  updateProfile,
   getProfile,
 } = require("../controllers/authController");
 
@@ -14,6 +15,7 @@ const {
 router.post("/register", register);
 router.post("/login", login);
 router.get("/profile", auth, getProfile);
+router.patch("/profile", auth, updateProfile);
 router.get("/admin", auth, admin, (req, res) => {
   res.status(200).json({
     success: true,
