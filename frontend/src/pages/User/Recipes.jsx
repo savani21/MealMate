@@ -20,15 +20,34 @@ function getMinutes(value) {
 }
 
 const CATEGORY_IMAGES = {
-  breakfast: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
-  lunch: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
-  dinner: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
-  default: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+  breakfast: [
+    "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-149等?auto=format&fit=crop&w=900&q=85",
+  ],
+  lunch: [
+    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
+  ],
+  dinner: [
+    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+  ],
+  default: [
+    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
+  ],
 };
 
-function getRecipeImage(recipe) {
+function getRecipeImage(recipe, index, duplicateImageUrls) {
   const category = String(recipe.category || "").trim().toLowerCase();
-  return recipe.image || CATEGORY_IMAGES[category] || CATEGORY_IMAGES.default;
+  const images = CATEGORY_IMAGES[category] || CATEGORY_IMAGES.default;
+  const savedImage = String(recipe.image || "").trim();
+  if (savedImage && !duplicateImageUrls.has(savedImage)) return savedImage;
+  return images[index % images.length];
 }
 
 export default function Recipes() {
@@ -292,17 +311,21 @@ export default function Recipes() {
           </div>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredRecipes.map((recipe) => (
+            {filteredRecipes.map((recipe, index) => (
               <article key={recipe._id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
                     <img
-                      src={getRecipeImage(recipe)}
+                      src={getRecipeImage(recipe, index, new Set(filteredRecipes
+                        .map((item) => String(item.image || "").trim())
+                        .filter((url, imageIndex, urls) => url && urls.indexOf(url) !== imageIndex)))}
                       alt={recipe.name}
                       loading="lazy"
                       onError={(event) => {
-                        if (event.currentTarget.src !== CATEGORY_IMAGES.default) {
-                          event.currentTarget.src = CATEGORY_IMAGES.default;
+                        const categoryImages = CATEGORY_IMAGES[String(recipe.category || "").trim().toLowerCase()] || CATEGORY_IMAGES.default;
+                        const fallback = categoryImages[index % categoryImages.length];
+                        if (event.currentTarget.src !== fallback) {
+                          event.currentTarget.src = fallback;
                         } else {
                           event.currentTarget.style.display = "none";
                         }
