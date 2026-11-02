@@ -11,6 +11,7 @@ const recipeReviewRoutes = require("./routes/user/recipeReviewRoutes");
 const favoriteRoutes = require("./routes/user/favoriteRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
+const { processDueOrders } = require("./controllers/user/orderController");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
 const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
@@ -25,7 +26,12 @@ app.use(express.json());
 
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB Connected"))
+  .then(async () => {
+    console.log("MongoDB Connected");
+    await processDueOrders();
+    // Check due grocery deliveries in the background, even when the user is offline.
+    setInterval(() => processDueOrders(), 15000);
+  })
   .catch((err) => console.log(err));
 
 app.use("/api/auth", require("./routes/authRoutes"));
