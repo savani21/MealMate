@@ -605,6 +605,10 @@ export default function GroceryStore() {
                       <p className="font-bold text-primary">₹{order.totalAmount}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{formatDateTime(order.createdAt)}</p>
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <span className={`text-[11px] font-bold rounded-full px-2 py-1 ${order.status === "delivered" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>{order.status === "delivered" ? "Delivered · Added to pantry" : "On the way · Pantry pending"}</span>
+                      <span className="text-[11px] text-gray-500">ETA {formatDateTime(order.deliveryTime)}</span>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -619,8 +623,8 @@ export default function GroceryStore() {
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden" id="receipt-print-area">
             <div className="bg-primary text-white p-6 text-center">
               <Receipt className="w-8 h-8 mx-auto mb-2" />
-              <h2 className="text-xl font-black">Order Placed!</h2>
-              <p className="text-white/80 text-sm mt-1">Your grocery order is confirmed</p>
+              <h2 className="text-xl font-black">{receipt.order.status === "delivered" ? "Delivered to Pantry!" : "Order Placed!"}</h2>
+              <p className="text-white/80 text-sm mt-1">{receipt.order.status === "delivered" ? "Your ordered ingredients have been added to your pantry." : "Your groceries will be added to your pantry after delivery."}</p>
             </div>
 
             <div className="p-6 space-y-4">
