@@ -1,7 +1,9 @@
 const PantryItem = require("../../models/user/PantryItem");
+const { processDueOrders } = require("./orderController");
 
 exports.listPantry = async (req, res) => {
   try {
+    await processDueOrders();
     const items = await PantryItem.find({ user: req.user.id }).sort({ name: 1 }).lean();
     res.json({ items });
   } catch (error) {
