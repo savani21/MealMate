@@ -19,6 +19,18 @@ function getMinutes(value) {
   return match ? Number(match[0]) : null;
 }
 
+const CATEGORY_IMAGES = {
+  breakfast: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
+  lunch: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
+  dinner: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
+  default: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+};
+
+function getRecipeImage(recipe) {
+  const category = String(recipe.category || "").trim().toLowerCase();
+  return recipe.image || CATEGORY_IMAGES[category] || CATEGORY_IMAGES.default;
+}
+
 export default function Recipes() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
@@ -115,16 +127,13 @@ export default function Recipes() {
   };
 
   const searchTerms = search.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
-  const categories = useMemo(
-    () => ["All", ...new Set(recipes.map((recipe) => recipe.category).filter(Boolean))],
-    [recipes]
-  );
+  const categories = ["All", "Breakfast", "Lunch", "Dinner"];
 
   const filteredRecipes = useMemo(() => {
     const filtered = recipes.filter((recipe) => {
       const searchableText = [recipe.name, recipe.description, ...(recipe.ingredients || [])].join(" ").toLowerCase();
       const matchesSearch = searchTerms.length === 0 || searchTerms.some((term) => searchableText.includes(term));
-      const matchesCategory = category === "All" || recipe.category === category;
+      const matchesCategory = category === "All" || String(recipe.category || "").trim().toLowerCase() === category.toLowerCase();
       const matchesDiet = diet === "All diets" || String(recipe.diet || "Any").toLowerCase() === diet.toLowerCase();
       const minutes = getMinutes(recipe.prepTime);
       const matchesTime = timeLimit === "Any time" || (minutes !== null && minutes <= Number(timeLimit));
@@ -287,7 +296,19 @@ export default function Recipes() {
               <article key={recipe._id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                    {recipe.image ? <img src={recipe.image} alt={recipe.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" /> : <div className="flex h-full items-center justify-center"><ChefHat className="h-14 w-14 text-green-700/30" /></div>}
+                    <img
+                      src={getRecipeImage(recipe)}
+                      alt={recipe.name}
+                      loading="lazy"
+                      onError={(event) => {
+                        if (event.currentTarget.src !== CATEGORY_IMAGES.default) {
+                          event.currentTarget.src = CATEGORY_IMAGES.default;
+                        } else {
+                          event.currentTarget.style.display = "none";
+                        }
+                      }}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    />
                     <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold capitalize text-green-800 shadow-sm">{recipe.category || "Recipe"}</span>
                     {recipe.isHighlyLiked && <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-bold text-amber-950"><Flame className="h-3 w-3" /> Community favourite</span>}
                   </div>
