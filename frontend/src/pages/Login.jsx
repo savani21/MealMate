@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import axios from "axios";
-import { Leaf, Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { ChefHat, Eye, EyeOff, Mail, Lock, ArrowRight, CheckCircle } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/context/AuthContext';
 
@@ -67,10 +67,10 @@ const { login } = useAuth();
           {/* Logo */ }
           <Link href="/" className="inline-flex items-center gap-2 mb-10 group">
             <div className="bg-primary/10 p-2 rounded-xl group-hover:bg-primary/20 transition-colors">
-              <Leaf className="w-6 h-6 text-primary" />
+              <ChefHat className="w-6 h-6 text-primary" />
             </div>
             <span className="text-xl font-black text-gray-900 tracking-tight">
-              MealMate <span className="text-primary">AI</span>
+              MealMate
             </span>
           </Link>
 
