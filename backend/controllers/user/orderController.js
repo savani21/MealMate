@@ -118,7 +118,7 @@ exports.processDueOrders = async () => {
           ],
         },
         { $set: { inventorySyncing: true, inventorySyncingAt: now } },
-        { new: true, sort: { deliveryTime: 1 } }
+        { returnDocument: "after", sort: { deliveryTime: 1 } }
       );
       if (!order) break;
       try {
