@@ -45,7 +45,7 @@ function getRecipeImage(recipe, index) {
     .map((item) => typeof item === "string" ? item : item?.name || item?.ingredient || "")
     .join(" ");
   const recipeText = `${recipe.name || ""} ${recipe.description || ""} ${ingredients}`.toLowerCase();
-  const animalTerms = /\\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\\b/i;
+  const animalTerms = /\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\b/i;
   const isNonVegetarian = diet === "non-vegetarian" || animalTerms.test(recipeText);
   const images = isNonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
   const stableKey = String(recipe._id || recipe.name || index);
