@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
@@ -341,44 +342,15 @@ export default function GroceryStore() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="w-full h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center"><ShoppingBasket className="w-5 h-5 text-primary" /></span>
-            <span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span>
-          </button>
-          <nav className="hidden lg:flex items-center gap-1">
-            <button onClick={() => setLocation("/dashboard")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Dashboard</button>
-            <button onClick={() => setLocation("/meal-planner")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Meal Planner</button>
-            <button onClick={() => setLocation("/pantry")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Pantry</button>
-            <button onClick={() => setLocation("/my-meal-plans")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Meal Plans</button>
-            <button onClick={() => setLocation("/recipes")} className="px-3 py-2 rounded-xl text-sm font-semibold text-gray-700 hover:bg-green-50 hover:text-primary transition">Recipes</button>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={openOrders}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-800"
-            >
-              <History className="w-5 h-5" />
-              <span className="hidden sm:inline">My Orders</span>
-            </button>
-
-            <button
-              onClick={() => setCartOpen(true)}
-              className="relative flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white font-semibold text-gray-800"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              Cart
-              {cartCount > 0 && (
-                <span className="min-w-6 h-6 px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center">
-                  {cartCount}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppNavbar>
+        <button onClick={openOrders} className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+          <History className="h-5 w-5" /><span>My Orders</span>
+        </button>
+        <button onClick={() => setCartOpen(true)} className="relative flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">
+          <ShoppingCart className="h-5 w-5" />Cart
+          {cartCount > 0 && <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1 text-xs text-white">{cartCount}</span>}
+        </button>
+      </AppNavbar>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-8">
