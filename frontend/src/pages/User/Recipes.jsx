@@ -411,7 +411,7 @@ export default function Recipes() {
               <article key={recipe._id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                    {recipeImages[recipe._id] ? (
+                    {(recipe.imageGeneratedAt && recipe.image) || recipeImages[recipe._id] ? (
                       <img
                         src={recipe.imageGeneratedAt && recipe.image ? recipe.image : recipeImages[recipe._id]}
                         alt={recipe.name}
