@@ -19,65 +19,6 @@ function getMinutes(value) {
   return match ? Number(match[0]) : null;
 }
 
-const CATEGORY_IMAGES = {
-  breakfast: [
-    "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-  ],
-  lunch: [
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1515003197210-e0cd7184f8b5?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
-  ],
-  dinner: [
-    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1515003197210-e0cd7184f8b5?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-  ],
-  default: [
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1515003197210-e0cd7184f8b5?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
-  ],
-};
-
 const VEGETARIAN_IMAGES = [
   "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
   "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
@@ -102,9 +43,8 @@ function getRecipeImage(recipe, index) {
     .map((item) => typeof item === "string" ? item : item?.name || item?.ingredient || "")
     .join(" ");
   const recipeText = `${recipe.name || ""} ${recipe.description || ""} ${ingredients}`.toLowerCase();
-  const nonVegetarianWords = /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|meat|bacon|ham|sausage|egg|eggs)\b/i;
-  const isNonVegetarian = diet === "non-vegetarian" || diet === "eggetarian" ||
-    (diet !== "vegetarian" && diet !== "vegan" && nonVegetarianWords.test(recipeText));
+  const animalTerms = /\\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\\b/i;
+  const isNonVegetarian = diet === "non-vegetarian" || animalTerms.test(recipeText);
   const images = isNonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
   const stableKey = String(recipe._id || recipe.name || index);
   const hash = stableKey.split("").reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
@@ -147,80 +87,10 @@ export default function Recipes() {
   useEffect(() => { fetchRecipes(); fetchFavorites(); }, []);
   useEffect(() => {
     if (!recipes.length) return;
-    let cancelled = false;
-    const CACHE_KEY = "mealmate_recipe_image_cache_v2";
-    let savedImages = {};
-    try {
-      savedImages = JSON.parse(localStorage.getItem(CACHE_KEY) || "{}");
-    } catch {
-      savedImages = {};
-    }
-    const animalTerms = /\\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\\b/i;
-    const eggTerms = /\\b(egg|eggs)\\b/i;
-    const ingredientName = (value) => String(value || "")
-      .replace(/\\([^)]*\\)/g, " ")
-      .replace(/\\b(to taste|as needed|optional|fresh|chopped|sliced|diced|minced|ground|boiled|cooked|raw|large|small|medium)\\b/gi, " ")
-      .replace(/\\d+(?:[./]\\d+)?\\s*(g|kg|ml|l|cup|cups|tbsp|tsp|tablespoon|teaspoon|piece|pieces)?\\b/gi, " ")
-      .replace(/\\b(g|kg|ml|litre|liter|cup|cups|tbsp|tsp|tablespoon|teaspoon|pieces|piece| cloves?)\\b/gi, " ")
-      .replace(/[^a-zA-Z ]/g, " ").replace(/\\s+/g, " ").trim().toLowerCase();
-    const hashText = (value) => value.split("").reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7);
-    const isDietCompatible = (meal, dietType) => {
-      const mealIngredients = Array.from({ length: 20 }, (_, i) => meal[`strIngredient${i + 1}`] || "").join(" ");
-      const type = String(dietType || "Any").toLowerCase();
-      if (["vegetarian", "vegan"].includes(type)) return !animalTerms.test(mealIngredients) && !eggTerms.test(mealIngredients);
-      if (type === "eggetarian") return !animalTerms.test(mealIngredients);
-      if (type === "non-vegetarian") return animalTerms.test(mealIngredients);
-      return true;
-    };
-    const findIngredientImage = async (recipe) => {
-      const cacheId = String(recipe._id || recipe.name);
-      if (savedImages[cacheId]) return savedImages[cacheId];
-      const candidates = (Array.isArray(recipe.ingredients) ? recipe.ingredients : [])
-        .map(ingredientName)
-        .filter((name) => name && !/^(salt|water|oil|pepper|sugar|spices|masala|coriander powder|turmeric powder|red chilli powder)$/.test(name))
-        .map((name) => name.split(" ").slice(-2).join(" "));
-      const uniqueCandidates = [...new Set(candidates)].slice(0, 5);
-      const seed = hashText(cacheId);
-      for (const ingredient of uniqueCandidates) {
-        try {
-          const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(ingredient.replace(/\\s+/g, "_"))}`);
-          if (!response.ok) continue;
-          const meals = (await response.json()).meals || [];
-          const ordered = [...meals].sort((a, b) => String(a.idMeal).localeCompare(String(b.idMeal)));
-          if (!ordered.length) continue;
-          const offset = seed % ordered.length;
-          const rotated = [...ordered.slice(offset), ...ordered.slice(0, offset)];
-          for (const candidate of rotated.slice(0, 12)) {
-            const detailResponse = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${candidate.idMeal}`);
-            if (!detailResponse.ok) continue;
-            const detail = (await detailResponse.json()).meals?.[0];
-            if (detail?.strMealThumb && isDietCompatible(detail, recipe.diet)) return detail.strMealThumb;
-          }
-        } catch {
-          continue;
-        }
-      }
-      return null;
-    };
-    const loadImages = async () => {
-      const entries = await Promise.all(recipes.map(async (recipe) => [String(recipe._id || recipe.name), await findIngredientImage(recipe)]));
-      const resolved = Object.fromEntries(entries.filter(([, url]) => url));
-      if (!cancelled && Object.keys(resolved).length) {
-        savedImages = { ...savedImages, ...resolved };
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(savedImages));
-        } catch {
-          // Keep images available for this session if browser storage is full.
-        }
-        setRecipeImages((current) => ({ ...current, ...resolved }));
-      }
-    };
-    const cachedForPage = Object.fromEntries(recipes
-      .filter((recipe) => savedImages[String(recipe._id || recipe.name)])
-      .map((recipe) => [recipe._id, savedImages[String(recipe._id || recipe.name)]]));
-    if (Object.keys(cachedForPage).length) setRecipeImages((current) => ({ ...current, ...cachedForPage }));
-    loadImages();
-    return () => { cancelled = true; };
+    const images = Object.fromEntries(
+      recipes.map((recipe, index) => [recipe._id, getRecipeImage(recipe, index)])
+    );
+    setRecipeImages(images);
   }, [recipes]);
 
   useEffect(() => {
