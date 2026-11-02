@@ -112,13 +112,13 @@ exports.consumeRecipeIngredients = async (req, res) => {
 
     const normalizeName = (value) => String(value || "")
       .toLowerCase()
-      .replace(/\\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted)\\b/g, "")
-      .replace(/\\s+/g, " ").trim()
+      .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted)\b/g, "")
+      .replace(/\s+/g, " ").trim()
       .replace(/s$/, "");
     const aliases = { "basmati rice": "rice", "long grain rice": "rice", "atta": "wheat flour", "whole wheat flour": "wheat flour" };
     const canonical = (value) => aliases[normalizeName(value)] || normalizeName(value);
     const toStoredUnit = (amount, normalizedUnit, targetUnit) => {
-      const target = String(targetUnit || "").toLowerCase().replace(/\\([^)]*\\)/g, "").replace(/\\./g, "").trim();
+      const target = String(targetUnit || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/\./g, "").trim();
       if (normalizedUnit === "g" && /^(kg|kgs|kilogram|kilograms)$/.test(target)) return amount / 1000;
       if (normalizedUnit === "ml" && /^(l|litre|litres|liter|liters)$/.test(target)) return amount / 1000;
       return amount;
