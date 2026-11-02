@@ -25,6 +25,7 @@ export default function MealPlanner() {
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [draftDays, setDraftDays] = useState([]);
+  const [savedPlans, setSavedPlans] = useState([]);
   const [previewReady, setPreviewReady] = useState(false);
   const recipeChoicesRef = useRef(null);
 
@@ -42,6 +43,21 @@ export default function MealPlanner() {
       })
       .catch((error) => console.error("Failed to load food preference:", error));
   }, []);
+
+  const loadSavedPlans = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    try {
+      const response = await fetch(API, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not load saved plans");
+      setSavedPlans(data.mealPlans || []);
+    } catch (error) {
+      console.error("Saved meal plans could not be loaded:", error);
+    }
+  };
+
+  useEffect(() => { loadSavedPlans(); }, [weekStart]);
 
   const handleDietChange = (value) => {
     setDiet(value);
@@ -136,12 +152,40 @@ export default function MealPlanner() {
     if (previewReady) recipeChoicesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [previewReady]);
 
-  const selectOption = (dayIndex, mealType, option) => {
+  const selectOption = async (dayIndex, mealType, option, savedEntry) => {
+    if (savedEntry) {
+      const token = localStorage.getItem("token");
+      try {
+        const response = await fetch(`${API}/${savedEntry.plan._id}/selection`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ day: savedEntry.dayNumber, mealType, option }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Could not update meal");
+        setSavedPlans((current) => current.map((plan) => plan._id === data.mealPlan._id ? data.mealPlan : plan));
+      } catch (error) { alert(error.message); }
+      return;
+    }
     setDraftDays((current) => current.map((day, index) => index !== dayIndex ? day : ({
       ...day,
       [mealType]: option.name,
       [mealType + "Ingredients"]: option.ingredients || [],
     })));
+  };
+
+  const removeSavedMeal = async (entry, mealType) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`${API}/${entry.plan._id}/selection`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ day: entry.dayNumber, mealType, option: null }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not remove meal");
+      setSavedPlans((current) => current.map((plan) => plan._id === data.mealPlan._id ? data.mealPlan : plan));
+    } catch (error) { alert(error.message); }
   };
 
   const saveSelectedPlan = async () => {
@@ -152,12 +196,15 @@ export default function MealPlanner() {
       const response = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...payload, selectedDays: draftDays }),
+        body: JSON.stringify({ ...payload, selectedDays: draftDays, startDate: formatDateKey(weekStart) }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to save meal plan");
       if (!data.mealPlan?._id) throw new Error("Meal plan was saved but no plan ID was returned.");
-      setLocation(`/meal-plans/${data.mealPlan._id}`);
+      await loadSavedPlans();
+      setDraftDays([]);
+      setPreviewReady(false);
+      alert("Your meals are saved to the selected calendar dates.");
     } catch (error) {
       console.error("Save meal plan error:", error);
       alert(error.message || "Unable to save your selected meal plan.");
@@ -247,12 +294,23 @@ export default function MealPlanner() {
           </div>
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
             {weekDays.map((date, index) => {
-              const day = draftDays[index];
+              const dateKey = formatDateKey(date);
+              const savedEntry = savedPlans.reduce((match, plan) => {
+                if (match || !plan.startDate || plan.isArchived) return match;
+                const startKey = new Date(plan.startDate).toISOString().slice(0, 10);
+                const start = new Date(startKey + "T00:00:00Z");
+                const current = new Date(dateKey + "T00:00:00Z");
+                const offset = Math.round((current - start) / 86400000);
+                if (offset < 0 || offset >= (plan.meals || []).length) return match;
+                const savedDay = plan.meals.find((item) => Number(item.day) === offset + 1);
+                return savedDay ? { plan, day: savedDay, dayNumber: offset + 1 } : match;
+              }, null);
+              const day = previewReady ? draftDays[index] : (savedEntry?.day || null);
               const isToday = formatDateKey(date) === formatDateKey(new Date());
               return (
                 <article key={formatDateKey(date)} className={"min-h-44 rounded-2xl border p-3 " + (isToday ? "border-primary/50 bg-green-50/60" : "border-gray-100 bg-[#fbfcfa]")}>
                   <div className="mb-3 flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{date.toLocaleDateString([], { weekday: "short" })}</p><p className={"text-lg font-black " + (isToday ? "text-primary" : "text-gray-900")}>{date.getDate()}</p></div>{isToday && <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-primary">Today</span>}</div>
-                  {day ? <div className="space-y-2">{["breakfast", "lunch", "dinner"].map((type) => <div key={type} className="rounded-xl bg-white p-2.5 shadow-sm"><p className="text-[10px] font-bold uppercase tracking-wide text-primary">{type}</p><p className="mt-1 text-xs font-semibold leading-4 text-gray-800">{day[type] || "No recipe selected"}</p>{(day[type + "Options"] || []).length > 1 && <details className="mt-2"><summary className="cursor-pointer text-[11px] font-semibold text-primary">Change recipe</summary><div className="mt-2 space-y-1.5">{day[type + "Options"].map((option, optionIndex) => <label key={option.name + optionIndex} className="flex cursor-pointer items-start gap-2 text-[11px] text-gray-600"><input type="radio" name={"week-" + index + "-" + type} checked={day[type] === option.name} onChange={() => selectOption(index, type, option)} className="mt-0.5 accent-green-700" /><span>{option.name}</span></label>)}</div></details>}</div>)}</div> : <button type="button" onClick={() => document.getElementById("meal-preferences")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="flex min-h-24 w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white/70 px-2 text-center text-xs font-semibold text-gray-500 transition hover:border-primary hover:text-primary"><span className="mb-1 text-xl leading-none">+</span> Add meals</button>}
+                  {day ? <div className="space-y-2">{["breakfast", "lunch", "dinner"].map((type) => <div key={type} className="rounded-xl bg-white p-2.5 shadow-sm"><p className="text-[10px] font-bold uppercase tracking-wide text-primary">{type}</p><p className="mt-1 text-xs font-semibold leading-4 text-gray-800">{day[type] || "No recipe selected"}</p>{savedEntry && day[type] && <button type="button" onClick={() => removeSavedMeal(savedEntry, type)} className="mt-1 text-[10px] font-semibold text-red-600 hover:underline">Remove</button>}{(day[type + "Options"] || []).length > 1 && <details className="mt-2"><summary className="cursor-pointer text-[11px] font-semibold text-primary">Change recipe</summary><div className="mt-2 space-y-1.5">{day[type + "Options"].map((option, optionIndex) => <label key={option.name + optionIndex} className="flex cursor-pointer items-start gap-2 text-[11px] text-gray-600"><input type="radio" name={"week-" + index + "-" + type} checked={day[type] === option.name} onChange={() => selectOption(index, type, option, savedEntry)} className="mt-0.5 accent-green-700" /><span>{option.name}</span></label>)}</div></details>}</div>)}</div> : <button type="button" onClick={() => document.getElementById("meal-preferences")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="flex min-h-24 w-full flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white/70 px-2 text-center text-xs font-semibold text-gray-500 transition hover:border-primary hover:text-primary"><span className="mb-1 text-xl leading-none">+</span> Add meals</button>}
                 </article>
               );
             })}
