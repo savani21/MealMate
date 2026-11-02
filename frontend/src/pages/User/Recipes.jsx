@@ -317,7 +317,7 @@ export default function Recipes() {
         )}
 
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="h-72 animate-pulse rounded-2xl bg-white" />)}</div>
+          <div className="space-y-3">{[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="h-32 animate-pulse rounded-2xl bg-white" />)}</div>
         ) : filteredRecipes.length === 0 ? (
           <div className="rounded-3xl border border-gray-100 bg-white px-6 py-14 text-center">
             <ChefHat className="mx-auto h-12 w-12 text-gray-300" />
@@ -326,61 +326,53 @@ export default function Recipes() {
             <button onClick={clearFilters} className="mt-5 rounded-xl bg-green-50 px-4 py-2.5 text-sm font-bold text-primary hover:bg-green-100">Clear all filters</button>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredRecipes.map((recipe, index) => (
-              <article key={recipe._id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
-                <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
-                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                    {recipeImages[recipe._id] ? (
-                      <img
-                        src={recipeImages[recipe._id]}
-                        alt={recipe.name}
-                        loading="lazy"
-                        data-image-attempt="0"
-                        onError={(event) => {
-                          const image = event.currentTarget;
-                          const candidates = getRecipeImageCandidates(recipe);
-                          const attempt = Number(image.dataset.imageAttempt || 0);
-                          if (attempt < candidates.length - 1) {
-                            const currentIndex = candidates.indexOf(image.src);
-                            image.dataset.imageAttempt = String(attempt + 1);
-                            image.src = candidates[(currentIndex + 1 + candidates.length) % candidates.length];
-                          } else {
-                            image.style.display = "none";
-                            setRecipeImages((current) => {
-                              const next = { ...current };
-                              delete next[recipe._id];
-                              return next;
-                            });
-                          }
-                        }}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-green-50 via-emerald-50 to-amber-50 px-6 text-center">
-                        <Utensils className="h-10 w-10 text-green-600" />
-                        <span className="text-sm font-bold text-gray-700">{recipe.name}</span>
-                        <span className="text-xs text-gray-500">Photo not available yet</span>
-                      </div>
-                    )}
-                    <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold capitalize text-green-800 shadow-sm">{recipe.category || "Recipe"}</span>
-                    {recipe.isHighlyLiked && <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-bold text-amber-950"><Flame className="h-3 w-3" /> Community favourite</span>}
-                  </div>
-                  <div className="px-4 pb-2 pt-4">
-                    <h3 className="line-clamp-1 text-lg font-extrabold text-gray-900 transition group-hover:text-primary">{recipe.name}</h3>
-                    <p className="mt-1.5 line-clamp-2 min-h-10 text-sm leading-5 text-gray-500">{recipe.description || "Discover the ingredients and steps for this recipe."}</p>
-                    {recipe.slogan && <p className="mt-2 line-clamp-1 text-xs italic text-primary">“{recipe.slogan}”</p>}
-                  </div>
+          <div className="space-y-3">
+            {filteredRecipes.map((recipe) => (
+              <article key={recipe._id} className="group flex min-h-28 items-stretch gap-3 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition hover:border-green-200 hover:shadow-md sm:gap-4">
+                <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 text-left sm:h-32 sm:w-32">
+                  {recipeImages[recipe._id] ? (
+                    <img src={recipeImages[recipe._id]} alt={recipe.name} loading="lazy" data-image-attempt="0"
+                      onError={(event) => {
+                        const image = event.currentTarget;
+                        const candidates = getRecipeImageCandidates(recipe);
+                        const attempt = Number(image.dataset.imageAttempt || 0);
+                        if (attempt < candidates.length - 1) {
+                          const currentIndex = candidates.indexOf(image.src);
+                          image.dataset.imageAttempt = String(attempt + 1);
+                          image.src = candidates[(currentIndex + 1 + candidates.length) % candidates.length];
+                        } else {
+                          image.style.display = "none";
+                          setRecipeImages((current) => { const next = { ...current }; delete next[recipe._id]; return next; });
+                        }
+                      }}
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 text-center">
+                      <Utensils className="h-7 w-7 text-green-600" />
+                      <span className="line-clamp-2 text-[10px] font-bold text-gray-700">{recipe.name}</span>
+                    </div>
+                  )}
+                  {recipe.isHighlyLiked && <span className="absolute bottom-1 left-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-amber-950">Popular</span>}
                 </button>
-                <div className="flex items-center justify-between gap-2 px-4 pb-4 pt-2">
-                  <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                <div className="flex min-w-0 flex-1 flex-col justify-center py-0.5">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold capitalize text-green-800">{recipe.category || "Recipe"}</span>
+                    {recipe.diet && <span className="text-[10px] font-medium text-gray-500">{recipe.diet}</span>}
+                  </div>
+                  <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="text-left">
+                    <h3 className="line-clamp-1 text-base font-extrabold text-gray-900 transition group-hover:text-primary sm:text-lg">{recipe.name}</h3>
+                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500 sm:text-sm">{recipe.description || "Discover the ingredients and steps for this recipe."}</p>
+                  </button>
+                  {recipe.slogan && <p className="mt-1 line-clamp-1 text-[11px] italic text-primary">“{recipe.slogan}”</p>}
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500 sm:text-xs">
                     <span className="inline-flex items-center gap-1"><Clock className="h-3.5 w-3.5" />{recipe.prepTime || "Time varies"}</span>
                     <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{recipe.averageRating ? recipe.averageRating.toFixed(1) : "New"}{recipe.ratingCount ? ` (${recipe.ratingCount})` : ""}</span>
                   </div>
-                  <button type="button" onClick={() => toggleFavorite(recipe._id)} aria-label={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"} title={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"} className="shrink-0 rounded-full p-2 transition hover:bg-red-50">
-                    <Heart className={`h-5 w-5 ${favorites.includes(recipe._id) ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"}`} />
-                  </button>
                 </div>
+                <button type="button" onClick={() => toggleFavorite(recipe._id)} aria-label={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"} title={favorites.includes(recipe._id) ? "Remove from favorites" : "Add to favorites"} className="self-start rounded-full p-2 transition hover:bg-red-50">
+                  <Heart className={`h-5 w-5 ${favorites.includes(recipe._id) ? "fill-red-500 text-red-500" : "text-gray-300 hover:text-red-400"}`} />
+                </button>
               </article>
             ))}
           </div>
