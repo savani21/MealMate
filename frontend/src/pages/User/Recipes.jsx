@@ -132,6 +132,7 @@ export default function Recipes() {
   const mode = params.get("mode") || "available";
 
   const [recipes, setRecipes] = useState([]);
+  const [recipeImages, setRecipeImages] = useState({});
   const [search, setSearch] = useState(params.get("search") || initialIngredients);
   const [category, setCategory] = useState("All");
   const [diet, setDiet] = useState("All diets");
@@ -144,6 +145,40 @@ export default function Recipes() {
   const [generationSlow, setGenerationSlow] = useState(false);
 
   useEffect(() => { fetchRecipes(); fetchFavorites(); }, []);
+  useEffect(() => {
+    if (!recipes.length) return;
+    let cancelled = false;
+    const normalize = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const findMatchingMealImage = async (recipe) => {
+      const name = normalize(recipe.name);
+      if (!name) return null;
+      try {
+        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(recipe.name)}`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        const meals = data.meals || [];
+        const exact = meals.find((meal) => normalize(meal.strMeal) === name);
+        if (exact?.strMealThumb) return exact.strMealThumb;
+        const recipeWords = new Set(name.split(" ").filter((word) => word.length > 2));
+        const best = meals.map((meal) => {
+          const words = normalize(meal.strMeal).split(" ").filter((word) => word.length > 2);
+          const overlap = words.filter((word) => recipeWords.has(word)).length;
+          return { meal, score: overlap / Math.max(recipeWords.size, words.length, 1) };
+        }).sort((a, b) => b.score - a.score)[0];
+        return best && best.score >= 0.8 ? best.meal.strMealThumb : null;
+      } catch {
+        return null;
+      }
+    };
+    const loadImages = async () => {
+      const matches = await Promise.all(recipes.slice(0, 36).map(async (recipe) => [recipe._id, await findMatchingMealImage(recipe)]));
+      if (!cancelled) setRecipeImages((current) => ({ ...current, ...Object.fromEntries(matches.filter(([, url]) => url)) }));
+    };
+    loadImages();
+    return () => { cancelled = true; };
+  }, [recipes]);
+
+
   useEffect(() => {
     if (!generating) { setGenerationSlow(false); return; }
     const timer = setTimeout(() => setGenerationSlow(true), 8000);
@@ -377,7 +412,7 @@ export default function Recipes() {
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
                     <img
-                      src={getRecipeImage(recipe, index)}
+                      src={recipeImages[recipe._id] || getRecipeImage(recipe, index)}
                       alt={recipe.name}
                       loading="lazy"
                       onError={(event) => {
