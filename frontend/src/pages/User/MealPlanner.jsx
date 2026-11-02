@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat } from "lucide-react";
@@ -195,7 +196,7 @@ export default function MealPlanner() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30"><div className="w-full px-4 sm:px-6 lg:px-8"><div className="h-20 flex items-center justify-between gap-6"><div className="flex items-center gap-2 shrink-0"><Sparkles className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div><nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto text-sm font-semibold"><NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} /><NavLink label="Meal Planner" active onClick={() => setLocation("/meal-planner")} /><NavLink label="Pantry" onClick={() => setLocation("/pantry")} /><NavLink label="Meal Plans" onClick={() => setLocation("/my-meal-plans")} /><NavLink label="Recipes" onClick={() => setLocation("/recipes")} /></nav></div></div></header>
+      <AppNavbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <section className="text-center mb-10"><div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Sparkles className="w-4 h-4" /> Fast Indian Meal Suggestions</div><h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">Smart Meal Planner</h1><p className="text-gray-500 mt-3 max-w-2xl mx-auto">Choose your preferences, review recipe ideas for every meal, and select exactly what you want.</p></section>
         <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10">
