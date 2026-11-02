@@ -38,6 +38,9 @@ const orderSchema = new mongoose.Schema(
       enum: ["placed", "preparing", "out-for-delivery", "delivered"],
       default: "placed",
     },
+    inventorySyncing: { type: Boolean, default: false },
+    inventorySyncingAt: { type: Date, default: null },
+    inventoryAppliedAt: { type: Date, default: null },
   },
   {
     timestamps: true,
