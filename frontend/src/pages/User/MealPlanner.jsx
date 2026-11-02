@@ -139,6 +139,9 @@ export default function MealPlanner() {
       [mealType]: option.name,
       [mealType + "Ingredients"]: option.ingredients || [],
     })));
+    if (dayIndex === draftDays.length - 1 && mealType === "dinner") {
+      setTimeout(() => scrollTo(savePlanRef), 120);
+    }
   };
 
   const saveSelectedPlan = async () => {
