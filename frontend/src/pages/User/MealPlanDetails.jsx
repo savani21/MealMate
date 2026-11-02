@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { Sparkles, Utensils, ShoppingBasket, X } from "lucide-react";
@@ -149,21 +150,7 @@ export default function MealPlanDetails() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="bg-white border-b border-gray-100 sticky top-0 z-30">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="h-20 flex items-center justify-between gap-6">
-            <div className="flex items-center gap-2 shrink-0"><Sparkles className="w-6 h-6 text-primary" /><span className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></span></div>
-            <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto text-sm font-semibold">
-              <NavLink label="Dashboard" onClick={() => setLocation("/dashboard")} />
-              <NavLink label="Meal Plans" active onClick={() => setLocation("/my-meal-plans")} />
-              <NavLink label="Recipes" onClick={() => setLocation("/recipes")} />
-              <NavLink label="Favorites" onClick={() => setLocation("/favorites")} />
-              <NavLink label="Notifications" onClick={() => setLocation("/notifications")} />
-              <NavLink label="Profile" onClick={() => setLocation("/profile")} />
-            </nav>
-          </div>
-        </div>
-      </header>
+      <AppNavbar />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-6 flex items-center gap-2 text-sm text-gray-500"><button onClick={() => setLocation("/my-meal-plans")} className="hover:text-primary transition">Meal Plans</button><span>/</span><span className="text-gray-900 font-semibold">{plan.duration}-Day Plan</span></div>
