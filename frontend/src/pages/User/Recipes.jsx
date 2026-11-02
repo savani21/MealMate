@@ -148,36 +148,57 @@ export default function Recipes() {
   useEffect(() => {
     if (!recipes.length) return;
     let cancelled = false;
-    const normalize = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-    const findMatchingMealImage = async (recipe) => {
-      const name = normalize(recipe.name);
-      if (!name) return null;
-      try {
-        const response = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(recipe.name)}`);
-        if (!response.ok) return null;
-        const data = await response.json();
-        const meals = data.meals || [];
-        const exact = meals.find((meal) => normalize(meal.strMeal) === name);
-        if (exact?.strMealThumb) return exact.strMealThumb;
-        const recipeWords = new Set(name.split(" ").filter((word) => word.length > 2));
-        const best = meals.map((meal) => {
-          const words = normalize(meal.strMeal).split(" ").filter((word) => word.length > 2);
-          const overlap = words.filter((word) => recipeWords.has(word)).length;
-          return { meal, score: overlap / Math.max(recipeWords.size, words.length, 1) };
-        }).sort((a, b) => b.score - a.score)[0];
-        return best && best.score >= 0.8 ? best.meal.strMealThumb : null;
-      } catch {
-        return null;
+    const animalTerms = /\\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\\b/i;
+    const eggTerms = /\\b(egg|eggs)\\b/i;
+    const ingredientName = (value) => String(value || "")
+      .replace(/\\([^)]*\\)/g, " ")
+      .replace(/\\b(to taste|as needed|optional|fresh|chopped|sliced|diced|minced|ground|boiled|cooked|raw)\\b/gi, " ")
+      .replace(/\\d+(?:[./]\\d+)?\\s*(g|kg|ml|l|cup|cups|tbsp|tsp|tablespoon|teaspoon|piece|pieces)?/gi, " ")
+      .replace(/[^a-zA-Z ]/g, " ").trim().toLowerCase();
+    const isDietCompatible = (meal, dietType) => {
+      const mealIngredients = Array.from({ length: 20 }, (_, i) => meal[`strIngredient${i + 1}`] || "").join(" ");
+      const type = String(dietType || "Any").toLowerCase();
+      if (["vegetarian", "vegan"].includes(type)) return !animalTerms.test(mealIngredients) && !eggTerms.test(mealIngredients);
+      if (type === "eggetarian") return !animalTerms.test(mealIngredients);
+      return true;
+    };
+    const findIngredientImage = async (recipe) => {
+      const rawIngredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+      const candidates = rawIngredients.map(ingredientName).filter((name) =>
+        name && !/^(salt|water|oil|pepper|sugar|spices|masala|coriander powder|turmeric powder)$/.test(name)
+      );
+      for (const ingredient of candidates.slice(0, 4)) {
+        try {
+          const response = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${encodeURIComponent(ingredient.replace(/\\s+/g, "_"))}`);
+          if (!response.ok) continue;
+          const meals = (await response.json()).meals || [];
+          if (!meals.length) continue;
+          const ranked = meals.slice(0, 8);
+          for (const candidate of ranked) {
+            const detailResponse = await fetch(`https://www.themealdb.com/api/json/v1/1/lookup.php?i=${candidate.idMeal}`);
+            if (!detailResponse.ok) continue;
+            const detail = (await detailResponse.json()).meals?.[0];
+            if (detail?.strMealThumb && isDietCompatible(detail, recipe.diet)) return detail.strMealThumb;
+          }
+        } catch {
+          continue;
+        }
       }
+      // If no matching dish is found, show artwork for an actual recipe ingredient.
+      const firstIngredient = candidates[0];
+      if (firstIngredient) {
+        const slug = firstIngredient.replace(/\\s+/g, "_");
+        return `https://www.themealdb.com/images/ingredients/${encodeURIComponent(slug)}.png`;
+      }
+      return null;
     };
     const loadImages = async () => {
-      const matches = await Promise.all(recipes.slice(0, 36).map(async (recipe) => [recipe._id, await findMatchingMealImage(recipe)]));
-      if (!cancelled) setRecipeImages((current) => ({ ...current, ...Object.fromEntries(matches.filter(([, url]) => url)) }));
+      const entries = await Promise.all(recipes.slice(0, 36).map(async (recipe) => [recipe._id, await findIngredientImage(recipe)]));
+      if (!cancelled) setRecipeImages((current) => ({ ...current, ...Object.fromEntries(entries.filter(([, url]) => url)) }));
     };
     loadImages();
     return () => { cancelled = true; };
   }, [recipes]);
-
 
   useEffect(() => {
     if (!generating) { setGenerationSlow(false); return; }
@@ -411,9 +432,9 @@ export default function Recipes() {
               <article key={recipe._id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                    {(recipe.imageGeneratedAt && recipe.image) || recipeImages[recipe._id] ? (
+                    {recipeImages[recipe._id] ? (
                       <img
-                        src={recipe.imageGeneratedAt && recipe.image ? recipe.image : recipeImages[recipe._id]}
+                        src={recipeImages[recipe._id]}
                         alt={recipe.name}
                         loading="lazy"
                         onError={(event) => {
