@@ -380,6 +380,14 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+    const calendarStart = startDate && /^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)
+      ? new Date(`${startDate}T00:00:00.000Z`)
+      : new Date();
+    days.forEach((day, index) => {
+      const calendarDate = new Date(calendarStart);
+      calendarDate.setUTCDate(calendarDate.getUTCDate() + index);
+      day.date = calendarDate.toISOString().slice(0, 10);
+    });
 
     // Keep the legacy selected-meal fields in sync with the first suggested option.
     // Older saved meal plans without option arrays remain fully compatible.
@@ -444,7 +452,7 @@ Do not include markdown or explanations outside JSON.
       recommendedIngredients: recommended.join(", "),
       ingredients: allowedPool.join(", "),
       duration: Number(duration),
-      startDate: startDate ? new Date(`${startDate}T00:00:00.000Z`) : new Date(),
+      startDate: calendarStart,
       meals: days,
     });
 
