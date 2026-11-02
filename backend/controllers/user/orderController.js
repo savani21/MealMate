@@ -4,6 +4,7 @@ const Cart = require("../../models/user/Cart");
 const Order = require("../../models/user/Order");
 const User = require("../../models/User");
 const GroceryList = require("../../models/user/GroceryList");
+const PantryItem = require("../../models/user/PantryItem");
 
 function normalizePurchasedIngredient(value) {
   return String(value || "")
@@ -32,6 +33,117 @@ async function markPurchasedGroceryItems(userId, orderItems) {
     if (changed) await list.save();
   }
 }
+
+
+function parseStorePack(unit, count) {
+  const value = String(unit || "").trim().toLowerCase();
+  const match = value.match(/^([0-9]+(?:\\.[0-9]+)?)\\s*(kg|kgs|g|gm|gms|grams?|l|litres?|liters?|ml|pieces?|pcs?|bunch(?:es)?)$/i);
+  if (!match) return { quantity: Number(count), unit: value || "item" };
+  let quantity = Number(match[1]) * Number(count);
+  let normalized = match[2].toLowerCase();
+  if (/^(kg|kgs)$/.test(normalized)) return { quantity: quantity * 1000, unit: "g" };
+  if (/^(g|gm|gms|gram|grams)$/.test(normalized)) return { quantity, unit: "g" };
+  if (/^(l|litre|litres|liter|liters)$/.test(normalized)) return { quantity: quantity * 1000, unit: "ml" };
+  if (normalized === "ml") return { quantity, unit: "ml" };
+  if (/^(piece|pieces|pcs)$/.test(normalized)) return { quantity, unit: "piece" };
+  return { quantity, unit: "bunch" };
+}
+
+function convertPantryQuantity(quantity, fromUnit, toUnit) {
+  const from = String(fromUnit || "").toLowerCase();
+  const to = String(toUnit || "").toLowerCase();
+  const mass = (unit) => /^(kg|kgs|g|gm|gms|grams?)$/.test(unit);
+  const volume = (unit) => /^(l|litre|litres|liter|liters|ml)$/.test(unit);
+  if (mass(from) && mass(to)) {
+    const grams = /^(kg|kgs)$/.test(from) ? quantity * 1000 : quantity;
+    return /^(kg|kgs)$/.test(to) ? grams / 1000 : grams;
+  }
+  if (volume(from) && volume(to)) {
+    const ml = from === "l" || /^(litre|litres|liter|liters)$/.test(from) ? quantity * 1000 : quantity;
+    return to === "l" || /^(litre|litres|liter|liters)$/.test(to) ? ml / 1000 : ml;
+  }
+  if (from === to) return quantity;
+  return null;
+}
+
+async function addDeliveredOrderItem(userId, orderId, item, index) {
+  const name = String(item.name || "").trim().toLowerCase();
+  if (!name) return;
+  const incoming = parseStorePack(item.unit, item.quantity);
+  const receiptKey = `${orderId}:${index}`;
+  let existing = await PantryItem.findOne({ user: userId, name });
+  if (existing) {
+    if ((existing.receivedOrderItems || []).includes(receiptKey)) return;
+    const amount = convertPantryQuantity(incoming.quantity, incoming.unit, existing.unit);
+    if (amount === null) throw new Error(`Cannot combine delivered ${name} units (${incoming.unit} and ${existing.unit}). Please standardize the pantry unit.`);
+    await PantryItem.updateOne(
+      { _id: existing._id, receivedOrderItems: { $ne: receiptKey } },
+      { $inc: { quantity: amount }, $addToSet: { receivedOrderItems: receiptKey } }
+    );
+    return;
+  }
+  try {
+    await PantryItem.create({
+      user: userId, name, quantity: incoming.quantity, unit: incoming.unit,
+      receivedOrderItems: [receiptKey],
+    });
+  } catch (error) {
+    if (error.code !== 11000) throw error;
+    existing = await PantryItem.findOne({ user: userId, name });
+    if (!existing || (existing.receivedOrderItems || []).includes(receiptKey)) return;
+    const amount = convertPantryQuantity(incoming.quantity, incoming.unit, existing.unit);
+    if (amount === null) throw new Error(`Cannot combine delivered ${name} units (${incoming.unit} and ${existing.unit}).`);
+    await PantryItem.updateOne(
+      { _id: existing._id, receivedOrderItems: { $ne: receiptKey } },
+      { $inc: { quantity: amount }, $addToSet: { receivedOrderItems: receiptKey } }
+    );
+  }
+}
+
+let deliveryProcessorRunning = false;
+exports.processDueOrders = async () => {
+  if (deliveryProcessorRunning) return;
+  deliveryProcessorRunning = true;
+  try {
+    while (true) {
+      const now = new Date();
+      const staleLock = new Date(now.getTime() - 2 * 60 * 1000);
+      const order = await Order.findOneAndUpdate(
+        {
+          deliveryTime: { $lte: now },
+          status: { $ne: "delivered" },
+          $or: [
+            { inventorySyncing: { $ne: true } },
+            { inventorySyncingAt: { $lt: staleLock } },
+          ],
+        },
+        { $set: { inventorySyncing: true, inventorySyncingAt: now } },
+        { new: true, sort: { deliveryTime: 1 } }
+      );
+      if (!order) break;
+      try {
+        for (let index = 0; index < order.items.length; index += 1) {
+          await addDeliveredOrderItem(order.user, order._id, order.items[index], index);
+        }
+        await Order.updateOne(
+          { _id: order._id },
+          { $set: { status: "delivered", inventoryAppliedAt: new Date(), inventorySyncing: false }, $unset: { inventorySyncingAt: 1 } }
+        );
+      } catch (error) {
+        await Order.updateOne(
+          { _id: order._id },
+          { $set: { inventorySyncing: false }, $unset: { inventorySyncingAt: 1 } }
+        );
+        console.error(`Delivery inventory sync failed for ${order.orderId}:`, error.message);
+        break;
+      }
+    }
+  } catch (error) {
+    console.error("Due-order processor error:", error.message);
+  } finally {
+    deliveryProcessorRunning = false;
+  }
+};
 
 function generateOrderId() {
   const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "");
@@ -111,6 +223,7 @@ exports.checkout = async (req, res) => {
 
 exports.getMyOrders = async (req, res) => {
   try {
+    await exports.processDueOrders();
     const orders = await Order.find({ user: req.user.id }).sort({
       createdAt: -1,
     });
@@ -129,6 +242,7 @@ exports.getMyOrders = async (req, res) => {
 
 exports.getOrderById = async (req, res) => {
   try {
+    await exports.processDueOrders();
     const order = await Order.findOne({
       _id: req.params.id,
       user: req.user.id,
