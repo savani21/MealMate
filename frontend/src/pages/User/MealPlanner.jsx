@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat } from "lucide-react";
 
@@ -17,6 +17,7 @@ export default function MealPlanner() {
   const [loading, setLoading] = useState(false);
   const [draftDays, setDraftDays] = useState([]);
   const [previewReady, setPreviewReady] = useState(false);
+  const recipeChoicesRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -115,12 +116,16 @@ export default function MealPlanner() {
         return copy;
       }));
       setPreviewReady(true);
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+
     } catch (error) {
       console.error("Meal plan preview error:", error);
       alert(error.message || "Unable to generate recipe choices.");
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    if (previewReady) recipeChoicesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [previewReady]);
 
   const selectOption = (dayIndex, mealType, option) => {
     setDraftDays((current) => current.map((day, index) => index !== dayIndex ? day : ({
@@ -236,7 +241,7 @@ export default function MealPlanner() {
           <div className="mt-8 pt-6 border-t border-gray-100"><button onClick={generatePlan} disabled={loading || recommendationLoading} className="w-full md:w-auto md:min-w-[280px] mx-auto flex items-center justify-center gap-2 bg-primary text-white px-6 py-3.5 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-60"><Sparkles className="w-5 h-5" />{loading ? "Preparing Recipe Options..." : "Show My Recipe Options"}</button></div>
         </section>
 
-        {previewReady && <section className="mt-10 space-y-6">
+        {previewReady && <section ref={recipeChoicesRef} className="mt-10 space-y-6 scroll-mt-24">
           <div className="text-center"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><CheckCircle2 className="w-4 h-4"/> Your preferences are applied</div><h2 className="text-2xl font-black text-gray-900 mt-2">Choose Your Recipes</h2><p className="text-sm text-gray-500 mt-2">Select one recipe for breakfast, lunch and dinner. Your chosen ingredients are already included.</p></div>
           {draftDays.map((day, dayIndex) => <div key={day.day || dayIndex} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-7"><div className="flex items-center gap-2 mb-5"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary"/></div><h3 className="text-lg font-black text-gray-900">Day {day.day || dayIndex + 1}</h3></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-5">{["breakfast","lunch","dinner"].map((type) => <div key={type} className="rounded-2xl border border-gray-100 p-4"><div className="text-xs font-bold uppercase tracking-wide text-primary mb-3">{type}</div><div className="space-y-2">{(day[type + "Options"] || []).map((option, optionIndex) => <label key={option.name + optionIndex} className={`block rounded-xl border p-3 cursor-pointer transition ${day[type] === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}><span className="flex items-start gap-2.5"><input type="radio" name={`day-${dayIndex}-${type}`} checked={day[type] === option.name} onChange={() => selectOption(dayIndex, type, option)} className="mt-1 accent-green-700"/><span className="min-w-0"><span className="block font-bold text-sm text-gray-900">{option.name}</span>{option.description && <span className="block text-xs text-gray-500 mt-1">{option.description}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-2">{option.prepTime}</span>}</span></span></label>)}</div>{(day[type + "Options"] || []).length === 0 && <p className="text-sm text-red-500">No options returned for this meal. Please regenerate.</p>}</div>)}</div></div>)}
           <div className="flex flex-col sm:flex-row justify-center gap-3"><button onClick={() => {setPreviewReady(false);setDraftDays([]);}} className="px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600">Change Preferences</button><button onClick={saveSelectedPlan} disabled={loading} className="px-7 py-3 rounded-xl bg-primary text-white font-bold disabled:opacity-60">{loading ? "Saving Your Choices..." : "Save Selected Meal Plan"}</button></div>
