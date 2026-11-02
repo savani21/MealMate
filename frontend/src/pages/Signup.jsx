@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from "wouter";
 import API from "../api/auth";
-import { Leaf, Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { ChefHat, Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 
 const PERKS = [
   { emoji: '🥗', text: 'AI-generated meal plans tailored to you' },
@@ -88,10 +88,10 @@ const handleSignup = async (e) => {
           className="flex items-center gap-2"
         >
           <div className="bg-white/20 p-2 rounded-xl">
-            <Leaf className="w-6 h-6 text-white" />
+            <ChefHat className="w-6 h-6 text-white" />
           </div>
           <span className="text-xl font-black text-white tracking-tight">
-            MealMate <span className="text-green-200">AI</span>
+            MealMate
           </span>
         </motion.div>
 
@@ -158,10 +158,10 @@ const handleSignup = async (e) => {
           {/* Mobile logo */}
           <Link href="/" className="lg:hidden inline-flex items-center gap-2 mb-8">
             <div className="bg-primary/10 p-2 rounded-xl">
-              <Leaf className="w-5 h-5 text-primary" />
+              <ChefHat className="w-5 h-5 text-primary" />
             </div>
             <span className="text-lg font-black text-gray-900">
-              MealMate <span className="text-primary">AI</span>
+              MealMate
             </span>
           </Link>
 
