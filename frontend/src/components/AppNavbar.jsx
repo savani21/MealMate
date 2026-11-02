@@ -67,7 +67,9 @@ export default function AppNavbar({ children }) {
           })}
         </nav>
 
-        <div className="hidden shrink-0 items-center gap-2 lg:flex">{children}</div>
+        <div className="hidden shrink-0 items-center gap-2 xl:flex">{children}</div>
+
+        <div className="flex shrink-0 items-center gap-2 xl:hidden">{children}</div>
 
         <button
           type="button"
@@ -98,7 +100,6 @@ export default function AppNavbar({ children }) {
               );
             })}
           </div>
-          {children && <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3">{children}</div>}
         </nav>
       )}
     </header>
