@@ -11,6 +11,7 @@ const recipeSchema = new mongoose.Schema(
     instructions: { type: [String], default: [] },
     prepTime: { type: String, default: "" },
     image: { type: String, default: "" },
+    imageGeneratedAt: { type: Date, default: null },
     source: { type: String, enum: ["manual", "ai"], default: "manual" },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
