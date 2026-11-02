@@ -32,10 +32,6 @@ const mealPlanSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    startDate: {
-      type: Date,
-      default: null,
-    },
 
     meals: {
       type: Array,
