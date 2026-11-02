@@ -380,7 +380,7 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
-    const calendarStart = startDate && /^\\d{4}-\\d{2}-\\d{2}$/.test(startDate)
+    const calendarStart = startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
       ? new Date(`${startDate}T00:00:00.000Z`)
       : new Date();
     days.forEach((day, index) => {
