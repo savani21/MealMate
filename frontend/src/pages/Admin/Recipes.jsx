@@ -35,7 +35,6 @@ export default function Recipes() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [generatingImageId, setGeneratingImageId] = useState(null);
 
   useEffect(() => {
     fetchRecipes();
@@ -161,29 +160,6 @@ export default function Recipes() {
   };
 
 
-  const generateImage = async (recipe) => {
-    if (!confirm(`Generate an AI food photo for "${recipe.name}"? Image generation may incur API charges.`)) return;
-    try {
-      setGeneratingImageId(recipe._id);
-      const response = await fetch(`http://localhost:5000/api/admin/recipes/${recipe._id}/generate-image`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        alert(data.message || "Image generation failed.");
-        return;
-      }
-      setRecipes((current) => current.map((item) => item._id === recipe._id ? data.recipe : item));
-      alert(`AI image generated for ${recipe.name}.`);
-    } catch (error) {
-      console.error(error);
-      alert("Unable to connect to the image generation service.");
-    } finally {
-      setGeneratingImageId(null);
-    }
-  };
-
   const removeRecipe = async (recipe) => {
     if (!confirm(`Delete "${recipe.name}"? This cannot be undone.`)) {
       return;
@@ -267,16 +243,6 @@ export default function Recipes() {
                   <span>({recipe.ratingCount || 0} reviews)</span>
                 </div>
 
-                <div className="mt-5 grid grid-cols-1 gap-2">
-                  <button
-                    onClick={() => generateImage(recipe)}
-                    disabled={Boolean(generatingImageId)}
-                    className="flex items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-800 hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {generatingImageId === recipe._id ? "Generating AI photo..." : recipe.imageGeneratedAt ? "Regenerate AI photo" : "Generate AI photo"}
-                  </button>
-                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <button
                     onClick={() => openEditForm(recipe)}
