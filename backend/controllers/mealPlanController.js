@@ -270,12 +270,16 @@ exports.createMealPlan = async (req, res) => {
     }
 
     const available = cleanList(availableIngredients || ingredients);
-    const recommended = cleanList(recommendedIngredients);
+    // Pantry ingredients are user-confirmed; recommended ingredients are filtered
+    // to the selected diet so stale or unfiltered suggestions cannot block planning.
+    const recommended = cleanList(recommendedIngredients).filter(
+      (ingredient) => !DIET_FORBIDDEN[diet]?.test(ingredient)
+    );
     const allowedPool = ingredientMode === "recommended"
       ? [...new Set([...available, ...recommended])]
       : available;
 
-    const invalidDietIngredients = allowedPool.filter(
+    const invalidDietIngredients = available.filter(
       (ingredient) => DIET_FORBIDDEN[diet]?.test(ingredient)
     );
     if (invalidDietIngredients.length > 0) {
