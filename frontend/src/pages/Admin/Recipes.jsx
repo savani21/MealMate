@@ -35,6 +35,7 @@ export default function Recipes() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [generatingImageId, setGeneratingImageId] = useState(null);
 
   useEffect(() => {
     fetchRecipes();
@@ -159,6 +160,30 @@ export default function Recipes() {
     }
   };
 
+
+  const generateImage = async (recipe) => {
+    if (!confirm(`Generate an AI food photo for "${recipe.name}"? Image generation may incur API charges.`)) return;
+    try {
+      setGeneratingImageId(recipe._id);
+      const response = await fetch(`http://localhost:5000/api/admin/recipes/${recipe._id}/generate-image`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        alert(data.message || "Image generation failed.");
+        return;
+      }
+      setRecipes((current) => current.map((item) => item._id === recipe._id ? data.recipe : item));
+      alert(`AI image generated for ${recipe.name}.`);
+    } catch (error) {
+      console.error(error);
+      alert("Unable to connect to the image generation service.");
+    } finally {
+      setGeneratingImageId(null);
+    }
+  };
+
   const removeRecipe = async (recipe) => {
     if (!confirm(`Delete "${recipe.name}"? This cannot be undone.`)) {
       return;
@@ -216,6 +241,9 @@ export default function Recipes() {
                 key={recipe._id}
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-6 flex flex-col"
               >
+                {recipe.image && (
+                  <img src={recipe.image} alt={recipe.name} className="mb-4 h-36 w-full rounded-xl object-cover" />
+                )}
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-bold text-lg text-gray-900">{recipe.name}</h3>
                   <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-primary bg-green-50 px-2.5 py-1 rounded-full">
@@ -239,7 +267,17 @@ export default function Recipes() {
                   <span>({recipe.ratingCount || 0} reviews)</span>
                 </div>
 
-                <div className="flex items-center gap-2 mt-5">
+                <div className="mt-5 grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => generateImage(recipe)}
+                    disabled={Boolean(generatingImageId)}
+                    className="flex items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-xs font-semibold text-green-800 hover:bg-green-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {generatingImageId === recipe._id ? "Generating AI photo..." : recipe.imageGeneratedAt ? "Regenerate AI photo" : "Generate AI photo"}
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
                   <button
                     onClick={() => openEditForm(recipe)}
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg px-3 py-2.5 hover:bg-gray-50 transition"
