@@ -413,7 +413,7 @@ export default function Recipes() {
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
                     {recipeImages[recipe._id] ? (
                       <img
-                        src={recipeImages[recipe._id]}
+                        src={recipe.imageGeneratedAt && recipe.image ? recipe.image : recipeImages[recipe._id]}
                         alt={recipe.name}
                         loading="lazy"
                         onError={(event) => {
