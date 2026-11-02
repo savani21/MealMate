@@ -37,7 +37,7 @@ async function markPurchasedGroceryItems(userId, orderItems) {
 
 function parseStorePack(unit, count) {
   const value = String(unit || "").trim().toLowerCase();
-  const match = value.match(/^([0-9]+(?:\\.[0-9]+)?)\\s*(kg|kgs|g|gm|gms|grams?|l|litres?|liters?|ml|pieces?|pcs?|bunch(?:es)?)$/i);
+  const match = value.match(/^([0-9]+(?:\.[0-9]+)?)\\s*(kg|kgs|g|gm|gms|grams?|l|litres?|liters?|ml|pieces?|pcs?|bunch(?:es)?)$/i);
   if (!match) return { quantity: Number(count), unit: value || "item" };
   let quantity = Number(match[1]) * Number(count);
   let normalized = match[2].toLowerCase();
@@ -50,7 +50,7 @@ function parseStorePack(unit, count) {
 }
 
 function convertPantryQuantity(quantity, fromUnit, toUnit) {
-  const from = String(fromUnit || "").toLowerCase().replace(/\\([^)]*\\)/g, "").replace(/\\./g, "").trim();
+  const from = String(fromUnit || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/\./g, "").trim();
   const to = String(toUnit || "").toLowerCase().replace(/\\([^)]*\\)/g, "").replace(/\\./g, "").trim();
   const mass = (unit) => /^(kg|kgs|g|gm|gms|grams?)$/.test(unit);
   const volume = (unit) => /^(l|litre|litres|liter|liters|ml)$/.test(unit);
