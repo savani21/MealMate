@@ -9,6 +9,7 @@ const {
   createRecipe,
   updateRecipe,
   deleteRecipe,
+  generateRecipeImage,
 } = require("../../controllers/admin/recipeController");
 
 router.get("/", auth, admin, getRecipes);
@@ -16,5 +17,6 @@ router.get("/:id", auth, admin, getRecipeById);
 router.post("/", auth, admin, createRecipe);
 router.put("/:id", auth, admin, updateRecipe);
 router.delete("/:id", auth, admin, deleteRecipe);
+router.post("/:id/generate-image", auth, admin, generateRecipeImage);
 
 module.exports = router;
