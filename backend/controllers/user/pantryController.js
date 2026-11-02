@@ -67,7 +67,7 @@ const Recipe = require("../../models/user/Recipe");
 
 function parseRequiredIngredient(raw) {
   const value = String(raw || "").trim();
-  const match = value.match(/^([0-9]+(?:\\.[0-9]+)?|[0-9]+\\/[0-9]+)\\s*(kg|kgs|kilograms?|g|gm|gms|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|piece)?\\s+(?:of\\s+)?(.+)$/i);
+  const match = value.match(/^([0-9]+(?:\.[0-9]+)?|[0-9]+\/[0-9]+)\s*(kg|kgs|kilograms?|g|gm|gms|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|piece)?\s+(?:of\s+)?(.+)$/i);
   if (!match) return { name: value.toLowerCase(), quantity: null, unit: null };
   const quantity = match[1].includes("/") ? match[1].split("/").reduce((a, b) => Number(a) / Number(b)) : Number(match[1]);
   return { name: match[3].toLowerCase().trim(), quantity, unit: (match[2] || "piece").toLowerCase() };
@@ -76,10 +76,10 @@ function parseRequiredIngredient(raw) {
 function normalizeAmount(quantity, unit) {
   const normalizedUnit = String(unit || "")
     .toLowerCase()
-    .replace(/\\([^)]*\\)/g, "")
-    .replace(/\\./g, "")
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\./g, "")
     .trim()
-    .replace(/\\s+/g, " ");
+    .replace(/\s+/g, " ");
 
   if (/^(kg|kgs|kilogram|kilograms)$/.test(normalizedUnit)) return { quantity: quantity * 1000, unit: "g" };
   if (/^(g|gm|gms|gram|grams)$/.test(normalizedUnit)) return { quantity, unit: "g" };
