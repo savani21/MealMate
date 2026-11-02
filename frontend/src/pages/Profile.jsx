@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "wouter";
@@ -24,28 +25,7 @@ export default function Profile() {
     <div className="min-h-screen bg-[#f7faf7]">
 
       {/* Header */}
-      <header className="bg-white border-b border-gray-100">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="h-20 flex items-center justify-between">
-
-            <button
-              onClick={() => setLocation("/dashboard")}
-              className="flex items-center gap-2 text-gray-600 hover:text-primary transition"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Dashboard
-            </button>
-
-            <div className="flex items-center gap-2">
-              <UserCircle className="w-6 h-6 text-primary" />
-              <span className="text-xl font-black text-gray-900">
-                My Profile
-              </span>
-            </div>
-
-          </div>
-        </div>
-      </header>
+      <AppNavbar />
 
       {/* Main */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
