@@ -67,23 +67,37 @@ const Recipe = require("../../models/user/Recipe");
 
 function parseRequiredIngredient(raw) {
   const value = String(raw || "").trim();
-  const match = value.match(/^([0-9]+(?:\.[0-9]+)?|[0-9]+\/[0-9]+)\s*(kg|g|ml|l|pieces?|piece|cups?|tbsp|tsp)?\s+(?:of\s+)?(.+)$/i);
+  const match = value.match(/^([0-9]+(?:\\.[0-9]+)?|[0-9]+\\/[0-9]+)\\s*(kg|kgs|kilograms?|g|gm|gms|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|piece)?\\s+(?:of\\s+)?(.+)$/i);
   if (!match) return { name: value.toLowerCase(), quantity: null, unit: null };
   const quantity = match[1].includes("/") ? match[1].split("/").reduce((a, b) => Number(a) / Number(b)) : Number(match[1]);
   return { name: match[3].toLowerCase().trim(), quantity, unit: (match[2] || "piece").toLowerCase() };
 }
 
 function normalizeAmount(quantity, unit) {
-  const normalizedUnit = String(unit || "").toLowerCase();
-  if (normalizedUnit === "kg") return { quantity: quantity * 1000, unit: "g" };
-  if (normalizedUnit === "l") return { quantity: quantity * 1000, unit: "ml" };
-  if (["piece", "pieces"].includes(normalizedUnit)) return { quantity, unit: "piece" };
-  // MealMate uses a simple pantry estimate: 1 cup = 100 grams.
-  if (["cup", "cups"].includes(normalizedUnit)) return { quantity: quantity * 100, unit: "g" };
-  if (["g", "gm", "gram", "grams"].includes(normalizedUnit)) return { quantity, unit: "g" };
-  if (["ml", "milliliter", "milliliters"].includes(normalizedUnit)) return { quantity, unit: "ml" };
+  const normalizedUnit = String(unit || "")
+    .toLowerCase()
+    .replace(/\\([^)]*\\)/g, "")
+    .replace(/\\./g, "")
+    .trim()
+    .replace(/\\s+/g, " ");
+
+  if (/^(kg|kgs|kilogram|kilograms)$/.test(normalizedUnit)) return { quantity: quantity * 1000, unit: "g" };
+  if (/^(g|gm|gms|gram|grams)$/.test(normalizedUnit)) return { quantity, unit: "g" };
+  if (/^(l|liter|liters|litre|litres)$/.test(normalizedUnit)) return { quantity: quantity * 1000, unit: "ml" };
+  if (/^(ml|milliliter|milliliters|millilitre|millilitres)$/.test(normalizedUnit)) return { quantity, unit: "ml" };
+  if (/^(cup|cups)$/.test(normalizedUnit)) return { quantity: quantity * 100, unit: "g" };
+  if (/^(piece|pieces)$/.test(normalizedUnit)) return { quantity, unit: "piece" };
+  if (/^(tbsp|tablespoon|tablespoons)$/.test(normalizedUnit)) return { quantity, unit: "tbsp" };
+  if (/^(tsp|teaspoon|teaspoons)$/.test(normalizedUnit)) return { quantity, unit: "tsp" };
   return { quantity, unit: normalizedUnit };
 }
+
+const COMMON_HOUSEHOLD_INGREDIENTS = new Set(["water"]);
+
+function isCommonHouseholdIngredient(name) {
+  return COMMON_HOUSEHOLD_INGREDIENTS.has(String(name || "").toLowerCase().trim());
+}
+
 
 exports.compareRecipeWithPantry = async (req, res) => {
   try {
@@ -94,6 +108,9 @@ exports.compareRecipeWithPantry = async (req, res) => {
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
     const rows = (recipe.ingredients || []).map((raw) => {
       const required = parseRequiredIngredient(raw);
+      if (isCommonHouseholdIngredient(required.name)) {
+        return { ingredient: raw, status: "available", message: "As needed" };
+      }
       const match = pantry.find((item) => item.name === required.name || required.name.includes(item.name) || item.name.includes(required.name));
       if (!match) return { ingredient: raw, available: 0, availableUnit: required.unit || "", status: "missing", message: "Not in pantry" };
       if (required.quantity === null) return { ingredient: raw, available: match.quantity, availableUnit: match.unit, status: "quantity-unknown", message: "Check required quantity" };
