@@ -39,15 +39,19 @@ const NON_VEGETARIAN_IMAGES = [
   "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=85",
 ];
 
-function getRecipeImage(recipe, index) {
+function getRecipeImageCandidates(recipe) {
   const diet = String(recipe.diet || "").trim().toLowerCase();
   const ingredients = (Array.isArray(recipe.ingredients) ? recipe.ingredients : [])
     .map((item) => typeof item === "string" ? item : item?.name || item?.ingredient || "")
     .join(" ");
   const recipeText = `${recipe.name || ""} ${recipe.description || ""} ${ingredients}`.toLowerCase();
   const animalTerms = /\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\b/i;
-  const isNonVegetarian = diet === "non-vegetarian" || animalTerms.test(recipeText);
-  const images = isNonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
+  const isNonVegetarian = diet.includes("non-vegetarian") || animalTerms.test(recipeText);
+  return isNonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
+}
+
+function getRecipeImage(recipe, index) {
+  const images = getRecipeImageCandidates(recipe);
   const stableKey = String(recipe._id || recipe.name || index);
   const hash = stableKey.split("").reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
   return images[hash % images.length];
@@ -332,13 +336,23 @@ export default function Recipes() {
                         src={recipeImages[recipe._id]}
                         alt={recipe.name}
                         loading="lazy"
+                        data-image-attempt="0"
                         onError={(event) => {
-                          event.currentTarget.style.display = "none";
-                          setRecipeImages((current) => {
-                            const next = { ...current };
-                            delete next[recipe._id];
-                            return next;
-                          });
+                          const image = event.currentTarget;
+                          const candidates = getRecipeImageCandidates(recipe);
+                          const attempt = Number(image.dataset.imageAttempt || 0);
+                          if (attempt < candidates.length - 1) {
+                            const currentIndex = candidates.indexOf(image.src);
+                            image.dataset.imageAttempt = String(attempt + 1);
+                            image.src = candidates[(currentIndex + 1 + candidates.length) % candidates.length];
+                          } else {
+                            image.style.display = "none";
+                            setRecipeImages((current) => {
+                              const next = { ...current };
+                              delete next[recipe._id];
+                              return next;
+                            });
+                          }
                         }}
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
