@@ -253,7 +253,6 @@ exports.createMealPlan = async (req, res) => {
       recommendedIngredients,
       ingredientMode,
       duration,
-      startDate,
     } = req.body;
 
     if (!["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(diet)) {
@@ -380,14 +379,6 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
-    const calendarStart = startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate)
-      ? new Date(`${startDate}T00:00:00.000Z`)
-      : new Date();
-    days.forEach((day, index) => {
-      const calendarDate = new Date(calendarStart);
-      calendarDate.setUTCDate(calendarDate.getUTCDate() + index);
-      day.date = calendarDate.toISOString().slice(0, 10);
-    });
 
     // Keep the legacy selected-meal fields in sync with the first suggested option.
     // Older saved meal plans without option arrays remain fully compatible.
@@ -452,7 +443,6 @@ Do not include markdown or explanations outside JSON.
       recommendedIngredients: recommended.join(", "),
       ingredients: allowedPool.join(", "),
       duration: Number(duration),
-      startDate: calendarStart,
       meals: days,
     });
 
@@ -586,30 +576,23 @@ exports.updateMealSelection = async (req, res) => {
   try {
     const { day, mealType, option } = req.body;
     const allowedTypes = ["breakfast", "lunch", "dinner"];
-    if (!allowedTypes.includes(mealType)) {
-      return res.status(400).json({ success: false, message: "A valid meal type is required." });
+    if (!allowedTypes.includes(mealType) || !option || !option.name || !Array.isArray(option.ingredients)) {
+      return res.status(400).json({ success: false, message: "A valid meal type and recipe option are required." });
     }
     const mealPlan = await MealPlan.findOne({ _id: req.params.id, user: req.user.id });
     if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
     const dayPlan = mealPlan.meals.find((item) => Number(item.day) === Number(day));
     if (!dayPlan) return res.status(404).json({ success: false, message: "Meal-plan day not found." });
-    if (option === null) {
-      dayPlan[mealType] = "";
-      dayPlan[mealType + "Ingredients"] = [];
-    } else {
-      if (!option || !option.name || !Array.isArray(option.ingredients)) {
-        return res.status(400).json({ success: false, message: "A valid recipe option is required." });
-      }
-      const selected = (dayPlan[mealType + "Options"] || []).find((item) => item.name === option.name);
-      if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
-      dayPlan[mealType] = selected.name;
-      dayPlan[mealType + "Ingredients"] = selected.ingredients;
-    }
+    const options = dayPlan[mealType + "Options"] || [];
+    const selected = options.find((item) => item.name === option.name);
+    if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
+    dayPlan[mealType] = selected.name;
+    dayPlan[mealType + "Ingredients"] = selected.ingredients;
     mealPlan.markModified("meals");
     await mealPlan.save();
-    res.json({ success: true, message: option === null ? "Meal removed from calendar." : "Meal selection saved.", mealPlan });
+    res.json({ success: true, message: "Meal selection saved.", mealPlan });
   } catch (error) {
     console.error("UPDATE MEAL SELECTION ERROR:", error);
-    res.status(500).json({ success: false, message: "Failed to update meal selection." });
+    res.status(500).json({ success: false, message: "Failed to save meal selection." });
   }
 };
