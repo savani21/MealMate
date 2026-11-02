@@ -99,6 +99,87 @@ function isCommonHouseholdIngredient(name) {
 }
 
 
+exports.consumeRecipeIngredients = async (req, res) => {
+  const changed = [];
+  try {
+    const [recipe, pantry] = await Promise.all([
+      Recipe.findById(req.params.recipeId).lean(),
+      PantryItem.find({ user: req.user.id }),
+    ]);
+    if (!recipe) return res.status(404).json({ message: "Recipe not found." });
+
+    const normalizeName = (value) => String(value || "")
+      .toLowerCase()
+      .replace(/\\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted)\\b/g, "")
+      .replace(/\\s+/g, " ").trim()
+      .replace(/s$/, "");
+    const aliases = { "basmati rice": "rice", "long grain rice": "rice", "atta": "wheat flour", "whole wheat flour": "wheat flour" };
+    const canonical = (value) => aliases[normalizeName(value)] || normalizeName(value);
+    const toStoredUnit = (amount, normalizedUnit, targetUnit) => {
+      const target = String(targetUnit || "").toLowerCase().replace(/\\([^)]*\\)/g, "").replace(/\\./g, "").trim();
+      if (normalizedUnit === "g" && /^(kg|kgs|kilogram|kilograms)$/.test(target)) return amount / 1000;
+      if (normalizedUnit === "ml" && /^(l|litre|litres|liter|liters)$/.test(target)) return amount / 1000;
+      return amount;
+    };
+    const skipped = [];
+    const requirements = [];
+    for (const raw of recipe.ingredients || []) {
+      const required = parseRequiredIngredient(raw);
+      if (isCommonHouseholdIngredient(required.name)) continue;
+      if (required.quantity === null) {
+        skipped.push(raw);
+        continue;
+      }
+      const item = pantry.find((entry) => canonical(entry.name) === canonical(required.name) ||
+        canonical(required.name).includes(canonical(entry.name)) ||
+        canonical(entry.name).includes(canonical(required.name)));
+      if (!item) return res.status(409).json({ message: "Some recipe ingredients are not in your pantry.", unavailable: [raw], skipped });
+      const need = normalizeAmount(required.quantity, required.unit);
+      const have = normalizeAmount(item.quantity, item.unit);
+      if (need.unit !== have.unit) return res.status(409).json({ message: `Cannot convert ${raw} to your pantry unit (${item.unit}).`, unavailable: [raw], skipped });
+      if (have.quantity + 0.000001 < need.quantity) {
+        return res.status(409).json({ message: "You do not have enough ingredients to cook this recipe.", unavailable: [raw], skipped });
+      }
+      const remainingBase = Math.max(0, have.quantity - need.quantity);
+      requirements.push({
+        item,
+        nextQuantity: toStoredUnit(remainingBase, have.unit, item.unit),
+        oldQuantity: item.quantity,
+        ingredient: raw,
+      });
+    }
+
+    for (const requirement of requirements) {
+      const updated = await PantryItem.findOneAndUpdate(
+        { _id: requirement.item._id, user: req.user.id, quantity: { $gte: requirement.oldQuantity } },
+        { $set: { quantity: requirement.nextQuantity } },
+        { new: true }
+      );
+      if (!updated) {
+        for (const previous of changed) {
+          await PantryItem.updateOne({ _id: previous.item._id, user: req.user.id }, { $set: { quantity: previous.oldQuantity } });
+        }
+        return res.status(409).json({ message: "Pantry stock changed while cooking. Please refresh and try again." });
+      }
+      changed.push(requirement);
+    }
+
+    const items = await PantryItem.find({ user: req.user.id }).sort({ name: 1 }).lean();
+    return res.json({
+      message: requirements.length ? "Recipe marked as cooked and pantry quantities updated." : "No measurable ingredient quantities were found, so pantry stock was not changed.",
+      deducted: requirements.map((item) => item.ingredient),
+      skipped,
+      items,
+    });
+  } catch (error) {
+    for (const previous of changed) {
+      await PantryItem.updateOne({ _id: previous.item._id, user: req.user.id }, { $set: { quantity: previous.oldQuantity } }).catch(() => {});
+    }
+    console.error("Consume recipe ingredients error:", error);
+    res.status(500).json({ message: "Could not update pantry quantities.", error: error.message });
+  }
+};
+
 exports.compareRecipeWithPantry = async (req, res) => {
   try {
     const [recipe, pantry] = await Promise.all([
