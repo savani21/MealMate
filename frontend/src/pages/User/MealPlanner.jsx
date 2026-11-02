@@ -198,7 +198,9 @@ export default function MealPlanner() {
 
   useEffect(() => {
     const timer = setTimeout(fetchRecommendedRecipes, 450);
-  
+    return () => clearTimeout(timer);
+  }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
+
   const formatDateKey = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -214,6 +216,8 @@ export default function MealPlanner() {
     const next = new Date(weekStart);
     next.setDate(next.getDate() + offset * 7);
     setWeekStart(next);
+    setDraftDays([]);
+    setPreviewReady(false);
     setLocation("/meal-planner?week=" + formatDateKey(next));
   };
   const weekLabel = weekDays[0].toLocaleDateString([], { month: "short", day: "numeric" }) + " – " +
@@ -237,7 +241,7 @@ export default function MealPlanner() {
             <div><p className="text-xs font-bold uppercase tracking-wider text-primary">Your weekly planner</p><h2 className="mt-1 text-xl font-black text-gray-900">What’s on the menu?</h2><p className="mt-1 text-sm text-gray-500">{weekLabel}</p></div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => changeWeek(-1)} aria-label="Previous week" className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary">← <span className="hidden sm:inline">Previous</span></button>
-              <button type="button" onClick={() => { const today = new Date(); today.setDate(today.getDate() - ((today.getDay() + 6) % 7)); today.setHours(0,0,0,0); setWeekStart(today); setLocation("/meal-planner?week=" + formatDateKey(today)); }} className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary">This week</button>
+              <button type="button" onClick={() => { const today = new Date(); today.setDate(today.getDate() - ((today.getDay() + 6) % 7)); today.setHours(0,0,0,0); setWeekStart(today); setDraftDays([]); setPreviewReady(false); setLocation("/meal-planner?week=" + formatDateKey(today)); }} className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary">This week</button>
               <button type="button" onClick={() => changeWeek(1)} aria-label="Next week" className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary"><span className="hidden sm:inline">Next</span> →</button>
             </div>
           </div>
