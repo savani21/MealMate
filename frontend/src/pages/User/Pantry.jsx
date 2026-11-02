@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { ChefHat, Plus, Search, Trash2, Pencil, Check, X, Package } from "lucide-react";
@@ -88,10 +89,7 @@ export default function Pantry() {
   };
 
   return <div className="min-h-screen bg-[#f7faf7]">
-    <header className="bg-white border-b border-gray-100"><div className="max-w-6xl mx-auto h-16 px-4 flex items-center justify-between">
-      <button onClick={() => setLocation("/dashboard")} className="flex items-center gap-2 font-black text-gray-900"><ChefHat className="w-6 h-6 text-primary" />Meal<span className="text-primary">Mate</span></button>
-      <nav className="flex gap-2 text-sm"><button onClick={() => setLocation("/meal-planner")} className="px-3 py-2 rounded-lg hover:bg-green-50">Meal Planner</button><button onClick={() => setLocation("/recipes")} className="px-3 py-2 rounded-lg hover:bg-green-50">Recipes</button></nav>
-    </div></header>
+    <AppNavbar />
     <main className="max-w-5xl mx-auto px-4 py-9">
       <div className="mb-7"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><Package className="w-4 h-4"/> Pantry Management</div><h1 className="text-3xl font-black text-gray-900 mt-2">Your Pantry</h1><p className="text-gray-500 mt-2">Keep ingredient quantities up to date so MealMate can plan around what you actually have.</p></div>
       <form onSubmit={save} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
