@@ -102,7 +102,7 @@ function getRecipeImage(recipe, index) {
     .map((item) => typeof item === "string" ? item : item?.name || item?.ingredient || "")
     .join(" ");
   const recipeText = `${recipe.name || ""} ${recipe.description || ""} ${ingredients}`.toLowerCase();
-  const nonVegetarianWords = /\\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|meat|bacon|ham|sausage|egg|eggs)\\b/i;
+  const nonVegetarianWords = /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|meat|bacon|ham|sausage|egg|eggs)\b/i;
   const isNonVegetarian = diet === "non-vegetarian" || diet === "eggetarian" ||
     (diet !== "vegetarian" && diet !== "vegan" && nonVegetarianWords.test(recipeText));
   const images = isNonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
