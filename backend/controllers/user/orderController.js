@@ -50,8 +50,8 @@ function parseStorePack(unit, count) {
 }
 
 function convertPantryQuantity(quantity, fromUnit, toUnit) {
-  const from = String(fromUnit || "").toLowerCase();
-  const to = String(toUnit || "").toLowerCase();
+  const from = String(fromUnit || "").toLowerCase().replace(/\\([^)]*\\)/g, "").replace(/\\./g, "").trim();
+  const to = String(toUnit || "").toLowerCase().replace(/\\([^)]*\\)/g, "").replace(/\\./g, "").trim();
   const mass = (unit) => /^(kg|kgs|g|gm|gms|grams?)$/.test(unit);
   const volume = (unit) => /^(l|litre|litres|liter|liters|ml)$/.test(unit);
   if (mass(from) && mass(to)) {
