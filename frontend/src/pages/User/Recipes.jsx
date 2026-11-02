@@ -411,21 +411,28 @@ export default function Recipes() {
               <article key={recipe._id} className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
-                    <img
-                      src={recipeImages[recipe._id] || getRecipeImage(recipe, index)}
-                      alt={recipe.name}
-                      loading="lazy"
-                      onError={(event) => {
-                        const categoryImages = CATEGORY_IMAGES[String(recipe.category || "").trim().toLowerCase()] || CATEGORY_IMAGES.default;
-                        const fallback = categoryImages[index % categoryImages.length];
-                        if (event.currentTarget.src !== fallback) {
-                          event.currentTarget.src = fallback;
-                        } else {
+                    {recipeImages[recipe._id] ? (
+                      <img
+                        src={recipeImages[recipe._id]}
+                        alt={recipe.name}
+                        loading="lazy"
+                        onError={(event) => {
                           event.currentTarget.style.display = "none";
-                        }
-                      }}
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                    />
+                          setRecipeImages((current) => {
+                            const next = { ...current };
+                            delete next[recipe._id];
+                            return next;
+                          });
+                        }}
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-green-50 via-emerald-50 to-amber-50 px-6 text-center">
+                        <Utensils className="h-10 w-10 text-green-600" />
+                        <span className="text-sm font-bold text-gray-700">{recipe.name}</span>
+                        <span className="text-xs text-gray-500">Photo not available yet</span>
+                      </div>
+                    )}
                     <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold capitalize text-green-800 shadow-sm">{recipe.category || "Recipe"}</span>
                     {recipe.isHighlyLiked && <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-amber-400 px-2.5 py-1 text-[10px] font-bold text-amber-950"><Flame className="h-3 w-3" /> Community favourite</span>}
                   </div>
