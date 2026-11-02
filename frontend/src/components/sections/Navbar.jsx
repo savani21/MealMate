@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Leaf, Menu, X } from 'lucide-react';
+import { ChefHat, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 
@@ -35,10 +35,10 @@ export function Navbar() {
           {/* Logo */}
           <a href="#home" className="flex items-center gap-2">
             <div className="bg-primary/10 p-2 rounded-xl">
-              <Leaf className="w-6 h-6 text-primary" />
+              <ChefHat className="w-6 h-6 text-primary" />
             </div>
             <span className="text-xl font-black text-gray-900 tracking-tight">
-              MealMate <span className="text-primary">AI</span>
+              MealMate
             </span>
           </a>
 
