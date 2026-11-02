@@ -143,37 +143,55 @@ exports.consumeRecipeIngredients = async (req, res) => {
       const remainingBase = Math.max(0, have.quantity - need.quantity);
       requirements.push({
         item,
-        nextQuantity: toStoredUnit(remainingBase, have.unit, item.unit),
-        oldQuantity: item.quantity,
+        deductQuantity: toStoredUnit(need.quantity, need.unit, item.unit),
         ingredient: raw,
       });
     }
 
+    const grouped = new Map();
     for (const requirement of requirements) {
+      const key = String(requirement.item._id);
+      const current = grouped.get(key) || { item: requirement.item, deductQuantity: 0, ingredients: [] };
+      current.deductQuantity += requirement.deductQuantity;
+      current.ingredients.push(requirement.ingredient);
+      grouped.set(key, current);
+    }
+    const deductions = [...grouped.values()];
+    for (const deduction of deductions) {
+      if (deduction.item.quantity + 0.000001 < deduction.deductQuantity) {
+        return res.status(409).json({
+          message: "You do not have enough total stock for all quantities required by this recipe.",
+          unavailable: deduction.ingredients,
+          skipped,
+        });
+      }
+    }
+
+    for (const deduction of deductions) {
       const updated = await PantryItem.findOneAndUpdate(
-        { _id: requirement.item._id, user: req.user.id, quantity: { $gte: requirement.oldQuantity } },
-        { $set: { quantity: requirement.nextQuantity } },
+        { _id: deduction.item._id, user: req.user.id, quantity: { $gte: deduction.deductQuantity } },
+        { $inc: { quantity: -deduction.deductQuantity } },
         { new: true }
       );
       if (!updated) {
         for (const previous of changed) {
-          await PantryItem.updateOne({ _id: previous.item._id, user: req.user.id }, { $set: { quantity: previous.oldQuantity } });
+          await PantryItem.updateOne({ _id: previous.item._id, user: req.user.id }, { $inc: { quantity: previous.deductQuantity } });
         }
         return res.status(409).json({ message: "Pantry stock changed while cooking. Please refresh and try again." });
       }
-      changed.push(requirement);
+      changed.push(deduction);
     }
 
     const items = await PantryItem.find({ user: req.user.id }).sort({ name: 1 }).lean();
     return res.json({
       message: requirements.length ? "Recipe marked as cooked and pantry quantities updated." : "No measurable ingredient quantities were found, so pantry stock was not changed.",
-      deducted: requirements.map((item) => item.ingredient),
+      deducted: deductions.flatMap((item) => item.ingredients),
       skipped,
       items,
     });
   } catch (error) {
     for (const previous of changed) {
-      await PantryItem.updateOne({ _id: previous.item._id, user: req.user.id }, { $set: { quantity: previous.oldQuantity } }).catch(() => {});
+      await PantryItem.updateOne({ _id: previous.item._id, user: req.user.id }, { $inc: { quantity: previous.deductQuantity } }).catch(() => {});
     }
     console.error("Consume recipe ingredients error:", error);
     res.status(500).json({ message: "Could not update pantry quantities.", error: error.message });
