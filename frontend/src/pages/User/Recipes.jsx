@@ -47,7 +47,20 @@ function getRecipeImage(recipe, index, duplicateImageUrls) {
   const images = CATEGORY_IMAGES[category] || CATEGORY_IMAGES.default;
   const savedImage = String(recipe.image || "").trim();
   if (savedImage && !duplicateImageUrls.has(savedImage)) return savedImage;
-  return images[index % images.length];
+
+  // Use the dish name and its ingredients as image-search tags.
+  const tags = [
+    recipe.name,
+    ...(recipe.ingredients || []).slice(0, 4).map((item) =>
+      String(item).replace(/[0-9]/g, "").replace(/[^a-zA-Z -]/g, "").trim()
+    ),
+    "food",
+  ].filter(Boolean).join(",");
+  const lock = String(recipe._id || recipe.name || index)
+    .split("")
+    .reduce((hash, char) => ((hash * 31) + char.charCodeAt(0)) >>> 0, 7);
+
+  return `https://loremflickr.com/900/600/${encodeURIComponent(tags)}?lock=${lock}`;
 }
 
 export default function Recipes() {
