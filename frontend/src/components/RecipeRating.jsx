@@ -1,14 +1,24 @@
 import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import { Star, X } from "lucide-react";
 
 const API = "http://localhost:5000";
 
-export default function RecipeRating({ recipeId }) {
+export default function RecipeRating({ recipeId, promptOpen = false, onPromptClose }) {
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [promptVisible, setPromptVisible] = useState(false);
+
+  useEffect(() => {
+    if (promptOpen) setPromptVisible(true);
+  }, [promptOpen]);
+
+  const closePrompt = () => {
+    setPromptVisible(false);
+    onPromptClose?.();
+  };
 
   const token = localStorage.getItem("token");
 
@@ -83,6 +93,7 @@ export default function RecipeRating({ recipeId }) {
       setRating(data.review?.rating || rating);
       setFeedback(data.review?.feedback || feedback.trim());
       setHasRated(true);
+      closePrompt();
     } catch (error) {
       console.error("Save recipe rating error:", error);
       alert("Unable to save your rating.");
