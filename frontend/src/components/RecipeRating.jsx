@@ -103,7 +103,59 @@ export default function RecipeRating({ recipeId, promptOpen = false, onPromptClo
   };
 
   return (
-    <section className="mt-8 pt-7 border-t border-gray-100">
+    <>
+      {promptVisible && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-labelledby="recipe-rating-dialog-title">
+          <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <button type="button" onClick={closePrompt} className="absolute right-4 top-4 rounded-full p-2 text-gray-500 hover:bg-gray-100" aria-label="Close rating popup">
+              <X className="h-5 w-5" />
+            </button>
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50">
+              <Star className="h-7 w-7 fill-amber-400 text-amber-400" />
+            </div>
+            <h2 id="recipe-rating-dialog-title" className="text-center text-xl font-black text-gray-900">
+              {hasRated ? "Thanks for rating this recipe!" : "How was your cooking experience?"}
+            </h2>
+            <p className="mt-2 text-center text-sm text-gray-500">
+              Your honest rating helps other MealMate users choose recipes.
+            </p>
+            {loading ? (
+              <p className="mt-6 text-center text-sm text-gray-500">Checking your previous rating...</p>
+            ) : hasRated ? (
+              <>
+                <div className="mt-6 flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <Star key={value} className={"h-9 w-9 " + (value <= rating ? "fill-amber-400 text-amber-400" : "text-gray-200")} />
+                  ))}
+                </div>
+                <p className="mt-3 text-center text-sm text-gray-600">You have already rated this recipe.</p>
+                <button type="button" onClick={closePrompt} className="mt-6 w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">Done</button>
+              </>
+            ) : !token ? (
+              <>
+                <p className="mt-5 text-center text-sm text-gray-600">Please log in to submit a rating.</p>
+                <button type="button" onClick={closePrompt} className="mt-6 w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white">Close</button>
+              </>
+            ) : (
+              <>
+                <div className="mt-6 flex justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button key={value} type="button" onClick={() => setRating(value)} aria-label={value + " stars"} className="rounded-lg p-1">
+                      <Star className={"h-9 w-9 " + (value <= rating ? "fill-amber-400 text-amber-400" : "text-gray-300")} />
+                    </button>
+                  ))}
+                </div>
+                <textarea value={feedback} onChange={(event) => setFeedback(event.target.value)} maxLength={1000} rows={3} placeholder="Share a quick tip or what you liked (optional)..." className="mt-5 w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary" />
+                <button type="button" onClick={submitRating} disabled={saving || !rating} className="mt-4 w-full rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+                  {saving ? "Submitting..." : "Submit rating"}
+                </button>
+                <button type="button" onClick={closePrompt} className="mt-3 w-full rounded-xl px-4 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50">Maybe later</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      <section className="mt-8 pt-7 border-t border-gray-100">
       <div>
         <h2 className="text-lg font-bold text-gray-900">
           {hasRated ? "Your rating" : "Rate this recipe"}
@@ -182,6 +234,7 @@ export default function RecipeRating({ recipeId, promptOpen = false, onPromptClo
           Log in to rate this recipe.
         </p>
       )}
-    </section>
+      </section>
+    </>
   );
 }
