@@ -78,14 +78,37 @@ const CATEGORY_IMAGES = {
   ],
 };
 
-function getRecipeImage(recipe, index, duplicateImageUrls) {
-  const category = String(recipe.category || "").trim().toLowerCase();
-  const images = CATEGORY_IMAGES[category] || CATEGORY_IMAGES.default;
-  const savedImage = String(recipe.image || "").trim();
-  if (savedImage && !duplicateImageUrls.has(savedImage)) return savedImage;
+const VEGETARIAN_IMAGES = [
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1515003197210-e0cd7184f8b5?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=900&q=85",
+];
 
-  // Use a stable, varied fallback instead of a remote tag service that can repeat results.
-  return images[index % images.length];
+const NON_VEGETARIAN_IMAGES = [
+  "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=85",
+];
+
+function getRecipeImage(recipe, index) {
+  const diet = String(recipe.diet || "").trim().toLowerCase();
+  const ingredients = (Array.isArray(recipe.ingredients) ? recipe.ingredients : [])
+    .map((item) => typeof item === "string" ? item : item?.name || item?.ingredient || "")
+    .join(" ");
+  const recipeText = `${recipe.name || ""} ${recipe.description || ""} ${ingredients}`.toLowerCase();
+  const nonVegetarianWords = /\\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|meat|bacon|ham|sausage|egg|eggs)\\b/i;
+  const isNonVegetarian = diet === "non-vegetarian" || diet === "eggetarian" ||
+    (diet !== "vegetarian" && diet !== "vegan" && nonVegetarianWords.test(recipeText));
+  const images = isNonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
+  const stableKey = String(recipe._id || recipe.name || index);
+  const hash = stableKey.split("").reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
+  return images[hash % images.length];
 }
 
 export default function Recipes() {
@@ -354,9 +377,7 @@ export default function Recipes() {
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="block w-full text-left">
                   <div className="relative h-48 overflow-hidden bg-gradient-to-br from-green-50 to-emerald-100">
                     <img
-                      src={getRecipeImage(recipe, index, new Set(filteredRecipes
-                        .map((item) => String(item.image || "").trim())
-                        .filter((url, imageIndex, urls) => url && urls.indexOf(url) !== imageIndex)))}
+                      src={getRecipeImage(recipe, index)}
                       alt={recipe.name}
                       loading="lazy"
                       onError={(event) => {
