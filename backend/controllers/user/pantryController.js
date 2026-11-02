@@ -46,7 +46,7 @@ exports.updatePantryItem = async (req, res) => {
     }
     const item = await PantryItem.findOneAndUpdate(
       { _id: req.params.id, user: req.user.id }, { $set: updates },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
     if (!item) return res.status(404).json({ message: "Pantry ingredient not found." });
     res.json({ message: "Pantry ingredient updated", item });
@@ -173,7 +173,7 @@ exports.consumeRecipeIngredients = async (req, res) => {
       const updated = await PantryItem.findOneAndUpdate(
         { _id: deduction.item._id, user: req.user.id, quantity: { $gte: deduction.deductQuantity } },
         { $inc: { quantity: -deduction.deductQuantity } },
-        { new: true }
+        { returnDocument: "after" }
       );
       if (!updated) {
         for (const previous of changed) {
