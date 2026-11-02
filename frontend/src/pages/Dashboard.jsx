@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
@@ -108,27 +109,15 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="max-w-7xl mx-auto h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-6 h-6 text-primary" /></div>
-            <div>
-              <h1 className="text-xl font-black text-gray-900">Meal<span className="text-primary">Mate</span></h1>
-              <p className="text-xs text-gray-400 hidden sm:block">Your smart meal companion</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button onClick={() => goTo("/notifications")} className="relative w-10 h-10 rounded-xl flex items-center justify-center hover:bg-gray-50 transition">
-              <Bell className="w-5 h-5 text-gray-600" />
-              {dashboardStats.notifications > 0 && <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />}
-            </button>
-            <button onClick={() => setMenuOpen(!menuOpen)} className="w-11 h-11 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-gray-50 flex items-center justify-center transition" aria-label="Toggle menu">
-              {menuOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppNavbar>
+          <button onClick={() => goTo("/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-50" aria-label="Notifications">
+            <Bell className="h-5 w-5 text-gray-600" />
+            {dashboardStats.notifications > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />}
+          </button>
+          <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm hover:bg-gray-50" aria-label="Toggle account menu">
+            {menuOpen ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
+          </button>
+        </AppNavbar>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-8">
