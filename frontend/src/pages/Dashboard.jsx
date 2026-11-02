@@ -18,6 +18,7 @@ import {
   CalendarDays,
   ClipboardList,
   ShoppingBasket,
+  ShoppingCart,
   Heart,
   ChevronRight,
   Sparkles,
@@ -166,6 +167,8 @@ export default function Dashboard() {
               <>
                 <div className="mt-5 mb-3 px-3 text-xs font-bold uppercase tracking-wider text-gray-400">My MealMate</div>
                 <MenuItem icon={<ShoppingBasket className="w-5 h-5" />} label="Grocery List" onClick={() => goTo("/user/grocery")} />
+                <MenuItem icon={<ShoppingBasket className="w-5 h-5" />} label="Pantry" onClick={() => goTo("/pantry")} />
+                <MenuItem icon={<ShoppingCart className="w-5 h-5" />} label="Cart & Grocery Store" onClick={() => goTo("/grocery-store")} />
                 <MenuItem icon={<ChefHat className="w-5 h-5" />} label="Recipes" onClick={() => goTo("/recipes")} />
                 <MenuItem icon={<Heart className="w-5 h-5" />} label="Favorites" onClick={() => goTo("/favorites")} />
               </>
