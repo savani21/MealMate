@@ -1,3 +1,4 @@
+import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -189,38 +190,7 @@ export default function Recipes() {
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-gray-100">
-        <div className="max-w-6xl mx-auto h-20 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setLocation("/dashboard")}
-              className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-700" />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center">
-                <ChefHat className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-xl font-black text-gray-900">Manage Recipes</h1>
-                <p className="text-xs text-gray-400">
-                  {recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={openCreateForm}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Recipe</span>
-          </button>
-        </div>
-      </header>
+      <AppNavbar />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="relative mb-6 max-w-sm">
