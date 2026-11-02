@@ -1,7 +1,7 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat } from "lucide-react";
+import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, ChevronDown, Star } from "lucide-react";
 
 const API = "http://localhost:5000/api/meal-plans";
 
@@ -158,6 +158,7 @@ export default function MealPlanner() {
 
 
   const [recommendedRecipes, setRecommendedRecipes] = useState([]);
+  const [showRecommendedRecipes, setShowRecommendedRecipes] = useState(false);
 
   const fetchRecommendedRecipes = async () => {
     const available = getAvailableIngredients();
@@ -213,31 +214,52 @@ export default function MealPlanner() {
           </div></div>
 
           <section className="mt-8 border-t border-gray-100 pt-6">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div>
-                <h3 className="font-black text-gray-900 text-lg">Recommended Recipes</h3>
-                <p className="text-sm text-gray-500">Suggestions based on your ingredients, food preference and ratings.</p>
-              </div>
-              {recommendationLoading && <span className="text-xs font-semibold text-primary">Updating...</span>}
-            </div>
-            {recommendedRecipes.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {recommendedRecipes.slice(0, 3).map((recipe) => (
-                  <div key={recipe._id} className="rounded-xl border border-gray-100 p-4 bg-gray-50">
-                    <h4 className="font-bold text-gray-900">{recipe.name}</h4>
-                    <p className="text-xs text-gray-500 mt-1">{recipe.description}</p>
-                    <div className="flex flex-wrap gap-2 mt-3 text-xs">
-                      <span className="rounded-full bg-white px-2 py-1">{recipe.matchPercentage || 0}% ingredient match</span>
-                      <span className="rounded-full bg-white px-2 py-1">{recipe.averageRating || 0}/5 ({recipe.ratingCount || 0})</span>
-                    </div>
-                    {recipe.missingIngredients?.length > 0 && <p className="text-xs text-amber-700 mt-2">Missing: {recipe.missingIngredients.join(", ")}</p>}
-                    <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="mt-3 text-sm font-semibold text-primary hover:underline">View recipe</button>
+            <div className="rounded-2xl border border-green-100 bg-green-50/50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowRecommendedRecipes((open) => !open)}
+                aria-expanded={showRecommendedRecipes}
+                className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-green-50 transition"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-black text-gray-900 text-lg">Recommended Recipes</h3>
+                    <span className="rounded-full bg-white border border-green-100 px-2.5 py-1 text-xs font-bold text-primary">
+                      {recommendedRecipes.length} found
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : !recommendationLoading ? (
-              <p className="text-sm text-gray-400">Add ingredients and select a food preference to see recipe suggestions.</p>
-            ) : null}
+                  <p className="text-sm text-gray-500 mt-1">Top matches for your ingredients and diet, ranked using recipe ratings.</p>
+                </div>
+                <ChevronDown className={`w-5 h-5 shrink-0 text-primary transition-transform ${showRecommendedRecipes ? "rotate-180" : ""}`} />
+              </button>
+              {showRecommendedRecipes && (
+                <div className="border-t border-green-100 bg-white p-5">
+                  {recommendationLoading ? (
+                    <p className="text-sm text-gray-500">Finding the best-rated recipes for you...</p>
+                  ) : recommendedRecipes.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {recommendedRecipes.slice(0, 3).map((recipe) => (
+                        <div key={recipe._id} className="rounded-xl border border-gray-100 p-4 bg-gray-50">
+                          <h4 className="font-bold text-gray-900">{recipe.name}</h4>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{recipe.description}</p>
+                          <div className="flex flex-wrap gap-2 mt-3 text-xs">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-1 font-semibold">
+                              <Star className="w-3.5 h-3.5 fill-current" /> {(Number(recipe.averageRating) || 0).toFixed(1)}/5
+                            </span>
+                            <span className="rounded-full bg-white px-2 py-1 text-gray-600">{recipe.ratingCount || 0} ratings</span>
+                            <span className="rounded-full bg-white px-2 py-1 text-gray-600">{recipe.matchPercentage || 0}% ingredient match</span>
+                          </div>
+                          {recipe.missingIngredients?.length > 0 && <p className="text-xs text-amber-700 mt-2">Missing: {recipe.missingIngredients.join(", ")}</p>}
+                          <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="mt-3 text-sm font-semibold text-primary hover:underline">View recipe</button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">Add ingredients and select a food preference to see recipe suggestions.</p>
+                  )}
+                </div>
+              )}
+            </div>
           </section>
           <div className="mt-8 pt-6 border-t border-gray-100"><button onClick={generatePlan} disabled={loading || recommendationLoading} className="w-full md:w-auto md:min-w-[280px] mx-auto flex items-center justify-center gap-2 bg-primary text-white px-6 py-3.5 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-60"><Sparkles className="w-5 h-5" />{loading ? "Preparing Recipe Options..." : "Show My Recipe Options"}</button></div>
         </section>
