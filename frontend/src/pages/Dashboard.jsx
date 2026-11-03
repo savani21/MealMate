@@ -108,7 +108,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip bg-[radial-gradient(ellipse_at_top_left,_#e8f5ec_0%,_#f7faf7_48%,_#f1f8f2_100%)]">
+    <div className="relative isolate min-h-screen overflow-x-clip bg-[radial-gradient(ellipse_at_top_left,_#fcfefc_0%,_#ffffff_52%,_#fbfdfb_100%)]">
       <AppNavbar>
           <button onClick={() => goTo("/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-50" aria-label="Notifications">
             <Bell className="h-5 w-5 text-gray-600" />
