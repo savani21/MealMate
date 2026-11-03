@@ -156,12 +156,6 @@ export default function MealPlanDetails() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-6 flex items-center gap-2 text-sm text-gray-500"><button onClick={() => setLocation("/my-meal-plans")} className="hover:text-primary transition">Meal Plans</button><span>/</span><span className="text-gray-900 font-semibold">{plan.duration}-Day Plan</span></div>
-        <section className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Sparkles className="w-4 h-4" /> AI Generated Plan</div>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">Your {plan.duration}-Day Meal Plan</h1>
-          <p className="text-gray-500 mt-3">Personalized according to your goals, diet, and selected ingredients.</p>
-        </section>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <InfoCard title="Goal" value={plan.goal} /><InfoCard title="Diet" value={plan.diet} /><InfoCard title="Duration" value={`${plan.duration} Days`} />
         </div>
