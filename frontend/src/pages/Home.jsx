@@ -62,7 +62,7 @@ function RecipeDiscoverySection() {
 
   return (
     <section id="recipes" className="bg-[#faf9f6] py-14 sm:py-16">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.24em] text-primary">POPULAR RIGHT NOW</p>
@@ -72,9 +72,9 @@ function RecipeDiscoverySection() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-4 sm:gap-x-4">{[1,2,3,4,5,6,7,8].map((n) => <div key={n}><div className="aspect-[4/5] animate-pulse bg-gray-200" /><div className="mt-2 h-3 w-4/5 animate-pulse bg-gray-200" /></div>)}</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4 sm:gap-x-6">{[1,2,3,4,5,6,7,8].map((n) => <div key={n}><div className="aspect-[4/5] animate-pulse bg-gray-200" /><div className="mt-2 h-3 w-4/5 animate-pulse bg-gray-200" /></div>)}</div>
         ) : popularRecipes.length ? (
-          <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-4 sm:gap-x-4 sm:gap-y-7">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-4 sm:gap-x-6 sm:gap-y-8">
             {popularRecipes.map((recipe, index) => (
               <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="group min-w-0 text-left">
                 <div className="relative aspect-[4/5] overflow-hidden bg-[#eeeae3]">
