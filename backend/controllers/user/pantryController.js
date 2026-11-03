@@ -1,5 +1,6 @@
 const PantryItem = require("../../models/user/PantryItem");
 const { processDueOrders } = require("./orderController");
+const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 exports.listPantry = async (req, res) => {
   try {
@@ -19,7 +20,8 @@ exports.addPantryItem = async (req, res) => {
     if (!name || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       return res.status(400).json({ message: "Ingredient name, positive quantity and unit are required." });
     }
-    const existing = await PantryItem.findOne({ user: req.user.id, name });
+    const pantryItems = await PantryItem.find({ user: req.user.id });
+    const existing = pantryItems.find((item) => normalizeIngredientName(item.name) === normalizeIngredientName(name));
     if (existing) {
       if (existing.unit !== unit) return res.status(409).json({ message: "This ingredient already exists with a different unit. Edit the existing item instead." });
       existing.quantity += quantity;
@@ -94,17 +96,7 @@ function normalizeAmount(quantity, unit) {
   return { quantity, unit: normalizedUnit };
 }
 
-function normalizeIngredientName(value) {
-  const cleaned = String(value || "").toLowerCase()
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole)\b/g, " ")
-    .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-  const words = cleaned.split(" ").filter(Boolean);
-  if (words.length && /s$/.test(words[words.length - 1]) && !/ss$/.test(words[words.length - 1])) words[words.length - 1] = words[words.length - 1].slice(0, -1);
-  const name = words.join(" ");
-  const aliases = { "basmati rice":"rice", "long grain rice":"rice", atta:"wheat flour", "whole wheat flour":"wheat flour", "wheat atta":"wheat flour", "tuver dal":"toor dal", "tuvar dal":"toor dal", "tur dal":"toor dal", "arhar dal":"toor dal", "green chilli":"green chili", "sunflower oil":"oil", "vegetable oil":"oil", "whole milk":"milk", "warm milk":"milk", "full cream milk":"milk", "toned milk":"milk" };
-  return aliases[name] || name;
-}
+
 
 const COMMON_HOUSEHOLD_INGREDIENTS = new Set(["water"]);
 
