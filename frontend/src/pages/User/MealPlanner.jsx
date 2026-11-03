@@ -15,6 +15,7 @@ export default function MealPlanner() {
   const [selectedPantryNames, setSelectedPantryNames] = useState([]);
   const [pantryLoading, setPantryLoading] = useState(true);
   const [newIngredient, setNewIngredient] = useState("");
+  const [showIngredientPicker, setShowIngredientPicker] = useState(false);
   const [duration, setDuration] = useState("3");
   const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
   const [recommendedIngredients, setRecommendedIngredients] = useState(params.get("recommended") ? params.get("recommended").split(",").filter(Boolean) : []);
@@ -322,22 +323,17 @@ export default function MealPlanner() {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Select Ingredients from Your Pantry</label>
-              <p className="mb-3 text-xs text-gray-500">Add ingredients to My Pantry first, then select what you want to use for this plan.</p>
-              {pantryLoading ? <p className="rounded-xl border border-gray-100 p-4 text-sm text-gray-500">Loading your pantry...</p> : pantryItems.length ? (
-                <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {pantryItems.map((item) => <label key={item._id || item.name} className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm text-gray-700">
-                    <input type="checkbox" checked={selectedPantryNames.some((name) => name.toLowerCase() === item.name.toLowerCase())} onChange={() => togglePantryIngredient(item.name)} className="accent-green-700" />
-                    <span className="min-w-0 flex-1 truncate capitalize">{item.name}</span>
-                    <span className="shrink-0 text-[10px] text-gray-400">{item.quantity} {item.unit}</span>
-                  </label>)}
-                </div>
-              ) : <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. Add ingredients in My Kitchen → Pantry before planning meals.</p>}
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input value={newIngredient} onChange={(e) => setNewIngredient(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomIngredient(); } }} placeholder="Add another ingredient (e.g. fresh coriander)" className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-2.5 outline-none focus:border-primary" />
-                <button type="button" onClick={addCustomIngredient} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-green-50"><Plus className="h-4 w-4" /> Add ingredient</button>
-              </div>
-              {(getAvailableIngredients().length > 0) && <p className="mt-2 text-xs text-gray-500">{getAvailableIngredients().length} ingredients selected for planning.</p>}
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredients you want to use for meal</label>
+              <p className="mb-3 text-xs text-gray-500">Choose ingredients from your pantry. You can also add ingredients that are not in your pantry.</p>
+              <button type="button" onClick={() => setShowIngredientPicker(true)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition hover:border-green-300 hover:bg-green-50/40">
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-gray-800">Select ingredients</span>
+                  <span className="mt-0.5 block text-xs text-gray-500">{getAvailableIngredients().length ? `${getAvailableIngredients().length} ingredients selected` : "Choose items you want to use for this meal plan"}</span>
+                </span>
+                <span className="shrink-0 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-primary">Select ingredients</span>
+              </button>
+              {getAvailableIngredients().length > 0 && <div className="mt-2 flex flex-wrap gap-2">{getAvailableIngredients().map((name) => <span key={name} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-800">{name}</span>)}</div>}
+              {pantryItems.length === 0 && !pantryLoading && <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. Add ingredients in My Kitchen → Pantry before planning meals.</p>}
             </div>
             <div className="md:col-span-2">
               <label htmlFor="ingredient-mode" className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredient Preference</label>
@@ -403,6 +399,42 @@ export default function MealPlanner() {
           <div className="mt-4" ref={generateButtonRef}><div className="text-center text-xs text-gray-500 mb-2">Next step: generate your meal options</div><button onClick={generatePlan} disabled={loading || recommendationLoading} className="w-full md:w-auto md:min-w-[280px] mx-auto flex items-center justify-center gap-2 bg-primary text-white px-6 py-3.5 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-60"><Sparkles className="w-5 h-5" />{loading ? "Preparing Recipe Options..." : "Show My Recipe Options"}</button></div>
         </section>
 
+        {showIngredientPicker && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowIngredientPicker(false); }}>
+            <section role="dialog" aria-modal="true" aria-labelledby="ingredient-picker-title" className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-start justify-between border-b border-gray-100 px-5 py-4">
+                <div>
+                  <h2 id="ingredient-picker-title" className="text-lg font-bold text-gray-900">Ingredients you want to use for meal</h2>
+                  <p className="mt-1 text-sm text-gray-500">Select ingredients from your pantry for this meal plan.</p>
+                </div>
+                <button type="button" onClick={() => setShowIngredientPicker(false)} aria-label="Close ingredient selection" className="rounded-lg px-2 py-1 text-xl text-gray-400 hover:bg-gray-100">×</button>
+              </div>
+              <div className="overflow-y-auto p-5">
+                {pantryLoading ? <p className="text-sm text-gray-500">Loading your pantry...</p> : pantryItems.length ? (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {pantryItems.map((item) => <label key={item._id || item.name} className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-3 text-sm text-gray-700 hover:border-green-200">
+                      <input type="checkbox" checked={selectedPantryNames.some((name) => name.toLowerCase() === item.name.toLowerCase())} onChange={() => togglePantryIngredient(item.name)} className="h-4 w-4 accent-green-700" />
+                      <span className="min-w-0 flex-1 capitalize">{item.name}</span>
+                      <span className="shrink-0 text-xs text-gray-400">{item.quantity} {item.unit}</span>
+                    </label>)}
+                  </div>
+                ) : <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. You can still add ingredients below, or add pantry items in My Kitchen → Pantry.</p>}
+                <div className="mt-5">
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Add another ingredient</label>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input value={newIngredient} onChange={(event) => setNewIngredient(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomIngredient(); } }} placeholder="e.g. fresh coriander" className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-2.5 outline-none focus:border-primary" />
+                    <button type="button" onClick={addCustomIngredient} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-green-50"><Plus className="h-4 w-4" /> Add ingredient</button>
+                  </div>
+                  {ingredients.split(",").map((item) => item.trim()).filter(Boolean).length > 0 && <p className="mt-2 text-xs text-gray-500">Additional ingredients: {ingredients.split(",").map((item) => item.trim()).filter(Boolean).join(", ")}</p>}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-gray-100 px-5 py-4">
+                <span className="text-sm text-gray-500">{getAvailableIngredients().length} selected</span>
+                <button type="button" onClick={() => setShowIngredientPicker(false)} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">Done</button>
+              </div>
+            </section>
+          </div>
+        )}
         {previewReady && <section ref={recipeChoicesRef} className="mt-10 space-y-6 scroll-mt-24">
           <div className="text-center"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><CheckCircle2 className="w-4 h-4"/> Your preferences are applied</div><h2 className="text-2xl font-black text-gray-900 mt-2">Choose Your Recipes</h2><p className="text-sm text-gray-500 mt-2">Select one recipe for breakfast, lunch and dinner. Your chosen ingredients are already included.</p></div>
           {draftDays.map((day, dayIndex) => <div key={day.day || dayIndex} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-7"><div className="flex items-center gap-2 mb-5"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary"/></div><h3 className="text-lg font-black text-gray-900">Day {day.day || dayIndex + 1}</h3></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-5">{["breakfast","lunch","dinner"].map((type) => <div key={type} className="rounded-2xl border border-gray-100 p-4"><div className="text-xs font-bold uppercase tracking-wide text-primary mb-3">{type}</div><div className="space-y-2">{(day[type + "Options"] || []).map((option, optionIndex) => <label key={option.name + optionIndex} className={`block rounded-xl border p-3 cursor-pointer transition ${day[type] === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}><span className="flex items-start gap-2.5"><input type="radio" name={`day-${dayIndex}-${type}`} checked={day[type] === option.name} onChange={() => selectOption(dayIndex, type, option)} className="mt-1 accent-green-700"/><span className="min-w-0"><span className="block font-bold text-sm text-gray-900">{option.name}</span>{option.description && <span className="block text-xs text-gray-500 mt-1">{option.description}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-2">{option.prepTime}</span>}</span></span></label>)}</div>{(day[type + "Options"] || []).length === 0 && <p className="text-sm text-red-500">No options returned for this meal. Please regenerate.</p>}</div>)}</div></div>)}
