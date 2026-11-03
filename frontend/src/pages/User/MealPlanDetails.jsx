@@ -190,19 +190,30 @@ export default function MealPlanDetails() {
                     <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>
                     <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
                   </div>
-                  {activeMealEditor === mealKey && <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
-                    <p className="text-xs font-semibold text-gray-500">Choose an alternative. Only this meal will change.</p>
-                    {options.filter((option) => option.name !== day[type]).map((option) => <button key={option.name} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, option); setSavingMealKey(""); }} className="w-full rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
-                      <span className="block text-sm font-bold text-gray-900">{option.name}</span><span className="block text-xs text-gray-500 mt-1">{option.description || "Alternative meal"} {option.prepTime ? `· ${option.prepTime}` : ""}</span>
-                    </button>)}
-                    <p className="text-xs font-semibold text-gray-500 pt-1">Choose from MealMate recipes</p>
-                    <div className="max-h-48 overflow-y-auto space-y-2">
-                      {matchingRecipes.slice(0, 12).map((recipe) => <button key={recipe._id} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, null, recipe._id); setSavingMealKey(""); }} className="w-full flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
-                        <span className="min-w-0"><span className="block text-sm font-bold text-gray-900 truncate">{recipe.name}</span><span className="block text-xs text-gray-500">{recipe.prepTime || "Prep time not specified"}</span></span><Check className="w-4 h-4 text-primary shrink-0"/>
-                      </button>)}
-                      {!matchingRecipes.length && <p className="text-xs text-gray-400">No matching recipes available yet.</p>}
-                    </div>
-                    <button type="button" onClick={() => setActiveMealEditor("")} className="text-xs font-semibold text-gray-500 hover:text-gray-800">Close</button>
+                  {activeMealEditor === mealKey && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveMealEditor(""); }}>
+                    <section role="dialog" aria-modal="true" aria-labelledby={`change-meal-title-${mealKey}`} className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                      <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
+                        <div><p className="text-xs font-bold uppercase tracking-wide text-primary">Day {day.day} · {type}</p><h2 id={`change-meal-title-${mealKey}`} className="mt-1 text-xl font-black text-gray-900">Choose an alternative meal</h2><p className="mt-1 text-xs text-gray-500">Only this meal will change. Your other meals will stay the same.</p></div>
+                        <button type="button" onClick={() => setActiveMealEditor("")} aria-label="Close alternatives" className="rounded-lg px-2 py-1 text-2xl leading-none text-gray-400 hover:bg-gray-100">×</button>
+                      </div>
+                      <div className="overflow-y-auto p-5 space-y-3">
+                        <p className="text-sm font-bold text-gray-800">AI meal alternatives</p>
+                        {options.filter((option) => option.name !== day[type]).map((option) => <button key={option.name} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, option); setSavingMealKey(""); setActiveMealEditor(""); }} className="w-full rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
+                          <span className="block text-sm font-bold text-gray-900">{option.name}</span><span className="mt-1 block text-xs text-gray-500">{option.prepTime ? `Time: ${option.prepTime}` : "Preparation time not available"}</span>
+                        </button>)}
+                        {!options.filter((option) => option.name !== day[type]).length && <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-500">No AI alternatives are available for this meal.</p>}
+                        <div className="border-t border-gray-100 pt-4">
+                          <p className="mb-3 text-sm font-bold text-gray-800">Choose from MealMate recipes</p>
+                          <div className="space-y-2">
+                            {matchingRecipes.slice(0, 12).map((recipe) => <button key={recipe._id} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, null, recipe._id); setSavingMealKey(""); setActiveMealEditor(""); }} className="w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
+                              <span className="min-w-0"><span className="block text-sm font-bold text-gray-900 truncate">{recipe.name}</span><span className="block text-xs text-gray-500">{recipe.prepTime || "Prep time not specified"}</span></span><Check className="w-4 h-4 text-primary shrink-0"/>
+                            </button>)}
+                            {!matchingRecipes.length && <p className="text-xs text-gray-400">No matching recipes available yet.</p>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex justify-end border-t border-gray-100 px-5 py-4"><button type="button" onClick={() => setActiveMealEditor("")} className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button></div>
+                    </section>
                   </div>}
                 </div>;
               })}
