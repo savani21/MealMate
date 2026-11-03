@@ -335,6 +335,47 @@ export default function GroceryStore() {
     setCartOpen(true);
   };
 
+  const autoAddFromRecipe = new URLSearchParams(search).get("autoAdd") === "1";
+  const [autoAddHandled, setAutoAddHandled] = useState(false);
+
+  useEffect(() => {
+    if (!autoAddFromRecipe || autoAddHandled || loading || !products.length) return;
+    setAutoAddHandled(true);
+    (async () => {
+      try {
+        const cartResponse = await fetch(`${API}/api/store/cart`, { headers: authHeaders() });
+        const cartData = await cartResponse.json();
+        const existingIds = new Set((cartData.cart?.items || []).map((item) => String(item.product?._id || item.product || "")));
+        const requested = requestedIngredientsFromUrl;
+        const matches = products.filter((product) =>
+          requested.some((ingredient) => productMatchesIngredient(product, ingredient)) &&
+          !existingIds.has(String(product._id))
+        );
+        const failures = [];
+        for (const product of matches) {
+          const response = await fetch(`${API}/api/store/cart`, {
+            method: "POST",
+            headers: { ...authHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({ productId: product._id, quantity: 1 }),
+          });
+          const data = await response.json();
+          if (!response.ok) failures.push(product.name);
+          else if (data.cart) setCart(data.cart);
+        }
+        await loadCart();
+        setCartOpen(true);
+        setRequestedAddMessage(failures.length
+          ? `Some ingredients could not be added: ${failures.join(", ")}. Please add them manually.`
+          : matches.length
+            ? `Added ${matches.length} matching ingredient(s) to your cart.`
+            : "No matching store products were found, or all matching items are already in your cart.");
+      } catch (error) {
+        console.error("Recipe grocery auto-add error:", error);
+        setRequestedAddMessage("Could not automatically add items. Please add them from the store.");
+      }
+    })();
+  }, [autoAddFromRecipe, autoAddHandled, loading, products]);
+
   const cartCount = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
   const cartTotal = cart.items?.reduce(
     (sum, item) => sum + (item.product?.price || 0) * item.quantity,
