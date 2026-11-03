@@ -236,10 +236,37 @@ export default function MealPlanner() {
             <div><label className="block text-sm font-semibold text-gray-700 mb-2">Plan Duration</label><select value={duration} onChange={(e) => {setDuration(e.target.value);setPreviewReady(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option></select></div>
             <div><label className="block text-sm font-semibold text-gray-700 mb-2">Ingredients You Already Have</label><div className="relative"><ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" value={ingredients} onChange={(e) => {setIngredients(e.target.value);setPreviewReady(false);setShowRecommendedRecipes(false);setExpandRecommendationsAfterLoad(false);}} onBlur={() => { if (ingredients.trim()) scrollTo(planningMethodRef); }} placeholder="e.g. rice, paneer, tomato, spinach" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" /></div><p className="text-xs text-gray-400 mt-2">These ingredients will be passed to the recipe generator automatically. You won't need to enter them again.</p></div>
           </div>
-          <div ref={planningMethodRef} className="mt-6 border-t border-gray-100 pt-6 scroll-mt-24"><h3 className="font-black text-gray-900 text-base mb-3">How should we plan your meals?</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button type="button" onClick={() => {setIngredientMode("available");setPreviewReady(false);}} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "available" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ShoppingBasket className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Only Available Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Use only the ingredients you already have.</p>{ingredientMode === "available" && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button>
-            <button type="button" onClick={async () => {setIngredientMode("recommended");setPreviewReady(false);await getRecommendedIngredients();}} className={`text-left rounded-2xl border-2 p-5 transition ${ingredientMode === "recommended" ? "border-primary bg-green-50" : "border-gray-100 hover:border-gray-200"}`}><div className="flex items-center gap-3"><ThumbsUp className="w-5 h-5 text-primary" /><span className="font-bold text-gray-900">Available + Recommended Ingredients</span></div><p className="text-sm text-gray-500 mt-2">Use your ingredients plus suggested ingredients you can purchase.</p>{recommendationLoading ? <p className="text-sm text-primary font-semibold mt-4">Loading recommendations...</p> : recommendedIngredients.length > 0 ? <div className="flex flex-wrap gap-2 mt-4">{recommendedIngredients.slice(0, 8).map((item) => <span key={item} className="px-2.5 py-1 rounded-full bg-white border border-green-100 text-xs font-medium text-gray-600">{item}</span>)}</div> : <p className="text-xs text-gray-400 mt-4">Suggestions are based on popular recipes.</p>}{ingredientMode === "recommended" && !recommendationLoading && <p className="text-sm font-semibold text-primary mt-4">Selected</p>}</button>
-          </div></div>
+          <div ref={planningMethodRef} className="mt-6 border-t border-gray-100 pt-6 scroll-mt-24">
+            <label htmlFor="ingredient-mode" className="block text-sm font-semibold text-gray-700 mb-2">Ingredient Preference</label>
+            <select
+              id="ingredient-mode"
+              value={ingredientMode}
+              onChange={async (e) => {
+                const mode = e.target.value;
+                setIngredientMode(mode);
+                setPreviewReady(false);
+                if (mode === "recommended") await getRecommendedIngredients();
+              }}
+              className="w-full md:max-w-xl border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"
+            >
+              <option value="available">Only Available Ingredients</option>
+              <option value="recommended">Available + Recommended Ingredients</option>
+            </select>
+            <p className="text-xs text-gray-500 mt-2">
+              {ingredientMode === "available"
+                ? "Meal plans will use only the ingredients you already have."
+                : "Meal plans will include your ingredients and additional suggestions you can purchase."}
+            </p>
+            {ingredientMode === "recommended" && (
+              <p className="text-xs text-gray-500 mt-1">
+                {recommendationLoading
+                  ? "Loading suggested ingredients..."
+                  : recommendedIngredients.length > 0
+                    ? `Suggested additions: ${recommendedIngredients.join(", ")}`
+                    : "Suggested ingredients will be loaded when available."}
+              </p>
+            )}
+          </div>
 
           <section className="mt-8 border-t border-gray-100 pt-6">
             <div className="rounded-2xl border border-green-100 bg-green-50/50 overflow-hidden">
