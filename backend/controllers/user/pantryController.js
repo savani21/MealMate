@@ -69,7 +69,7 @@ const Recipe = require("../../models/user/Recipe");
 
 function parseRequiredIngredient(raw) {
   const value = String(raw || "").trim();
-  const match = value.match(/^([0-9]+(?:\.[0-9]+)?|[0-9]+\/[0-9]+)\s*(kg|kgs|kilograms?|g|gm|gms|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|piece)?\s+(?:of\s+)?(.+)$/i);
+  const match = value.match(/^([0-9]+(?:\.[0-9]+)?|[0-9]+\/[0-9]+)\s*(kg|kgs|kilograms?|g|gm|gms|grm|grms|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|piece)?\s+(?:of\s+)?(.+)$/i);
   if (!match) return { name: value.toLowerCase(), quantity: null, unit: null };
   const quantity = match[1].includes("/") ? match[1].split("/").reduce((a, b) => Number(a) / Number(b)) : Number(match[1]);
   return { name: match[3].toLowerCase().trim(), quantity, unit: (match[2] || "piece").toLowerCase() };
