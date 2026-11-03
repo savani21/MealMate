@@ -207,8 +207,28 @@ export default function MealPlanner() {
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <section className="text-center mb-10"><div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold"><Sparkles className="w-4 h-4" /> Fast Indian Meal Suggestions</div><h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">Smart Meal Planner</h1><p className="text-gray-500 mt-3 max-w-2xl mx-auto">Choose your preferences, review recipe ideas for every meal, and select exactly what you want.</p></section>
-        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10">
+        <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] px-6 py-9 text-white shadow-sm sm:px-10 sm:py-12">
+          <div className="relative z-10 max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-green-50">
+              <Sparkles className="h-4 w-4" /> MEALMATE SMART MEAL PLANNER
+            </div>
+            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Plan smarter. Eat better.</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-green-50/90 sm:text-base">
+              Create a meal plan around your goals, diet and available ingredients. Explore recipe ideas and choose the meals you love.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => document.getElementById("meal-plan-preferences")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-green-900 transition hover:bg-green-50"
+              >
+                <Target className="h-4 w-4" /> Plan my meals
+              </button>
+            </div>
+          </div>
+          <ChefHat className="absolute -bottom-10 -right-5 h-56 w-56 rotate-[-12deg] text-white/[0.08] sm:right-10 sm:h-72 sm:w-72" />
+        </section>
+        <section id="meal-plan-preferences" className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10">
           <div className="flex items-center gap-3 mb-8"><div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center"><Target className="w-6 h-6 text-primary" /></div><div><h2 className="text-xl font-black text-gray-900">Meal Plan Preferences</h2><p className="text-sm text-gray-500">Tell MealMate what works for you.</p></div></div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div><label className="block text-sm font-semibold text-gray-700 mb-2">Goal</label><select value={goal} onChange={(e) => {setGoal(e.target.value);setPreviewReady(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select your goal</option><option value="weight-loss">Weight Loss</option><option value="weight-gain">Weight Gain</option><option value="muscle-gain">Muscle Gain</option><option value="healthy-eating">Healthy Eating</option><option value="maintenance">Maintain Weight</option></select></div>
