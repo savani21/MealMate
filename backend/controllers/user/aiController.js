@@ -14,7 +14,7 @@ async function generateWithOpenRouter(messages, responseFormat) {
       messages,
       ...(responseFormat ? { response_format: responseFormat } : {}),
     }),
-    signal: AbortSignal.timeout(12000),
+    signal: AbortSignal.timeout(45000),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data?.error?.message || `OpenRouter request failed with status ${response.status}`);
@@ -49,20 +49,33 @@ function buildFallbackRecipe({ ingredients, diet, category, mealName }) {
   const items = [...new Set(String(ingredients || "").split(",").map((item) => item.trim()).filter(Boolean))];
   const mainName = String(mealName || "").trim();
   const recipeName = mainName || (items.length ? items[0].replace(/\b\w/g, (letter) => letter.toUpperCase()) + " Quick Recipe" : "Quick Home-Style Recipe");
+  const knownRecipes = {
+    "chana masala": {
+      ingredients: ["1 cup chickpeas (chana)", "1 onion, finely chopped", "2 tomatoes, chopped", "1 tsp ginger-garlic paste", "1 tbsp oil", "1 tsp cumin seeds", "1 tsp chana masala", "1/2 tsp turmeric", "1/2 tsp chilli powder", "Salt to taste", "Fresh coriander"],
+      instructions: ["Soak chickpeas overnight and pressure-cook until soft; use cooked chickpeas if already prepared.", "Heat oil, add cumin, onion and ginger-garlic paste; sauté until fragrant.", "Add tomatoes, turmeric, chilli powder, chana masala and salt; cook until the masala thickens.", "Add cooked chickpeas with a little water and simmer for 10–12 minutes.", "Garnish with coriander and serve with rice or roti."]
+    },
+    "poha": {
+      ingredients: ["1.5 cups poha (flattened rice)", "1 onion, chopped", "2 tbsp peanuts", "1 small potato, diced", "1 tbsp oil", "1/2 tsp mustard seeds", "1/2 tsp cumin seeds", "Curry leaves", "1/4 tsp turmeric", "Green chilli", "Salt to taste", "Lemon juice", "Fresh coriander"],
+      instructions: ["Rinse poha briefly, drain and let it soften.", "Heat oil; add mustard seeds, cumin, curry leaves, peanuts and potato. Cook until the potato softens.", "Add onion, green chilli and turmeric; sauté until the onion turns translucent.", "Add softened poha and salt; mix gently and steam for 2–3 minutes.", "Finish with lemon juice and coriander; serve warm."]
+    }
+  };
+  const known = knownRecipes[recipeName.toLowerCase()];
+  const completeIngredients = known?.ingredients || (items.length ? items : ["Available ingredients"]);
+  const instructions = known?.instructions || [
+    "Wash, clean and prepare the ingredients.",
+    "Heat a pan or pot and add oil or another suitable cooking medium.",
+    "Cook the main ingredients with suitable seasoning until fully cooked, stirring as needed.",
+    "Taste, adjust seasoning and serve hot."
+  ];
   return {
     name: recipeName,
-    description: "A quick home-style recipe prepared using the ingredients selected in your meal plan.",
-    slogan: "Simple ingredients, a satisfying homemade meal.",
+    description: `A practical home-style ${recipeName} recipe with clear ingredients and cooking steps.`,
+    slogan: `Make ${recipeName} fresh and delicious at home.`,
     category: category || "Other",
     diet: diet || "Any",
-    ingredients: items.length ? items : ["Available ingredients"],
-    instructions: [
-      "Wash, clean and prepare the selected ingredients.",
-      "Heat a suitable pan or pot and add the required cooking medium if needed.",
-      "Add the prepared ingredients and cook using a suitable method for this dish, stirring occasionally.",
-      "Adjust seasoning using household staples as needed, check that everything is properly cooked, and serve hot."
-    ],
-    prepTime: "20 minutes"
+    ingredients: completeIngredients,
+    instructions,
+    prepTime: "25 minutes"
   };
 }
 const generateRecipe = async (req, res) => {
@@ -75,15 +88,17 @@ const generateRecipe = async (req, res) => {
       : "Create a suitable recipe from the ingredients.";
 
     const prompt = `
-Create one practical recipe using these ingredients: ${ingredients}.
+Create one complete, practical recipe for the planned meal: ${mealName || "a suitable meal"}.
+The user's pantry/selected ingredients are: ${ingredients}.
 Diet preference: ${diet}. Category: ${category}.
+Treat the supplied ingredients as what the user has available, NOT as a strict limit on the recipe. Include all essential ingredients normally required to make this dish properly, even when they are not in the supplied list, and clearly list them so the user can buy missing items.
 ${mealInstruction}
 
 Cuisine guidance:
 - Prefer Indian home-style and regional Indian recipes by default whenever the supplied ingredients support them.
 - Consider suitable options such as poha, upma, idli, dosa, paratha, thepla, dal, khichdi, pulao, rajma, chole, sabzi, paneer preparations, and Indian-style snacks.
 - Treat these as examples, not a fixed list. Choose a recipe that genuinely fits the provided ingredients, meal category, diet preference, and allergies.
-- Do not add unavailable ingredients just to make a dish Indian. If the ingredients do not suit an Indian recipe, create the best practical recipe from the supplied ingredients instead.
+- Do not add unnecessary ingredients just to make a dish Indian. Include essential cooking ingredients and seasonings needed for a complete recipe. If the supplied ingredients do not suit an Indian recipe, create the best practical recipe instead.
 - Use familiar Indian cooking methods and flavors where appropriate, and avoid suggesting the same generic recipe repeatedly.
 
 Return ONLY valid JSON with this exact structure:
