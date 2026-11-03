@@ -1,7 +1,7 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, ChevronDown, Star, ArrowDown } from "lucide-react";
+import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, ChevronDown, Star, ArrowDown, Plus } from "lucide-react";
 
 const API = "http://localhost:5000/api/meal-plans";
 
@@ -11,6 +11,10 @@ export default function MealPlanner() {
   const [goal, setGoal] = useState("");
   const [diet, setDiet] = useState("");
   const [ingredients, setIngredients] = useState(params.get("ingredients") || "");
+  const [pantryItems, setPantryItems] = useState([]);
+  const [selectedPantryNames, setSelectedPantryNames] = useState([]);
+  const [pantryLoading, setPantryLoading] = useState(true);
+  const [newIngredient, setNewIngredient] = useState("");
   const [duration, setDuration] = useState("3");
   const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
   const [recommendedIngredients, setRecommendedIngredients] = useState(params.get("recommended") ? params.get("recommended").split(",").filter(Boolean) : []);
@@ -42,6 +46,23 @@ export default function MealPlanner() {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) { setPantryLoading(false); return; }
+    fetch("http://localhost:5000/api/user/pantry", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || "Unable to load pantry items");
+        const items = Array.isArray(data.items) ? data.items : [];
+        setPantryItems(items);
+        setSelectedPantryNames(items.map((item) => item.name).filter(Boolean));
+      })
+      .catch((error) => console.error("Pantry loading error:", error))
+      .finally(() => setPantryLoading(false));
   }, []);
 
   useEffect(() => {
@@ -92,7 +113,21 @@ export default function MealPlanner() {
     } finally { setRecommendationLoading(false); }
   };
 
-  const getAvailableIngredients = () => ingredients.split(",").map((item) => item.trim()).filter(Boolean);
+  const getAvailableIngredients = () => [...new Set([...selectedPantryNames, ...ingredients.split(",").map((item) => item.trim()).filter(Boolean)])];
+
+  const addCustomIngredient = () => {
+    const value = newIngredient.trim().replace(/,+$/, "");
+    if (!value) return;
+    const exists = getAvailableIngredients().some((item) => item.toLowerCase() === value.toLowerCase());
+    if (!exists) setIngredients((current) => [...current.split(",").map((item) => item.trim()).filter(Boolean), value].join(", "));
+    setNewIngredient("");
+    setPreviewReady(false);
+  };
+
+  const togglePantryIngredient = (name) => {
+    setSelectedPantryNames((current) => current.some((item) => item.toLowerCase() === name.toLowerCase()) ? current.filter((item) => item.toLowerCase() !== name.toLowerCase()) : [...current, name]);
+    setPreviewReady(false);
+  };
 
   const buildPayload = async () => {
     const available = getAvailableIngredients();
@@ -285,12 +320,23 @@ export default function MealPlanner() {
                 <option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option>
               </select>
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredients You Already Have</label>
-              <div className="relative">
-                <ShoppingBasket className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
-                <input type="text" value={ingredients} onChange={(e) => {setIngredients(e.target.value);setPreviewReady(false);setShowRecommendedRecipes(false);}} placeholder="e.g. rice, paneer, tomato" className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 outline-none transition focus:border-primary focus:ring-2 focus:ring-green-100" />
+            <div className="md:col-span-2">
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Select Ingredients from Your Pantry</label>
+              <p className="mb-3 text-xs text-gray-500">Add ingredients to My Pantry first, then select what you want to use for this plan.</p>
+              {pantryLoading ? <p className="rounded-xl border border-gray-100 p-4 text-sm text-gray-500">Loading your pantry...</p> : pantryItems.length ? (
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-gray-200 bg-gray-50 p-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {pantryItems.map((item) => <label key={item._id || item.name} className="flex cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={selectedPantryNames.some((name) => name.toLowerCase() === item.name.toLowerCase())} onChange={() => togglePantryIngredient(item.name)} className="accent-green-700" />
+                    <span className="min-w-0 flex-1 truncate capitalize">{item.name}</span>
+                    <span className="shrink-0 text-[10px] text-gray-400">{item.quantity} {item.unit}</span>
+                  </label>)}
+                </div>
+              ) : <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. Add ingredients in My Kitchen → Pantry before planning meals.</p>}
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input value={newIngredient} onChange={(e) => setNewIngredient(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomIngredient(); } }} placeholder="Add another ingredient (e.g. fresh coriander)" className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-2.5 outline-none focus:border-primary" />
+                <button type="button" onClick={addCustomIngredient} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-green-50"><Plus className="h-4 w-4" /> Add ingredient</button>
               </div>
+              {(getAvailableIngredients().length > 0) && <p className="mt-2 text-xs text-gray-500">{getAvailableIngredients().length} ingredients selected for planning.</p>}
             </div>
             <div className="md:col-span-2">
               <label htmlFor="ingredient-mode" className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredient Preference</label>
