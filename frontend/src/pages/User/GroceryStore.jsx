@@ -355,16 +355,6 @@ export default function GroceryStore() {
       <PageHeroBanner title="Grocery Store" description="Find and purchase the ingredients your meal plan needs." eyebrow="GROCERY MARKET" icon={ShoppingBasket} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mb-8">
-          <p className="text-primary font-semibold text-sm">MealMate Grocery Store</p>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-2">
-            Buy what your meal plan needs
-          </h1>
-          <p className="text-gray-500 mt-2">
-            Purchase ingredients you do not currently have.
-          </p>
-        </div>
-
         {requestedIngredients.length > 0 && (
           <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
