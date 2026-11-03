@@ -422,20 +422,31 @@ Do not include markdown or explanations outside JSON.
     days.forEach((day) => {
       const usedNames = new Set();
       ["breakfast", "lunch", "dinner"].forEach((type) => {
-        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
-        const current = options.find((item) => item?.name === day[type]) || options[0];
-        let selected = current;
-        if (selected?.name && usedNames.has(selected.name.trim().toLowerCase())) {
-          selected = options.find((item) => item?.name && !usedNames.has(item.name.trim().toLowerCase()));
+        const original = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+        const preferred = original.find((item) => item?.name === day[type]) || original[0];
+        const ordered = preferred ? [preferred, ...original.filter((item) => item !== preferred)] : original;
+        const uniqueOptions = [];
+        ordered.forEach((item) => {
+          const key = String(item?.name || "").trim().toLowerCase();
+          if (key && !usedNames.has(key) && uniqueOptions.length < 3) {
+            uniqueOptions.push(item);
+            usedNames.add(key);
+          }
+        });
+        if (uniqueOptions.length < 3) {
+          buildLocalOptions(allowedPool, type, Number(day.day) || 1, diet).forEach((item) => {
+            const key = String(item?.name || "").trim().toLowerCase();
+            if (key && !usedNames.has(key) && uniqueOptions.length < 3) {
+              uniqueOptions.push(item);
+              usedNames.add(key);
+            }
+          });
         }
-        if (!selected) {
-          selected = buildLocalOptions(allowedPool, type, Number(day.day) || 1, diet)
-            .find((item) => item?.name && !usedNames.has(item.name.trim().toLowerCase()));
-        }
-        if (selected?.name) {
+        day[type + "Options"] = uniqueOptions;
+        const selected = uniqueOptions[0];
+        if (selected) {
           day[type] = selected.name;
           day[type + "Ingredients"] = selected.ingredients || [];
-          usedNames.add(selected.name.trim().toLowerCase());
         }
       });
     });
@@ -634,10 +645,14 @@ exports.deleteMyMealPlan = async (req, res) => {
 
 exports.updateMealSelection = async (req, res) => {
   try {
-    const { day, mealType, option, recipeId } = req.body;
+    const { day, option, recipeId } = req.body;
+    const rawMealType = String(req.body.mealType || "").trim().toLowerCase();
+    const mealTypeAliases = { morning: "breakfast", noon: "lunch", evening: "dinner" };
+    const mealType = mealTypeAliases[rawMealType] || rawMealType;
     const allowedTypes = ["breakfast", "lunch", "dinner"];
     if (!allowedTypes.includes(mealType)) {
-      return res.status(400).json({ success: false, message: "A valid meal type is required." });
+      console.error("Invalid meal selection payload:", { day, mealType: req.body.mealType, hasRecipeId: Boolean(recipeId), hasOption: Boolean(option?.name) });
+      return res.status(400).json({ success: false, message: "A valid meal type (breakfast, lunch or dinner) is required." });
     }
     const mealPlan = await MealPlan.findOne({ _id: req.params.id, user: req.user.id });
     if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
