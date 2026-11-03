@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useLocation } from "wouter";
@@ -26,6 +27,7 @@ export default function Profile() {
 
       {/* Header */}
       <AppNavbar />
+      <PageHeroBanner title="Your Profile" description="Manage your MealMate account information." eyebrow="ACCOUNT" icon={UserCircle} />
 
       {/* Main */}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
