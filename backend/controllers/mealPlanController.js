@@ -1,4 +1,5 @@
 const MealPlan = require("../models/MealPlan");
+const Recipe = require("../models/user/Recipe");
 const {
   upsertGroceryListForMealPlan,
 } = require("./user/groceryController");
@@ -574,20 +575,40 @@ exports.deleteMyMealPlan = async (req, res) => {
 
 exports.updateMealSelection = async (req, res) => {
   try {
-    const { day, mealType, option } = req.body;
+    const { day, mealType, option, recipeId } = req.body;
     const allowedTypes = ["breakfast", "lunch", "dinner"];
-    if (!allowedTypes.includes(mealType) || !option || !option.name || !Array.isArray(option.ingredients)) {
-      return res.status(400).json({ success: false, message: "A valid meal type and recipe option are required." });
+    if (!allowedTypes.includes(mealType)) {
+      return res.status(400).json({ success: false, message: "A valid meal type is required." });
     }
     const mealPlan = await MealPlan.findOne({ _id: req.params.id, user: req.user.id });
     if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
     const dayPlan = mealPlan.meals.find((item) => Number(item.day) === Number(day));
     if (!dayPlan) return res.status(404).json({ success: false, message: "Meal-plan day not found." });
-    const options = dayPlan[mealType + "Options"] || [];
-    const selected = options.find((item) => item.name === option.name);
-    if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
+    let selected;
+    if (recipeId) {
+      const recipe = await Recipe.findById(recipeId).lean();
+      if (!recipe) return res.status(404).json({ success: false, message: "Recipe not found." });
+      const recipeDiet = String(recipe.diet || "").toLowerCase();
+      const planDiet = String(mealPlan.diet || "").toLowerCase();
+      if (recipeDiet && recipeDiet !== "any" && recipeDiet !== planDiet) {
+        return res.status(400).json({ success: false, message: "This recipe does not match your meal plan diet." });
+      }
+      selected = {
+        name: recipe.name,
+        description: recipe.description || "Selected from MealMate recipes",
+        prepTime: recipe.prepTime || "",
+        ingredients: (recipe.ingredients || []).map((name) => ({ name, quantity: "as needed" })),
+      };
+      const options = Array.isArray(dayPlan[mealType + "Options"]) ? dayPlan[mealType + "Options"] : [];
+      dayPlan[mealType + "Options"] = [selected, ...options.filter((item) => item.name !== selected.name)].slice(0, 3);
+    } else {
+      if (!option || !option.name) return res.status(400).json({ success: false, message: "A valid alternative meal is required." });
+      const options = dayPlan[mealType + "Options"] || [];
+      selected = options.find((item) => item.name === option.name);
+      if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
+    }
     dayPlan[mealType] = selected.name;
-    dayPlan[mealType + "Ingredients"] = selected.ingredients;
+    dayPlan[mealType + "Ingredients"] = selected.ingredients || [];
     mealPlan.markModified("meals");
     await mealPlan.save();
     res.json({ success: true, message: "Meal selection saved.", mealPlan });
