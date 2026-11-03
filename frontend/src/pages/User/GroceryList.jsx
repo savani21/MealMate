@@ -134,14 +134,6 @@ export default function GroceryList() {
       <PageHeroBanner title="My Grocery List" description="Keep every ingredient organized for your next meal." eyebrow="SMART GROCERY" icon={ShoppingBasket} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-primary text-sm font-semibold">
-            <ShoppingBasket className="w-4 h-4" /> Smart Grocery List
-          </div>
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mt-4">My Grocery List</h1>
-          <p className="text-gray-500 mt-3">Only ingredients you do not already have, organized by the meal that needs them.</p>
-        </div>
-
         {loading && <div className="text-center py-16 text-gray-500">Loading your grocery lists...</div>}
 
         {!loading && groceryLists.length === 0 && (
