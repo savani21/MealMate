@@ -230,7 +230,7 @@ export default function Recipes() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         {returnToMealPlan && planId && (
           <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">
             <button onClick={() => setLocation(`/meal-plans/${planId}`)} className="transition hover:text-primary">Meal Plans</button>
@@ -244,37 +244,20 @@ export default function Recipes() {
           </div>
         )}
 
-        <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] px-6 py-9 text-white shadow-sm sm:px-10 sm:py-12">
-          <div className="relative z-10 max-w-2xl">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-green-50">
-              <Utensils className="h-4 w-4" /> MEALMATE RECIPE DISCOVERY
-            </div>
-            <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Find your next favourite meal.</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-green-50/90 sm:text-base">
-              Explore recipes, discover something new, or find a delicious way to use the ingredients you already have.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => document.getElementById("recipe-search")?.focus()} className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-green-900 transition hover:bg-green-50">
-                <Search className="h-4 w-4" /> Explore recipes
-              </button>
-              <button onClick={() => setShowGenerator(true)} className="inline-flex items-center gap-2 rounded-xl border border-white/40 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20">
-                <Sparkles className="h-4 w-4" /> Create with AI
-              </button>
-            </div>
+        <section className="mb-4 flex flex-col gap-3 rounded-2xl bg-gradient-to-r from-[#173f2b] to-[#287348] px-5 py-4 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-baseline gap-3">
+            <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Find your next favourite meal.</h1>
+            <span className="hidden text-xs text-green-100 sm:inline">{loading ? "Loading recipes..." : `${filteredRecipes.length} recipes`}</span>
           </div>
-          <ChefHat className="absolute -bottom-10 -right-5 h-56 w-56 rotate-[-12deg] text-white/[0.08] sm:right-10 sm:h-72 sm:w-72" />
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button onClick={() => document.getElementById("recipe-search")?.focus()} className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-bold text-green-900 transition hover:bg-green-50">
+              <Search className="h-4 w-4" /> Explore
+            </button>
+            <button onClick={() => setShowGenerator(true)} className="inline-flex items-center gap-2 rounded-lg border border-white/40 bg-white/10 px-3 py-2 text-sm font-bold text-white transition hover:bg-white/20">
+              <Sparkles className="h-4 w-4" /> Create with AI
+            </button>
+          </div>
         </section>
-
-        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-primary">A little inspiration for every meal</p>
-            <h2 className="mt-1 text-2xl font-black text-gray-900">Explore recipes</h2>
-            <p className="mt-1 text-sm text-gray-500">{loading ? "Loading your recipe collection..." : `${filteredRecipes.length} recipes to explore`}</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-gray-500">
-            <TrendingUp className="h-4 w-4 text-primary" /> Discover what people love
-          </div>
-        </div>
 
         <div className="mb-5 flex flex-col gap-3 lg:flex-row">
           <div className="relative min-w-0 flex-1">
