@@ -226,7 +226,7 @@ export default function MealPlanner() {
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <section className={`${isBannerCompact ? "sticky top-[72px] z-30" : "relative"} mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-all duration-300 ease-in-out ${isBannerCompact ? "px-5 py-3 sm:px-7" : "px-6 py-9 sm:px-10 sm:py-12"}`}>
+        <div className={isBannerCompact ? "relative min-h-[190px] mb-8" : "mb-8"}><section className={`${isBannerCompact ? "fixed left-4 right-4 top-[88px] z-30 mx-auto max-w-[1120px] px-5 py-3 sm:px-7" : "relative px-6 py-9 sm:px-10 sm:py-12"} overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-[padding] duration-200 ease-out`}>
           <div className={`relative z-10 flex items-center justify-between gap-4 ${isBannerCompact ? "" : "max-w-2xl"}`}>
             <div className="min-w-0">
               {!isBannerCompact && (
@@ -260,7 +260,7 @@ export default function MealPlanner() {
             )}
           </div>
           {!isBannerCompact && <ChefHat className="absolute -bottom-10 -right-5 h-56 w-56 rotate-[-12deg] text-white/[0.08] sm:right-10 sm:h-72 sm:w-72" />}
-        </section>
+        </section></div>
                 <section id="meal-plan-preferences" className="scroll-mt-24 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50"><Target className="h-5 w-5 text-primary" /></div>
