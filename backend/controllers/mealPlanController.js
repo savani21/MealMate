@@ -491,17 +491,19 @@ Do not include markdown or explanations outside JSON.
       generatedMeals = { days: req.body.selectedDays };
       generatedBy = "user-selected";
     } else {
-      // Preview must be fast and predictable: use local Indian meal templates
-      // instead of waiting on variable-latency free AI model routing.
-      if (req.body.previewOnly === true) {
-        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
-        generatedBy = "local-fast";
-      } else {
+      // Try the configured AI provider for previews and direct generation.
+      // If the key is missing or the provider fails, keep planning available
+      // with the deterministic local recipe templates.
+      try {
         generatedMeals = await generateWithOpenRouter(prompt);
-        if (!generatedMeals) {
-          generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
-          generatedBy = "local-fallback";
-        }
+      } catch (aiError) {
+        console.error("AI meal generation failed; using local fallback:", aiError.message);
+        generatedMeals = null;
+      }
+
+      if (!generatedMeals) {
+        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+        generatedBy = process.env.OPENROUTER_API_KEY ? "local-fallback" : "local-no-api-key";
       }
     }
 
