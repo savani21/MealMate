@@ -3,15 +3,23 @@ import { motion } from 'framer-motion';
 import { AnimatedSection } from '../AnimatedSection';
 import { ChefHat, Users, ShoppingBasket, Star } from 'lucide-react';
 
-const initialStats = {
-    recipes: 0,
-    registeredUsers: 0,
-    groceryProducts: 0,
+// Set VITE_API_URL in the frontend deployment to the deployed backend origin.
+// Local development continues to use the local Express server by default.
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\\/+$/, '');
+
+const emptyStats = {
+    recipes: null,
+    registeredUsers: null,
+    groceryProducts: null,
     averageRecipeRating: null,
     recipeRatingCount: 0,
 };
 
-function StatCard({ icon: Icon, value, suffix = "", label, note }) {
+function StatCard({ icon: Icon, value, suffix = '', label, note }) {
+    const displayValue = value === null || value === undefined
+        ? '—'
+        : (typeof value === 'number' ? value.toLocaleString() : value) + suffix;
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -23,7 +31,7 @@ function StatCard({ icon: Icon, value, suffix = "", label, note }) {
                 <Icon className="h-5 w-5" />
             </div>
             <div className="mb-1 text-3xl font-black tracking-tight text-primary">
-                {value === null ? "—" : (typeof value === "number" ? value.toLocaleString() : value) + suffix}
+                {displayValue}
             </div>
             <div className="text-sm font-semibold text-gray-800">{label}</div>
             {note && <div className="mt-1 text-xs text-gray-400">{note}</div>}
@@ -32,33 +40,70 @@ function StatCard({ icon: Icon, value, suffix = "", label, note }) {
 }
 
 export function StatsSection() {
-    const [stats, setStats] = useState(initialStats);
-    const [loaded, setLoaded] = useState(false);
+    const [stats, setStats] = useState(emptyStats);
+    const [status, setStatus] = useState('loading');
 
     useEffect(() => {
-        let active = true;
-        fetch("http://localhost:5000/api/stats")
+        const controller = new AbortController();
+
+        fetch(`${API_BASE_URL}/api/stats`, { signal: controller.signal })
             .then((response) => {
-                if (!response.ok) throw new Error("Unable to load live statistics");
+                if (!response.ok) throw new Error(`Statistics API returned ${response.status}`);
                 return response.json();
             })
             .then((data) => {
-                if (active) setStats({ ...initialStats, ...data });
+                const numericFields = ['recipes', 'registeredUsers', 'groceryProducts', 'recipeRatingCount'];
+                const valid = numericFields.every((field) =>
+                    Number.isFinite(Number(data[field])) && Number(data[field]) >= 0
+                );
+                if (!valid) throw new Error('Statistics API returned an invalid response');
+
+                setStats({
+                    recipes: Number(data.recipes),
+                    registeredUsers: Number(data.registeredUsers),
+                    groceryProducts: Number(data.groceryProducts),
+                    averageRecipeRating: data.averageRecipeRating == null
+                        ? null
+                        : Number(data.averageRecipeRating),
+                    recipeRatingCount: Number(data.recipeRatingCount),
+                });
+                setStatus('loaded');
             })
-            .catch((error) => console.error("MealMate statistics:", error))
-            .finally(() => { if (active) setLoaded(true); });
-        return () => { active = false; };
+            .catch((error) => {
+                if (error.name !== 'AbortError') {
+                    console.error('MealMate statistics:', error);
+                    setStatus('error');
+                }
+            });
+
+        return () => controller.abort();
     }, []);
+
+    const unavailableNote = status === 'error'
+        ? 'Statistics temporarily unavailable'
+        : status === 'loading'
+            ? 'Loading live statistics'
+            : undefined;
 
     return (
         <section className="py-12 md:py-14 bg-white border-y border-gray-100" id="about">
             <div className="container mx-auto px-4 md:px-6">
                 <AnimatedSection>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
-                        <StatCard icon={ChefHat} value={loaded ? stats.recipes : "…"} label="Recipes Available" note="Recipes in MealMate" />
-                        <StatCard icon={Users} value={loaded ? stats.registeredUsers : "…"} label="Registered Users" note="Member accounts" />
-                        <StatCard icon={ShoppingBasket} value={loaded ? stats.groceryProducts : "…"} label="Grocery Products" note="Active marketplace products" />
-                        <StatCard icon={Star} value={loaded && stats.recipeRatingCount > 0 ? stats.averageRecipeRating : (loaded ? null : "…")} suffix={loaded && stats.recipeRatingCount > 0 ? "/5" : ""} label="Average Recipe Rating" note={loaded ? (stats.recipeRatingCount > 0 ? `Based on ${stats.recipeRatingCount.toLocaleString()} ratings` : "No ratings submitted yet") : "Loading live rating"} />
+                        <StatCard icon={ChefHat} value={status === 'loaded' ? stats.recipes : null} label="Recipes Available" note={status === 'loaded' ? 'Recipes in MealMate' : unavailableNote} />
+                        <StatCard icon={Users} value={status === 'loaded' ? stats.registeredUsers : null} label="Registered Users" note={status === 'loaded' ? 'Member accounts' : unavailableNote} />
+                        <StatCard icon={ShoppingBasket} value={status === 'loaded' ? stats.groceryProducts : null} label="Grocery Products" note={status === 'loaded' ? 'Active marketplace products' : unavailableNote} />
+                        <StatCard
+                            icon={Star}
+                            value={status === 'loaded' && stats.recipeRatingCount > 0 ? stats.averageRecipeRating : null}
+                            suffix={status === 'loaded' && stats.recipeRatingCount > 0 ? '/5' : ''}
+                            label="Average Recipe Rating"
+                            note={status !== 'loaded'
+                                ? unavailableNote
+                                : stats.recipeRatingCount > 0
+                                    ? `Based on ${stats.recipeRatingCount.toLocaleString()} ratings`
+                                    : 'No ratings submitted yet'}
+                        />
                     </div>
                 </AnimatedSection>
             </div>
