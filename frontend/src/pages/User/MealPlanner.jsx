@@ -223,7 +223,7 @@ export default function MealPlanner() {
       <AppNavbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div ref={bannerSentinelRef} aria-hidden="true" className="h-px" />
-        <section className={`sticky top-[72px] z-30 mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-all duration-300 ease-in-out ${isBannerCompact ? "px-5 py-3 sm:px-7" : "px-6 py-9 sm:px-10 sm:py-12"}`}>
+        <section className={`relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-all duration-300 ease-in-out ${isBannerCompact ? "px-5 py-3 sm:px-7" : "px-6 py-9 sm:px-10 sm:py-12"}`}>
           <div className={`relative z-10 flex items-center justify-between gap-4 ${isBannerCompact ? "" : "max-w-2xl"}`}>
             <div className="min-w-0">
               {!isBannerCompact && (
