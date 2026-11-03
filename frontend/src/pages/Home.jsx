@@ -15,8 +15,8 @@ export default function Home() {
     return (<div className="min-h-screen bg-background font-sans">
       <Navbar />
       <main>
-        <HeroSection />
         <RecipeDiscoverySection />
+        <HeroSection />
         <StatsSection />
         <FeaturesSection />
         <HowItWorksSection />
