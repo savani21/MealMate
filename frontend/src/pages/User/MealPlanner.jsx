@@ -302,7 +302,7 @@ export default function MealPlanner() {
               </select>
             </div>
           </div>
-          <section className="mt-8 border-t border-gray-100 pt-6">
+          <section className="mt-4">
             <div className="rounded-2xl border border-green-100 bg-green-50/50 overflow-hidden">
               <button
                 type="button"
@@ -350,7 +350,7 @@ export default function MealPlanner() {
               )}
             </div>
           </section>
-          <div className="mt-6 pt-5 border-t border-gray-100" ref={generateButtonRef}><div className="text-center text-xs text-gray-500 mb-2">Next step: generate your meal options</div><button onClick={generatePlan} disabled={loading || recommendationLoading} className="w-full md:w-auto md:min-w-[280px] mx-auto flex items-center justify-center gap-2 bg-primary text-white px-6 py-3.5 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-60"><Sparkles className="w-5 h-5" />{loading ? "Preparing Recipe Options..." : "Show My Recipe Options"}</button></div>
+          <div className="mt-4" ref={generateButtonRef}><div className="text-center text-xs text-gray-500 mb-2">Next step: generate your meal options</div><button onClick={generatePlan} disabled={loading || recommendationLoading} className="w-full md:w-auto md:min-w-[280px] mx-auto flex items-center justify-center gap-2 bg-primary text-white px-6 py-3.5 rounded-xl font-bold hover:opacity-90 transition disabled:opacity-60"><Sparkles className="w-5 h-5" />{loading ? "Preparing Recipe Options..." : "Show My Recipe Options"}</button></div>
         </section>
 
         {previewReady && <section ref={recipeChoicesRef} className="mt-10 space-y-6 scroll-mt-24">
