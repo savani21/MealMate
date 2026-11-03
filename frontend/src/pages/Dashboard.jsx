@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
@@ -118,6 +119,7 @@ export default function Dashboard() {
             {menuOpen ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
           </button>
         </AppNavbar>
+      {user?.role === "user" && <PageHeroBanner title={`Welcome back, ${user.name}`} description="Manage your meals, recipes and nutrition from one place." eyebrow="YOUR MEALMATE DASHBOARD" icon={ChefHat} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-8">
