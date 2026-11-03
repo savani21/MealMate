@@ -24,10 +24,6 @@ import {
   ChevronRight,
   Sparkles,
   ShieldCheck,
-  Leaf,
-  Carrot,
-  Apple,
-  Sprout,
 } from "lucide-react";
 
 export default function Dashboard() {
@@ -113,20 +109,6 @@ export default function Dashboard() {
 
   return (
     <div className="relative isolate min-h-screen overflow-x-clip bg-[radial-gradient(ellipse_at_top_left,_#e8f5ec_0%,_#f7faf7_48%,_#f1f8f2_100%)]">
-      <div className="pointer-events-none absolute inset-0 z-0 hidden xl:block overflow-hidden" aria-hidden="true">
-        <div className="absolute left-[3%] top-[300px] text-green-700/[0.09] rotate-[-18deg]">
-          <Leaf className="h-24 w-24" strokeWidth={1.2} />
-        </div>
-        <div className="absolute right-[3%] top-[560px] text-green-700/[0.08] rotate-[18deg]">
-          <Carrot className="h-28 w-28" strokeWidth={1.1} />
-        </div>
-        <div className="absolute left-[4%] top-[980px] text-green-700/[0.08] rotate-[12deg]">
-          <Sprout className="h-28 w-28" strokeWidth={1.1} />
-        </div>
-        <div className="absolute right-[5%] top-[1250px] text-green-700/[0.08] rotate-[-12deg]">
-          <Apple className="h-24 w-24" strokeWidth={1.1} />
-        </div>
-      </div>
       <AppNavbar>
           <button onClick={() => goTo("/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-50" aria-label="Notifications">
             <Bell className="h-5 w-5 text-gray-600" />
