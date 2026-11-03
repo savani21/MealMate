@@ -241,7 +241,6 @@ export default function Notifications() {
               </button>
             </div>
           )}
-        </div>
 
         {notifications.length === 0 ? (
           <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
