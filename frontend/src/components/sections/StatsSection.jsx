@@ -5,7 +5,7 @@ import { ChefHat, Users, ShoppingBasket, Star } from 'lucide-react';
 
 // Set VITE_API_URL in the frontend deployment to the deployed backend origin.
 // Local development continues to use the local Express server by default.
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\\/+$/, '');
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 const emptyStats = {
     recipes: null,
