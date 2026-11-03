@@ -228,46 +228,50 @@ export default function MealPlanner() {
           </div>
           <ChefHat className="absolute -bottom-10 -right-5 h-56 w-56 rotate-[-12deg] text-white/[0.08] sm:right-10 sm:h-72 sm:w-72" />
         </section>
-        <section id="meal-plan-preferences" className="scroll-mt-24 bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-10">
-          <div className="flex items-center gap-3 mb-8"><div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center"><Target className="w-6 h-6 text-primary" /></div><div><h2 className="text-xl font-black text-gray-900">Meal Plan Preferences</h2><p className="text-sm text-gray-500">Tell MealMate what works for you.</p></div></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Goal</label><select value={goal} onChange={(e) => {setGoal(e.target.value);setPreviewReady(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select your goal</option><option value="weight-loss">Weight Loss</option><option value="weight-gain">Weight Gain</option><option value="muscle-gain">Muscle Gain</option><option value="healthy-eating">Healthy Eating</option><option value="maintenance">Maintain Weight</option></select></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Diet Type</label><select value={diet} onChange={(e) => {handleDietChange(e.target.value);setPreviewReady(false);setShowRecommendedRecipes(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="">Select diet type</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="non-vegetarian">Non-Vegetarian</option><option value="eggetarian">Eggetarian</option></select></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Plan Duration</label><select value={duration} onChange={(e) => {setDuration(e.target.value);setPreviewReady(false);}} className="w-full border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"><option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option></select></div>
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Ingredients You Already Have</label><div className="relative"><ShoppingBasket className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" value={ingredients} onChange={(e) => {setIngredients(e.target.value);setPreviewReady(false);setShowRecommendedRecipes(false);setExpandRecommendationsAfterLoad(false);}} onBlur={() => { if (ingredients.trim()) scrollTo(planningMethodRef); }} placeholder="e.g. rice, paneer, tomato, spinach" className="w-full border border-gray-200 rounded-xl pl-11 pr-4 py-3 outline-none focus:border-primary" /></div><p className="text-xs text-gray-400 mt-2">These ingredients will be passed to the recipe generator automatically. You won't need to enter them again.</p></div>
+        <section id="meal-plan-preferences" className="scroll-mt-24 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50"><Target className="h-5 w-5 text-primary" /></div>
+            <h2 className="text-lg font-black text-gray-900">Meal Plan Preferences</h2>
           </div>
-          <div ref={planningMethodRef} className="mt-6 border-t border-gray-100 pt-6 scroll-mt-24">
-            <label htmlFor="ingredient-mode" className="block text-sm font-semibold text-gray-700 mb-2">Ingredient Preference</label>
-            <select
-              id="ingredient-mode"
-              value={ingredientMode}
-              onChange={async (e) => {
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Goal</label>
+              <select value={goal} onChange={(e) => {setGoal(e.target.value);setPreviewReady(false);}} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-green-100">
+                <option value="">Select your goal</option><option value="weight-loss">Weight Loss</option><option value="weight-gain">Weight Gain</option><option value="muscle-gain">Muscle Gain</option><option value="healthy-eating">Healthy Eating</option><option value="maintenance">Maintain Weight</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Diet Type</label>
+              <select value={diet} onChange={(e) => {handleDietChange(e.target.value);setPreviewReady(false);setShowRecommendedRecipes(false);}} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-green-100">
+                <option value="">Select diet type</option><option value="vegetarian">Vegetarian</option><option value="vegan">Vegan</option><option value="non-vegetarian">Non-Vegetarian</option><option value="eggetarian">Eggetarian</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Plan Duration</label>
+              <select value={duration} onChange={(e) => {setDuration(e.target.value);setPreviewReady(false);}} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-green-100">
+                <option value="1">1 Day</option><option value="3">3 Days</option><option value="7">7 Days</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredients You Already Have</label>
+              <div className="relative">
+                <ShoppingBasket className="absolute left-3.5 top-3 h-4 w-4 text-gray-400" />
+                <input type="text" value={ingredients} onChange={(e) => {setIngredients(e.target.value);setPreviewReady(false);setShowRecommendedRecipes(false);}} placeholder="e.g. rice, paneer, tomato" className="w-full rounded-xl border border-gray-200 py-2.5 pl-10 pr-4 outline-none transition focus:border-primary focus:ring-2 focus:ring-green-100" />
+              </div>
+            </div>
+            <div className="md:col-span-2">
+              <label htmlFor="ingredient-mode" className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredient Preference</label>
+              <select id="ingredient-mode" value={ingredientMode} onChange={async (e) => {
                 const mode = e.target.value;
                 setIngredientMode(mode);
                 setPreviewReady(false);
                 if (mode === "recommended") await getRecommendedIngredients();
-              }}
-              className="w-full md:max-w-xl border border-gray-200 rounded-xl px-4 py-3 bg-white outline-none focus:border-primary"
-            >
-              <option value="available">Only Available Ingredients</option>
-              <option value="recommended">Available + Recommended Ingredients</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-2">
-              {ingredientMode === "available"
-                ? "Meal plans will use only the ingredients you already have."
-                : "Meal plans will include your ingredients and additional suggestions you can purchase."}
-            </p>
-            {ingredientMode === "recommended" && (
-              <p className="text-xs text-gray-500 mt-1">
-                {recommendationLoading
-                  ? "Loading suggested ingredients..."
-                  : recommendedIngredients.length > 0
-                    ? `Suggested additions: ${recommendedIngredients.join(", ")}`
-                    : "Suggested ingredients will be loaded when available."}
-              </p>
-            )}
+              }} className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-green-100">
+                <option value="available">Only Available Ingredients</option>
+                <option value="recommended">Available + Recommended Ingredients</option>
+              </select>
+            </div>
           </div>
-
           <section className="mt-8 border-t border-gray-100 pt-6">
             <div className="rounded-2xl border border-green-100 bg-green-50/50 overflow-hidden">
               <button
