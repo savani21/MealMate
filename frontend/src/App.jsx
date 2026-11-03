@@ -57,8 +57,8 @@ function Router() {
       <Route path="/notifications" component={Notifications} />
       <Route path="/settings" component={Settings} />
       <Route path="/favorites" component={Favorites} />
-      <Route path="/recipes" component={Recipes} />
-      <Route path="/recipes/:id" component={RecipeDetails} />
+      <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />
+      <ProtectedRoute path="/recipes/:id" component={RecipeDetails} allowedRoles={["user", "admin"]} />
       <Route component={ NotFound } />
     </Switch>
   );
