@@ -320,3 +320,15 @@
     inset: -1px;
   }
 }
+
+/* Shared MealMate page atmosphere: subtle, food-fresh green accents across screens. */
+@layer utilities {
+  .min-h-screen:not([class*="bg-gradient"]) {
+    background-image:
+      radial-gradient(ellipse at 4% 22%, rgba(34, 197, 94, 0.075) 0%, transparent 24%),
+      radial-gradient(ellipse at 96% 38%, rgba(74, 222, 128, 0.065) 0%, transparent 22%),
+      radial-gradient(ellipse at 8% 88%, rgba(22, 163, 74, 0.045) 0%, transparent 20%);
+    background-attachment: fixed;
+  }
+}
+
