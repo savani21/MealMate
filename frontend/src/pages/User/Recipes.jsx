@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
   Search, ChefHat, Clock, Heart, Utensils, Sparkles, X, Star,
-  SlidersHorizontal, TrendingUp, Flame, ArrowUpDown, Leaf,
+  SlidersHorizontal, Flame, ArrowUpDown, Leaf,
 } from "lucide-react";
 
 const DIET_OPTIONS = ["All diets", "Vegetarian", "Vegan", "Non-vegetarian", "Eggetarian"];
