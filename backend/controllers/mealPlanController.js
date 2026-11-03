@@ -611,6 +611,11 @@ exports.updateMealSelection = async (req, res) => {
     dayPlan[mealType + "Ingredients"] = selected.ingredients || [];
     mealPlan.markModified("meals");
     await mealPlan.save();
+    try {
+      await upsertGroceryListForMealPlan(mealPlan);
+    } catch (groceryError) {
+      console.error("Meal selection saved, but grocery synchronization failed:", groceryError);
+    }
     res.json({ success: true, message: "Meal selection saved.", mealPlan });
   } catch (error) {
     console.error("UPDATE MEAL SELECTION ERROR:", error);
