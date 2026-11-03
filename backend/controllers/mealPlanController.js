@@ -104,6 +104,78 @@ function makeIngredient(name, quantity) {
   return { name, quantity };
 }
 
+const CANONICAL_RECIPE_INGREDIENTS = {
+  "vegetable pulao": [
+    ["Rice", "1/2 cup"], ["Mixed vegetables (carrot, peas, beans)", "3/4 cup"],
+    ["Onion", "1/2 medium"], ["Ginger-garlic", "1 tsp"], ["Cumin seeds", "1/2 tsp"],
+    ["Bay leaf", "1"], ["Cloves", "2"], ["Cardamom", "1"], ["Cinnamon", "1 small piece"],
+    ["Turmeric", "1/4 tsp"], ["Garam masala", "1/4 tsp"], ["Oil or ghee", "1 tbsp"],
+    ["Salt", "to taste"], ["Water", "1 cup"], ["Coriander leaves", "1 tbsp"]
+  ],
+  "poha": [
+    ["Poha (flattened rice)", "1 cup"], ["Onion", "1/2 medium"], ["Potato", "1/2 medium"],
+    ["Peanuts", "1 tbsp"], ["Oil", "1 tbsp"], ["Mustard seeds", "1/2 tsp"],
+    ["Cumin seeds", "1/4 tsp"], ["Turmeric", "1/4 tsp"], ["Green chilli", "1"],
+    ["Curry leaves", "5-6"], ["Salt", "to taste"], ["Lemon juice", "1 tsp"], ["Coriander leaves", "1 tbsp"]
+  ],
+  "paneer sandwich": [
+    ["Bread slices", "2"], ["Paneer", "75 g"], ["Onion", "2 tbsp, chopped"],
+    ["Tomato", "2 slices"], ["Green chilli", "1/2, optional"], ["Butter", "1 tsp"],
+    ["Salt", "to taste"], ["Black pepper", "1/4 tsp"]
+  ],
+  "paneer bhurji with roti": [
+    ["Paneer", "100 g"], ["Wheat flour", "1/2 cup"], ["Onion", "1/2 medium"],
+    ["Tomato", "1 small"], ["Green chilli", "1"], ["Ginger-garlic", "1 tsp"],
+    ["Turmeric", "1/4 tsp"], ["Red chilli powder", "1/4 tsp"], ["Garam masala", "1/4 tsp"],
+    ["Oil", "2 tsp"], ["Salt", "to taste"], ["Coriander leaves", "1 tbsp"], ["Water", "as required"]
+  ],
+  "paneer rice bowl": [
+    ["Paneer", "100 g"], ["Rice", "1/2 cup"], ["Onion", "1/2 medium"],
+    ["Tomato", "1 small"], ["Ginger-garlic", "1 tsp"], ["Cumin seeds", "1/2 tsp"],
+    ["Turmeric", "1/4 tsp"], ["Garam masala", "1/4 tsp"], ["Oil", "1 tbsp"],
+    ["Salt", "to taste"], ["Coriander leaves", "1 tbsp"], ["Water", "1 cup"]
+  ],
+  "chana masala": [
+    ["Chickpeas (chana)", "3/4 cup cooked"], ["Onion", "1 medium"], ["Tomato", "1 medium"],
+    ["Ginger-garlic", "1 tsp"], ["Chana masala", "1 tsp"], ["Cumin seeds", "1/2 tsp"],
+    ["Turmeric", "1/4 tsp"], ["Oil", "1 tbsp"], ["Salt", "to taste"],
+    ["Water", "1/2 cup"], ["Coriander leaves", "1 tbsp"], ["Lemon juice", "1 tsp"]
+  ],
+  "dal rice": [
+    ["Rice", "1/2 cup"], ["Toor dal", "1/3 cup"], ["Onion", "1/2 medium"],
+    ["Tomato", "1 small"], ["Garlic", "2 cloves"], ["Turmeric", "1/4 tsp"],
+    ["Cumin seeds", "1/2 tsp"], ["Ghee or oil", "1 tsp"], ["Salt", "to taste"], ["Water", "as required"]
+  ],
+  "tomato pulao": [
+    ["Rice", "1/2 cup"], ["Tomato", "2 medium"], ["Onion", "1/2 medium"],
+    ["Ginger-garlic", "1 tsp"], ["Green chilli", "1"], ["Cumin seeds", "1/2 tsp"],
+    ["Garam masala", "1/4 tsp"], ["Oil", "1 tbsp"], ["Salt", "to taste"],
+    ["Water", "1 cup"], ["Coriander leaves", "1 tbsp"]
+  ],
+  "vegetable khichdi": [
+    ["Rice", "1/3 cup"], ["Moong dal", "1/3 cup"], ["Mixed vegetables", "1/2 cup"],
+    ["Onion", "1/2 medium"], ["Turmeric", "1/4 tsp"], ["Cumin seeds", "1/2 tsp"],
+    ["Ghee", "1 tsp"], ["Salt", "to taste"], ["Water", "2 cups"]
+  ],
+  "roti with aloo sabzi": [
+    ["Wheat flour", "1/2 cup"], ["Potatoes", "2 small"], ["Tomato", "1 small"],
+    ["Onion", "1/2 medium"], ["Cumin seeds", "1/2 tsp"], ["Turmeric", "1/4 tsp"],
+    ["Red chilli powder", "1/4 tsp"], ["Oil", "1 tbsp"], ["Salt", "to taste"],
+    ["Water", "as required"], ["Coriander leaves", "1 tbsp"]
+  ],
+  "vegetable upma": [
+    ["Semolina (rava)", "1/2 cup"], ["Onion", "1/2 medium"], ["Mixed vegetables", "1/3 cup"],
+    ["Green chilli", "1"], ["Mustard seeds", "1/2 tsp"], ["Curry leaves", "5-6"],
+    ["Oil or ghee", "1 tbsp"], ["Salt", "to taste"], ["Water", "1 1/2 cups"], ["Lemon juice", "1 tsp"]
+  ]
+};
+
+function getCanonicalRecipeIngredients(recipeName) {
+  const key = String(recipeName || "").trim().toLowerCase();
+  const list = CANONICAL_RECIPE_INGREDIENTS[key];
+  return list ? list.map(([name, quantity]) => makeIngredient(name, quantity)) : null;
+}
+
 function pickIngredients(pool, keywords, count = 3) {
   const lower = pool.map((item) => item.toLowerCase());
   const picked = [];
@@ -416,6 +488,18 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+
+    // Replace incomplete AI ingredient guesses with a complete, recipe-specific ingredient list
+    // whenever MealMate has a verified-style canonical template for that dish.
+    days.forEach((day) => {
+      ["breakfast", "lunch", "dinner"].forEach((type) => {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+        options.forEach((option) => {
+          const canonical = getCanonicalRecipeIngredients(option?.name);
+          if (canonical) option.ingredients = canonical;
+        });
+      });
+    });
 
     // Enforce different selected dishes across breakfast, lunch and dinner,
     // even when an AI model ignores the uniqueness instruction.
