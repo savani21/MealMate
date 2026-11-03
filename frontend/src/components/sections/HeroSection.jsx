@@ -136,7 +136,7 @@ export function HeroSection() {
             </motion.div>
 
             {/* Floating Food Icons */}
-            <motion.div className="absolute top-1/4 -left-12 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}>
+            <motion.div className="absolute top-[22%] left-[calc(100%-30rem)] bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}>
               <div className="bg-green-100 p-2 rounded-lg"><Salad className="w-5 h-5 text-green-600"/></div>
               <span className="text-sm font-semibold text-gray-800 pr-2">Salad</span>
             </motion.div>
