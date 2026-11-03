@@ -148,14 +148,21 @@ export default function Recipes() {
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
+      let mealLinkWarning = "";
       if (returnToMealPlan && planId && mealDay && mealType) {
-        const saveResponse = await fetch(`http://localhost:5000/api/meal-plans/${planId}/selection`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ day: mealDay, mealType, recipeId: data.recipe._id }),
-        });
-        const saveData = await saveResponse.json();
-        if (!saveResponse.ok) throw new Error(saveData.message || "Recipe generated, but could not link it to this meal.");
+        try {
+          if (!token) throw new Error("Your login session is missing. Please sign in again.");
+          const saveResponse = await fetch(`http://localhost:5000/api/meal-plans/${planId}/selection`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ day: mealDay, mealType, recipeId: data.recipe._id }),
+          });
+          const saveData = await saveResponse.json();
+          if (!saveResponse.ok) throw new Error(saveData.message || `Meal link failed (HTTP ${saveResponse.status}).`);
+        } catch (linkError) {
+          console.error("Recipe generated, but linking it to the meal failed:", linkError);
+          mealLinkWarning = linkError.message;
+        }
       }
       setShowGenerator(false);
       setRecipes((prev) => [data.recipe, ...prev]);
@@ -163,10 +170,11 @@ export default function Recipes() {
         return: returnToMealPlan ? "meal-plan" : returnToPlanner ? "meal-planner" : "recipes",
         planId, meal: mealName, day: mealDay, mealType, available, recommended, mode,
       });
+      if (mealLinkWarning) alert(`Recipe generated successfully, but it could not be linked to this meal: ${mealLinkWarning}`);
       setLocation(`/recipes/${data.recipe._id}?${query.toString()}`);
     } catch (error) {
-      console.error(error);
-      alert("Unable to generate recipe.");
+      console.error("Recipe generation failed:", error);
+      alert(error.message || "Unable to generate recipe. Check the backend server logs for details.");
     } finally { setGenerating(false); }
   };
 
