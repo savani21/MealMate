@@ -23,31 +23,12 @@ export default function MealPlanner() {
   const [loading, setLoading] = useState(false);
   const [draftDays, setDraftDays] = useState([]);
   const [previewReady, setPreviewReady] = useState(false);
-  const [isBannerCompact, setIsBannerCompact] = useState(false);
   const recipeChoicesRef = useRef(null);
   const planningMethodRef = useRef(null);
   const recommendedRecipesRef = useRef(null);
   const generateButtonRef = useRef(null);
   const savePlanRef = useRef(null);
   const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const preferences = document.getElementById("meal-plan-preferences");
-      if (!preferences) return;
-
-      const formTop = preferences.getBoundingClientRect().top;
-      setIsBannerCompact((currentlyCompact) => {
-        if (!currentlyCompact && formTop <= 150) return true;
-        if (currentlyCompact && formTop > 260) return false;
-        return currentlyCompact;
-      });
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -263,30 +244,18 @@ export default function MealPlanner() {
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className={isBannerCompact ? "relative min-h-[190px] mb-8" : "mb-8"}><section className={`${isBannerCompact ? "fixed left-4 right-4 top-[88px] z-30 mx-auto max-w-[1120px] px-5 py-3 sm:px-7" : "relative px-6 py-9 sm:px-10 sm:py-12"} overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-[padding] duration-200 ease-out`}>
-          <div className={`relative z-10 flex items-center justify-between gap-4 ${isBannerCompact ? "" : "max-w-2xl"}`}>
-            <div className="min-w-0">
-              {!isBannerCompact && (
+        <div className="mb-8">
+          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] px-6 py-9 text-white shadow-md sm:px-10 sm:py-12">
+            <div className="relative z-10 flex items-center justify-between gap-4">
+              <div className="min-w-0 max-w-2xl">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-green-50">
                   <Sparkles className="h-4 w-4" /> MEALMATE SMART MEAL PLANNER
                 </div>
-              )}
-              <h1 className={`font-black tracking-tight transition-all duration-300 ${isBannerCompact ? "text-lg sm:text-xl" : "text-3xl sm:text-4xl"}`}>Plan smarter. Eat better.</h1>
-              {!isBannerCompact && (
+                <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Plan smarter. Eat better.</h1>
                 <p className="mt-3 max-w-xl text-sm leading-6 text-green-50/90 sm:text-base">
                   Create a meal plan around your goals, diet and available ingredients. Explore recipe ideas and choose the meals you love.
                 </p>
-              )}
-            </div>
-            {isBannerCompact ? (
-              <button
-                type="button"
-                onClick={() => document.getElementById("meal-plan-preferences")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-green-900 transition hover:bg-green-50"
-              >
-                Plan meals
-              </button>
-            ) : (
+              </div>
               <button
                 type="button"
                 onClick={() => document.getElementById("meal-plan-preferences")?.scrollIntoView({ behavior: "smooth", block: "start" })}
@@ -294,10 +263,10 @@ export default function MealPlanner() {
               >
                 <Target className="h-4 w-4" /> Plan my meals
               </button>
-            )}
-          </div>
-          {!isBannerCompact && <ChefHat className="absolute -bottom-10 -right-5 h-56 w-56 rotate-[-12deg] text-white/[0.08] sm:right-10 sm:h-72 sm:w-72" />}
-        </section></div>
+            </div>
+            <ChefHat className="absolute -bottom-10 -right-5 h-56 w-56 rotate-[-12deg] text-white/[0.08] sm:right-10 sm:h-72 sm:w-72" />
+          </section>
+        </div>
                 <section id="meal-plan-preferences" className="scroll-mt-24 rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-50"><Target className="h-5 w-5 text-primary" /></div>
