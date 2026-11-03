@@ -23,7 +23,7 @@ function StatCard({ icon: Icon, value, suffix = "", label, note }) {
                 <Icon className="h-5 w-5" />
             </div>
             <div className="mb-1 text-3xl font-black tracking-tight text-primary">
-                {value === null ? "—" : Number(value).toLocaleString() + suffix}
+                {value === null ? "—" : (typeof value === "number" ? value.toLocaleString() : value) + suffix}
             </div>
             <div className="text-sm font-semibold text-gray-800">{label}</div>
             {note && <div className="mt-1 text-xs text-gray-400">{note}</div>}
