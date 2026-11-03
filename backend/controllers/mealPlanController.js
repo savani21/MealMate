@@ -182,11 +182,24 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
   }
 
   // Always return three distinct, usable options, even when the pantry is sparse.
-  const fallbacks = [
-    ["Indian Masala Bowl", ["rice", "potato", "tomato", "onion"]],
-    ["Homestyle Spiced Roti", ["wheat", "atta", "flour", "potato", "tomato"]],
-    ["Simple Indian Veggie Mix", ["vegetable", "potato", "tomato", "onion"]],
-  ];
+  const fallbacksByType = {
+    breakfast: [
+      ["Savory Vegetable Breakfast Bowl", ["vegetable", "potato", "tomato", "onion"]],
+      ["Quick Spiced Breakfast Toast", ["bread", "tomato", "onion"]],
+      ["Warm Lentil Breakfast Pancakes", ["dal", "lentil", "besan"]],
+    ],
+    lunch: [
+      ["Indian Masala Rice Bowl", ["rice", "potato", "tomato", "onion"]],
+      ["Homestyle Dal and Roti", ["dal", "lentil", "wheat", "atta"]],
+      ["Vegetable Curry with Rice", ["vegetable", "rice", "tomato"]],
+    ],
+    dinner: [
+      ["Light Vegetable Soup and Toast", ["vegetable", "carrot", "bread"]],
+      ["One-Pot Savory Millet", ["millet", "dalia", "vegetable"]],
+      ["Stuffed Vegetable Roti", ["wheat", "atta", "potato", "vegetable"]],
+    ],
+  };
+  const fallbacks = fallbacksByType[type] || fallbacksByType.lunch;
   for (const [name, keywords] of fallbacks) {
     if (chosen.length >= 3) break;
     if (!chosen.some((item) => item.name === name)) {
@@ -344,6 +357,8 @@ Cuisine preference:
 - These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet.
 - Prefer meals that make good use of pantry ingredients, but include all other essential ingredients needed to prepare a complete, realistic dish.
 - Keep the three choices in each meal category meaningfully different from one another.
+- Within the same day, breakfast, lunch and dinner MUST have different recipe names and must not repeat the same dish under different meal categories.
+- Across a 3-day or 7-day plan, avoid repeating a recipe name wherever practical; prioritize variety.
 
 Rules:
 1. Every meal must have its own complete ingredient list.
@@ -401,6 +416,29 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+
+    // Enforce different selected dishes across breakfast, lunch and dinner,
+    // even when an AI model ignores the uniqueness instruction.
+    days.forEach((day) => {
+      const usedNames = new Set();
+      ["breakfast", "lunch", "dinner"].forEach((type) => {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+        const current = options.find((item) => item?.name === day[type]) || options[0];
+        let selected = current;
+        if (selected?.name && usedNames.has(selected.name.trim().toLowerCase())) {
+          selected = options.find((item) => item?.name && !usedNames.has(item.name.trim().toLowerCase()));
+        }
+        if (!selected) {
+          selected = buildLocalOptions(allowedPool, type, Number(day.day) || 1, diet)
+            .find((item) => item?.name && !usedNames.has(item.name.trim().toLowerCase()));
+        }
+        if (selected?.name) {
+          day[type] = selected.name;
+          day[type + "Ingredients"] = selected.ingredients || [];
+          usedNames.add(selected.name.trim().toLowerCase());
+        }
+      });
+    });
 
     // Keep the legacy selected-meal fields in sync with the first suggested option.
     // Older saved meal plans without option arrays remain fully compatible.
