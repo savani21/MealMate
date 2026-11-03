@@ -97,12 +97,12 @@ function normalizeAmount(quantity, unit) {
 function normalizeIngredientName(value) {
   const cleaned = String(value || "").toLowerCase()
     .replace(/\([^)]*\)/g, " ")
-    .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional)\b/g, " ")
+    .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole)\b/g, " ")
     .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   const words = cleaned.split(" ").filter(Boolean);
   if (words.length && /s$/.test(words[words.length - 1]) && !/ss$/.test(words[words.length - 1])) words[words.length - 1] = words[words.length - 1].slice(0, -1);
   const name = words.join(" ");
-  const aliases = { "basmati rice":"rice", "long grain rice":"rice", atta:"wheat flour", "whole wheat flour":"wheat flour", "wheat atta":"wheat flour", "tuver dal":"toor dal", "tuvar dal":"toor dal", "tur dal":"toor dal", "arhar dal":"toor dal", "green chilli":"green chili", "sunflower oil":"oil", "vegetable oil":"oil" };
+  const aliases = { "basmati rice":"rice", "long grain rice":"rice", atta:"wheat flour", "whole wheat flour":"wheat flour", "wheat atta":"wheat flour", "tuver dal":"toor dal", "tuvar dal":"toor dal", "tur dal":"toor dal", "arhar dal":"toor dal", "green chilli":"green chili", "sunflower oil":"oil", "vegetable oil":"oil", "whole milk":"milk", "warm milk":"milk", "full cream milk":"milk", "toned milk":"milk" };
   return aliases[name] || name;
 }
 
@@ -216,20 +216,19 @@ exports.compareRecipeWithPantry = async (req, res) => {
     const rows = (recipe.ingredients || []).map((raw) => {
       const required = parseRequiredIngredient(raw);
       if (isCommonHouseholdIngredient(required.name)) {
-        return { ingredient: raw, status: "available", message: "As needed" };
+        return { ingredient: raw, status: "available", message: "Common household item" };
       }
-      const match = pantry.find((item) => normalizeIngredientName(item.name) === normalizeIngredientName(required.name));
-      if (!match) return { ingredient: raw, available: 0, availableUnit: required.unit || "", status: "missing", message: "Not in pantry" };
-      if (required.quantity === null) return { ingredient: raw, available: match.quantity, availableUnit: match.unit, status: "quantity-unknown", message: "Check required quantity" };
-      const need = normalizeAmount(required.quantity, required.unit);
-      const have = normalizeAmount(match.quantity, match.unit);
-      if (need.unit !== have.unit) return { ingredient: raw, available: match.quantity, availableUnit: match.unit, status: "unit-mismatch", message: "Units do not match" };
-      const remaining = Math.max(0, need.quantity - have.quantity);
+      const normalizedRequired = normalizeIngredientName(required.name);
+      const match = pantry.find((item) => normalizeIngredientName(item.name) === normalizedRequired);
+      if (!match) {
+        return { ingredient: raw, status: "missing", message: "Not in pantry" };
+      }
       return {
-        ingredient: raw, required: required.quantity, requiredUnit: required.unit,
-        available: match.quantity, availableUnit: match.unit,
-        missing: remaining, status: remaining === 0 ? "available" : "insufficient",
-        message: remaining === 0 ? "Available" : `Need ${remaining} ${need.unit} more`,
+        ingredient: raw,
+        status: "available",
+        message: `Already in pantry · ${match.name}`,
+        pantryItemId: match._id,
+        pantryName: match.name,
       };
     });
     res.json({ recipeId: recipe._id, comparison: rows });
