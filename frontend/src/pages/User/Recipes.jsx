@@ -144,10 +144,19 @@ export default function Recipes() {
       const response = await fetch("http://localhost:5000/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ingredients: initialIngredients, mealName }),
+        body: JSON.stringify({ ingredients: initialIngredients, mealName, diet: params.get("diet") || "Any", category: mealType }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
+      if (returnToMealPlan && planId && mealDay && mealType) {
+        const saveResponse = await fetch(`http://localhost:5000/api/meal-plans/${planId}/selection`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ day: mealDay, mealType, recipeId: data.recipe._id }),
+        });
+        const saveData = await saveResponse.json();
+        if (!saveResponse.ok) throw new Error(saveData.message || "Recipe generated, but could not link it to this meal.");
+      }
       setShowGenerator(false);
       setRecipes((prev) => [data.recipe, ...prev]);
       const query = new URLSearchParams({
