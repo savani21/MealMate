@@ -323,8 +323,8 @@ export default function MealPlanner() {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredients you want to use for meal</label>
-              <p className="mb-3 text-xs text-gray-500">Choose ingredients from your pantry. You can also add ingredients that are not in your pantry.</p>
+              <label className="mb-1.5 block text-sm font-semibold text-gray-700">Available Ingredients</label>
+              <p className="mb-3 text-xs text-gray-500">Select ingredients available in your pantry or add other ingredients.</p>
               <button type="button" onClick={() => setShowIngredientPicker(true)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition hover:border-green-300 hover:bg-green-50/40">
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-gray-800">{getAvailableIngredients().length ? getAvailableIngredients().join(", ") : "No ingredients selected yet"}</span>
