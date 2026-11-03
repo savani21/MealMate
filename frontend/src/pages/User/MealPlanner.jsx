@@ -148,6 +148,7 @@ export default function MealPlanner() {
 
   const generatePlan = async () => {
     if (!goal || !diet) { alert("Please select your goal and diet type."); return; }
+    if (pantryItems.length === 0) { alert("Please add ingredients to My Kitchen → Pantry first, then select the items you want to use."); return; }
     if (getAvailableIngredients().length === 0) { alert("Enter your available ingredients first."); return; }
     try {
       setLoading(true);
@@ -254,7 +255,7 @@ export default function MealPlanner() {
   useEffect(() => {
     const timer = setTimeout(fetchRecommendedRecipes, 450);
     return () => clearTimeout(timer);
-  }, [ingredients, diet, ingredientMode, recommendedIngredients.join(",")]);
+  }, [ingredients, selectedPantryNames.join(","), diet, ingredientMode, recommendedIngredients.join(",")]);
 
 
   return (
