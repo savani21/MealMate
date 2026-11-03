@@ -88,6 +88,7 @@ export default function Recipes() {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState([]);
   const [showGenerator, setShowGenerator] = useState(params.get("generate") === "1");
+  const [generatorIngredients, setGeneratorIngredients] = useState(initialIngredients);
   const [generating, setGenerating] = useState(false);
   const [generationSlow, setGenerationSlow] = useState(false);
 
@@ -134,8 +135,8 @@ export default function Recipes() {
   };
 
   const generateRecipe = async () => {
-    if (!initialIngredients.trim()) {
-      alert("No ingredients were passed from the selected meal. Go back and choose a meal again.");
+    if (!generatorIngredients.trim()) {
+      alert("Please enter at least one ingredient to generate a recipe.");
       return;
     }
     setGenerating(true);
@@ -145,7 +146,7 @@ export default function Recipes() {
       const response = await fetch("http://localhost:5000/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ingredients: initialIngredients, mealName, diet: params.get("diet") || "Any", category: mealType }),
+        body: JSON.stringify({ ingredients: generatorIngredients.trim(), mealName, diet: params.get("diet") || "Any", category: mealType || category !== "All" ? (mealType || category) : "Other" }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
@@ -311,7 +312,7 @@ export default function Recipes() {
                 <div className="min-w-0"><div className="flex items-center gap-2"><Sparkles className="h-4 w-4 shrink-0 text-primary" /><h2 className="text-base font-bold text-gray-900">Generate Recipe</h2></div>{mealName && <p className="mt-1 truncate text-xs font-semibold text-primary">{mealName}</p>}</div>
                 <button onClick={() => setShowGenerator(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700" title="Close"><X className="h-4 w-4" /></button>
               </div>
-              <div className="mt-2 rounded-xl border border-green-100 bg-green-50 p-3"><p className="mb-2 text-xs font-semibold text-gray-600">Full ingredient list</p><p className="text-sm leading-relaxed text-gray-700">{initialIngredients || "No selected-meal ingredients were provided."}</p><p className="mt-2 text-[11px] text-gray-500">Includes the ingredients for the complete recipe, whether you already have them or need to buy them.</p></div>
+              <div className="mt-2 rounded-xl border border-green-100 bg-green-50 p-3"><label htmlFor="generator-ingredients" className="mb-2 block text-xs font-semibold text-gray-700">Enter your ingredients</label><textarea id="generator-ingredients" rows={4} value={generatorIngredients} onChange={(event) => setGeneratorIngredients(event.target.value)} placeholder="e.g. potato, onion, tomato, rice, paneer..." className="w-full resize-y rounded-lg border border-green-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-green-100" /><p className="mt-2 text-[11px] text-gray-500">Separate ingredients with commas. MealMate will create a complete recipe and include any additional ingredients you may need.</p></div>
               {generating && <p className="mt-3 text-xs text-gray-500" role="status">{generationSlow ? "The AI service is taking longer than usual. MealMate is preparing a quick backup recipe." : "Creating your recipe. This usually takes a few seconds."}</p>}
               <div className="mt-3 flex justify-end gap-2"><button onClick={() => setShowGenerator(false)} className="rounded-lg border border-gray-200 px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button><button onClick={generateRecipe} disabled={generating} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">{generating ? (generationSlow ? "Preparing quick recipe..." : "Generating...") : "Generate"}</button></div>
             </div>
