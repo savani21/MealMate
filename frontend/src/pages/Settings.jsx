@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -50,6 +51,7 @@ export default function Settings() {
 
       {/* HEADER */}
       <AppNavbar />
+      <PageHeroBanner title="Settings & Preferences" description="Customize how MealMate works for you." eyebrow="PREFERENCES" icon={SettingsIcon} />
 
 
       {/* MAIN */}
