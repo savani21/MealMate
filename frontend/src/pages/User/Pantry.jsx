@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { ChefHat, Plus, Search, Trash2, Pencil, Check, X, Package } from "lucide-react";
@@ -90,6 +91,7 @@ export default function Pantry() {
 
   return <div className="min-h-screen bg-[#f7faf7]">
     <AppNavbar />
+      <PageHeroBanner title="Your Pantry" description="Track the ingredients you have and plan meals around them." eyebrow="MY KITCHEN" icon={ChefHat} />
     <main className="max-w-5xl mx-auto px-4 py-9">
       <div className="mb-7"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><Package className="w-4 h-4"/> Pantry Management</div><h1 className="text-3xl font-black text-gray-900 mt-2">Your Pantry</h1><p className="text-gray-500 mt-2">Keep ingredient quantities up to date so MealMate can plan around what you actually have.</p></div>
       <form onSubmit={save} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
