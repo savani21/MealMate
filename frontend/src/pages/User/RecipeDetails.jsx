@@ -2,7 +2,7 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { ChefHat, Clock, Utensils, Share2, Download, FileText, Trash2, ShoppingCart, Check, Timer, ChevronLeft, ChevronRight, X, ClipboardList, Play, Pause, RotateCcw } from "lucide-react";
+import { ChefHat, Clock, Utensils, Share2, Download, FileText, Trash2, ShoppingCart, Check, ChevronLeft, ChevronRight, X, ClipboardList, Play, Pause, RotateCcw } from "lucide-react";
 import RecipeRating from "../../components/RecipeRating";
 
 export default function RecipeDetails() {
@@ -24,7 +24,6 @@ export default function RecipeDetails() {
   const [pantryComparison, setPantryComparison] = useState([]);
   const [selectedGroceryIngredients, setSelectedGroceryIngredients] = useState([]);
   const [addingToGrocery, setAddingToGrocery] = useState(false);
-  const [groceryMessage, setGroceryMessage] = useState("");
   const [showCookingMode, setShowCookingMode] = useState(false);
   const [cookingStep, setCookingStep] = useState(0);
   const [checkedIngredients, setCheckedIngredients] = useState([]);
