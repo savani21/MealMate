@@ -137,7 +137,7 @@ export default function Dashboard() {
           </button>
         </AppNavbar>
 
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-8">
           <p className="text-sm text-primary font-semibold">Welcome back</p>
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">{user.name}</h1>
