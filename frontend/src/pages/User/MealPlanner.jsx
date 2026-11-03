@@ -19,7 +19,6 @@ export default function MealPlanner() {
   const [draftDays, setDraftDays] = useState([]);
   const [previewReady, setPreviewReady] = useState(false);
   const [isBannerCompact, setIsBannerCompact] = useState(false);
-  const bannerSentinelRef = useRef(null);
   const recipeChoicesRef = useRef(null);
   const planningMethodRef = useRef(null);
   const recommendedRecipesRef = useRef(null);
@@ -28,16 +27,18 @@ export default function MealPlanner() {
   const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => {
-    const sentinel = bannerSentinelRef.current;
-    if (!sentinel) return;
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsBannerCompact((currentlyCompact) => {
+        if (!currentlyCompact && scrollPosition > 180) return true;
+        if (currentlyCompact && scrollPosition < 70) return false;
+        return currentlyCompact;
+      });
+    };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsBannerCompact(!entry.isIntersecting),
-      { root: null, threshold: 0, rootMargin: "-100px 0px 0px 0px" }
-    );
-
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -222,7 +223,6 @@ export default function MealPlanner() {
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div ref={bannerSentinelRef} aria-hidden="true" className="h-px" />
         <section className={`relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-all duration-300 ease-in-out ${isBannerCompact ? "px-5 py-3 sm:px-7" : "px-6 py-9 sm:px-10 sm:py-12"}`}>
           <div className={`relative z-10 flex items-center justify-between gap-4 ${isBannerCompact ? "" : "max-w-2xl"}`}>
             <div className="min-w-0">
