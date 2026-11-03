@@ -23,6 +23,7 @@ export default function MealPlanner() {
   const [loading, setLoading] = useState(false);
   const [draftDays, setDraftDays] = useState([]);
   const [previewReady, setPreviewReady] = useState(false);
+  const [recipeDetails, setRecipeDetails] = useState(null);
   const recipeChoicesRef = useRef(null);
   const planningMethodRef = useRef(null);
   const recommendedRecipesRef = useRef(null);
@@ -404,9 +405,38 @@ export default function MealPlanner() {
             </section>
           </div>
         )}
+        {recipeDetails && (
+          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setRecipeDetails(null); }}>
+            <section role="dialog" aria-modal="true" aria-labelledby="recipe-details-title" className="flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wide text-primary">{recipeDetails.mealType} · Day {recipeDetails.day}</p>
+                  <h2 id="recipe-details-title" className="mt-1 text-xl font-black text-gray-900">{recipeDetails.name}</h2>
+                  <p className="mt-1 text-sm font-semibold text-primary">{recipeDetails.prepTime ? `Preparation time: ${recipeDetails.prepTime}` : "Preparation time not available"}</p>
+                </div>
+                <button type="button" onClick={() => setRecipeDetails(null)} aria-label="Close recipe details" className="rounded-lg px-2 py-1 text-2xl leading-none text-gray-400 hover:bg-gray-100">×</button>
+              </div>
+              <div className="overflow-y-auto p-5">
+                <h3 className="mb-3 text-sm font-bold text-gray-900">Ingredients required</h3>
+                {Array.isArray(recipeDetails.ingredients) && recipeDetails.ingredients.length > 0 ? (
+                  <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {recipeDetails.ingredients.map((item, index) => {
+                      const name = typeof item === "string" ? item : item.name;
+                      const quantity = typeof item === "string" ? "" : item.quantity;
+                      return <li key={name + index} className="flex items-start justify-between gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm"><span className="text-gray-700">{name}</span>{quantity && <span className="shrink-0 text-xs font-medium text-gray-500">{quantity}</span>}</li>;
+                    })}
+                  </ul>
+                ) : <p className="text-sm text-gray-500">Ingredient details are not available for this recipe yet.</p>}
+              </div>
+              <div className="flex justify-end border-t border-gray-100 px-5 py-4">
+                <button type="button" onClick={() => setRecipeDetails(null)} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">Done</button>
+              </div>
+            </section>
+          </div>
+        )}
         {previewReady && <section ref={recipeChoicesRef} className="mt-10 space-y-6 scroll-mt-24">
           <div className="text-center"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><CheckCircle2 className="w-4 h-4"/> Your preferences are applied</div><h2 className="text-2xl font-black text-gray-900 mt-2">Choose Your Recipes</h2><p className="text-sm text-gray-500 mt-2">Select one recipe for breakfast, lunch and dinner. Your chosen ingredients are already included.</p></div>
-          {draftDays.map((day, dayIndex) => <div key={day.day || dayIndex} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-7"><div className="flex items-center gap-2 mb-5"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary"/></div><h3 className="text-lg font-black text-gray-900">Day {day.day || dayIndex + 1}</h3></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-5">{["breakfast","lunch","dinner"].map((type) => <div key={type} className="rounded-2xl border border-gray-100 p-4"><div className="text-xs font-bold uppercase tracking-wide text-primary mb-3">{type}</div><div className="space-y-2">{(day[type + "Options"] || []).map((option, optionIndex) => <label key={option.name + optionIndex} className={`block rounded-xl border p-3 cursor-pointer transition ${day[type] === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}><span className="flex items-start gap-2.5"><input type="radio" name={`day-${dayIndex}-${type}`} checked={day[type] === option.name} onChange={() => selectOption(dayIndex, type, option)} className="mt-1 accent-green-700"/><span className="min-w-0"><span className="block font-bold text-sm text-gray-900">{option.name}</span>{Array.isArray(option.ingredients) && option.ingredients.length > 0 && <span className="mt-1 block text-xs text-gray-500"><span className="font-semibold text-gray-600">Ingredients: </span>{option.ingredients.map((item) => (typeof item === "string" ? item : `${item.name}${item.quantity && !/as needed/i.test(item.quantity) ? ` (${item.quantity})` : ""}`).replace(/\s*\(as needed\)/gi, "").trim()).filter(Boolean).join(", ")}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-2">Time: {option.prepTime}</span>}</span></span></label>)}</div>{(day[type + "Options"] || []).length === 0 && <p className="text-sm text-red-500">No options returned for this meal. Please regenerate.</p>}</div>)}</div></div>)}
+          {draftDays.map((day, dayIndex) => <div key={day.day || dayIndex} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-7"><div className="flex items-center gap-2 mb-5"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary"/></div><h3 className="text-lg font-black text-gray-900">Day {day.day || dayIndex + 1}</h3></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-5">{["breakfast","lunch","dinner"].map((type) => <div key={type} className="rounded-2xl border border-gray-100 p-4"><div className="text-xs font-bold uppercase tracking-wide text-primary mb-3">{type}</div><div className="space-y-2">{(day[type + "Options"] || []).map((option, optionIndex) => <button type="button" key={option.name + optionIndex} onClick={() => { selectOption(dayIndex, type, option); setRecipeDetails({ ...option, mealType: type, day: day.day || dayIndex + 1 }); }} className={`block w-full rounded-xl border p-3 text-left transition ${day[type] === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}><span className="flex items-start gap-2.5"><input type="radio" tabIndex={-1} aria-label={`Select ${option.name}`} name={`day-${dayIndex}-${type}`} checked={day[type] === option.name} onChange={() => selectOption(dayIndex, type, option)} className="mt-1 accent-green-700 pointer-events-none"/><span className="min-w-0"><span className="block font-bold text-sm text-gray-900">{option.name}</span><span className="mt-1 block text-xs font-medium text-primary">{option.prepTime ? `Time: ${option.prepTime}` : "Preparation time not available"}</span><span className="mt-1 block text-[11px] text-gray-400">Click to view recipe details</span></span></span></button>)}</div>{(day[type + "Options"] || []).length === 0 && <p className="text-sm text-red-500">No options returned for this meal. Please regenerate.</p>}</div>)}</div></div>)}
           <div ref={savePlanRef} className="flex flex-col sm:flex-row justify-center gap-3 scroll-mt-24"><button onClick={() => {setPreviewReady(false);setDraftDays([]);}} className="px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600">Change Preferences</button><button onClick={saveSelectedPlan} disabled={loading} className="px-7 py-3 rounded-xl bg-primary text-white font-bold disabled:opacity-60">{loading ? "Saving Your Choices..." : "Save Selected Meal Plan"}</button></div>
         </section>}
       </main>
