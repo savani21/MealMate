@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
@@ -227,6 +228,7 @@ export default function Notifications() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
+      <PageHeroBanner title="Your Notifications" description="Stay up to date with your meal plans and kitchen activity." eyebrow="STAY UPDATED" icon={Bell} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
