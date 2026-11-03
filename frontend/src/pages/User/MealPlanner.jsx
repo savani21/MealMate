@@ -27,7 +27,12 @@ export default function MealPlanner() {
   const scrollTo = (ref) => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   useEffect(() => {
-    const handleScroll = () => setIsBannerCompact(window.scrollY > 100);
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsBannerCompact((currentlyCompact) =>
+        currentlyCompact ? scrollPosition > 60 : scrollPosition > 160
+      );
+    };
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
