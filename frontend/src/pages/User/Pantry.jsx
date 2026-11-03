@@ -93,7 +93,6 @@ export default function Pantry() {
     <AppNavbar />
       <PageHeroBanner title="Your Pantry" description="Track the ingredients you have and plan meals around them." eyebrow="MY KITCHEN" icon={ChefHat} />
     <main className="max-w-5xl mx-auto px-4 py-9">
-      <div className="mb-7"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><Package className="w-4 h-4"/> Pantry Management</div><h1 className="text-3xl font-black text-gray-900 mt-2">Your Pantry</h1><p className="text-gray-500 mt-2">Keep ingredient quantities up to date so MealMate can plan around what you actually have.</p></div>
       <form onSubmit={save} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
         <h2 className="font-bold text-gray-900 mb-4">{editing ? "Update ingredient" : "Add ingredients"}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_120px_140px_auto] gap-3">
