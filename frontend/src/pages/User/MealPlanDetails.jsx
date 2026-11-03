@@ -93,6 +93,19 @@ export default function MealPlanDetails() {
     }
   };
 
+  const openOrGenerateRecipe = (dayPlan, mealType) => {
+    const mealName = dayPlan?.[mealType] || "";
+    if (!mealName) { alert("This meal is not available."); return; }
+    const existing = findRecipe(mealName);
+    if (existing) {
+      setLocation(`/recipes/${existing._id}?return=meal-plan&planId=${plan._id}&day=${dayPlan.day}&mealType=${mealType}`);
+      return;
+    }
+    setSelectedDay(String(dayPlan.day));
+    setSelectedMealType(mealType);
+    setShowRecipeSelector(true);
+  };
+
   const generateRecipe = () => {
     if (!selectedMealName || !selectedDayPlan) { alert("Please select a day and meal first."); return; }
     // Use only the ingredients belonging to the selected meal, never the whole pantry/plan list.
@@ -175,7 +188,7 @@ export default function MealPlanDetails() {
                   <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
                   <div className="flex flex-wrap gap-2 mt-4">
                     <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>
-                    <button type="button" onClick={() => { setSelectedDay(String(day.day)); setSelectedMealType(type); setShowRecipeSelector(true); }} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
+                    <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
                   </div>
                   {activeMealEditor === mealKey && <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
                     <p className="text-xs font-semibold text-gray-500">Choose an alternative. Only this meal will change.</p>
@@ -198,7 +211,7 @@ export default function MealPlanDetails() {
         </section>
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-8">
-          <button onClick={() => setShowRecipeSelector(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
+          <button onClick={() => openOrGenerateRecipe(selectedDayPlan || plan.meals[0], selectedMealType || "breakfast")} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
           <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Preparing Cart..." : "Open Grocery Cart"}</button>
         </div>
 
