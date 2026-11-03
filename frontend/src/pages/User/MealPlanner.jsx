@@ -327,12 +327,12 @@ export default function MealPlanner() {
               <p className="mb-3 text-xs text-gray-500">Choose ingredients from your pantry. You can also add ingredients that are not in your pantry.</p>
               <button type="button" onClick={() => setShowIngredientPicker(true)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition hover:border-green-300 hover:bg-green-50/40">
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-gray-800">Selected ingredients</span>
+                  <span className="block text-sm font-semibold text-gray-800">{getAvailableIngredients().length ? getAvailableIngredients().join(", ") : "No ingredients selected yet"}</span>
                   <span className="mt-0.5 block text-xs text-gray-500">{getAvailableIngredients().length ? `${getAvailableIngredients().length} ingredients selected` : "Choose items you want to use for this meal plan"}</span>
                 </span>
                 <span className="shrink-0 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-primary">Select ingredients</span>
               </button>
-              {getAvailableIngredients().length > 0 && <div className="mt-2 flex flex-wrap gap-2">{getAvailableIngredients().map((name) => <span key={name} className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-800">{name}</span>)}</div>}
+              
               {pantryItems.length === 0 && !pantryLoading && <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. Add ingredients in My Kitchen → Pantry before planning meals.</p>}
             </div>
             <div className="md:col-span-2">
