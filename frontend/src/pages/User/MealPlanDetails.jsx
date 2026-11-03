@@ -2,7 +2,7 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
-import { Sparkles, Utensils, ShoppingBasket, X } from "lucide-react";
+import { Sparkles, Utensils, ShoppingBasket, X, RefreshCw, BookOpen, Check } from "lucide-react";
 
 export default function MealPlanDetails() {
   const [, setLocation] = useLocation();
@@ -14,6 +14,8 @@ export default function MealPlanDetails() {
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [selectedDay, setSelectedDay] = useState("");
   const [selectedMealType, setSelectedMealType] = useState("");
+  const [activeMealEditor, setActiveMealEditor] = useState("");
+  const [savingMealKey, setSavingMealKey] = useState("");
 
   useEffect(() => {
     fetchMealPlan();
@@ -74,13 +76,13 @@ export default function MealPlanDetails() {
 
   const selectedRecipe = findRecipe(selectedMealName);
 
-  const selectMealOption = async (day, mealType, option) => {
+  const selectMealOption = async (day, mealType, option, recipeId = "") => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`http://localhost:5000/api/meal-plans/${plan._id}/selection`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ day, mealType, option }),
+        body: JSON.stringify({ day, mealType, option, recipeId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Could not save meal selection");
@@ -123,7 +125,7 @@ export default function MealPlanDetails() {
 
   const openExistingRecipe = () => {
     if (!selectedRecipe) return;
-    setLocation(`/recipes/${selectedRecipe._id}?return=meal-plan&planId=${plan._id}`);
+    setLocation(`/recipes/${selectedRecipe._id}?return=meal-plan&planId=${plan._id}&day=${selectedDayPlan.day}&mealType=${selectedMealType}`);
   };
 
   const generateGroceryList = async () => {
@@ -164,7 +166,33 @@ export default function MealPlanDetails() {
           {plan.meals.map((day) => <div key={day.day} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 md:p-8">
             <div className="flex items-center gap-3 mb-6"><div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center"><Utensils className="w-5 h-5 text-primary" /></div><h2 className="text-xl font-black text-gray-900">Day {day.day}</h2></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <MealCard title="Breakfast" meal={day.breakfast} /><MealCard title="Lunch" meal={day.lunch} /><MealCard title="Dinner" meal={day.dinner} />
+              {["breakfast", "lunch", "dinner"].map((type) => {
+                const mealKey = `${day.day}-${type}`;
+                const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+                const matchingRecipes = recipes.filter((recipe) => String(recipe.category || "").toLowerCase() === type || !recipe.category || String(recipe.category).toLowerCase() === "other");
+                return <div key={type} className="border border-gray-100 rounded-2xl p-5">
+                  <p className="text-xs uppercase tracking-wide font-bold text-primary">{type}</p>
+                  <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>
+                    <button type="button" onClick={() => { setSelectedDay(String(day.day)); setSelectedMealType(type); setShowRecipeSelector(true); }} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
+                  </div>
+                  {activeMealEditor === mealKey && <div className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+                    <p className="text-xs font-semibold text-gray-500">Choose an alternative. Only this meal will change.</p>
+                    {options.filter((option) => option.name !== day[type]).map((option) => <button key={option.name} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, option); setSavingMealKey(""); }} className="w-full rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
+                      <span className="block text-sm font-bold text-gray-900">{option.name}</span><span className="block text-xs text-gray-500 mt-1">{option.description || "Alternative meal"} {option.prepTime ? `· ${option.prepTime}` : ""}</span>
+                    </button>)}
+                    <p className="text-xs font-semibold text-gray-500 pt-1">Choose from MealMate recipes</p>
+                    <div className="max-h-48 overflow-y-auto space-y-2">
+                      {matchingRecipes.slice(0, 12).map((recipe) => <button key={recipe._id} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, null, recipe._id); setSavingMealKey(""); }} className="w-full flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
+                        <span className="min-w-0"><span className="block text-sm font-bold text-gray-900 truncate">{recipe.name}</span><span className="block text-xs text-gray-500">{recipe.prepTime || "Prep time not specified"}</span></span><Check className="w-4 h-4 text-primary shrink-0"/>
+                      </button>)}
+                      {!matchingRecipes.length && <p className="text-xs text-gray-400">No matching recipes available yet.</p>}
+                    </div>
+                    <button type="button" onClick={() => setActiveMealEditor("")} className="text-xs font-semibold text-gray-500 hover:text-gray-800">Close</button>
+                  </div>}
+                </div>;
+              })}
             </div>
           </div>)}
         </section>
