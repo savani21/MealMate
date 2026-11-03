@@ -44,7 +44,7 @@ export default function RecipeDetails() {
     return () => clearInterval(interval);
   }, [timerRunning]);
   const stepTimerSeconds = (step) => {
-    const matches = [...String(step || "").matchAll(/(\\d+)\\s*(minutes?|mins?|seconds?|secs?)/gi)];
+    const matches = [...String(step || "").matchAll(/(\d+)\s*(minutes?|mins?|seconds?|secs?)/gi)];
     if (!matches.length) return 0;
     const match = matches[matches.length - 1];
     return Number(match[1]) * (/sec/i.test(match[2]) ? 1 : 60);
