@@ -120,6 +120,11 @@ export default function Dashboard() {
         </AppNavbar>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section className="mb-8">
+          <p className="text-sm text-primary font-semibold">Welcome back</p>
+          <h1 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">{user.name}</h1>
+          <p className="text-sm text-gray-500 mt-2">Manage your meals, recipes and nutrition from one place.</p>
+        </section>
         {user.role === "user" && (
           <section className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
             <StatCard label="Meals Planned" value={statsLoading ? "..." : dashboardStats.mealsLogged} description="Meals in your active meal plans" />
