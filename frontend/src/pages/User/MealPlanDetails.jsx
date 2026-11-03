@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { Sparkles, Utensils, ShoppingBasket, X } from "lucide-react";
@@ -151,6 +152,7 @@ export default function MealPlanDetails() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
+      <PageHeroBanner title="Your Meal Plan" description="Your personalized meals, organized day by day." eyebrow="AI MEAL PLAN" icon={Utensils} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-6 flex items-center gap-2 text-sm text-gray-500"><button onClick={() => setLocation("/my-meal-plans")} className="hover:text-primary transition">Meal Plans</button><span>/</span><span className="text-gray-900 font-semibold">{plan.duration}-Day Plan</span></div>
