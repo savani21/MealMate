@@ -65,7 +65,8 @@ export default function Recipes() {
   const planId = params.get("planId") || "";
   const mealName = params.get("meal") || "";
   const mealDay = params.get("day") || "";
-  const mealType = params.get("mealType") || "Recipe";
+  const mealType = (params.get("mealType") || "").trim().toLowerCase();
+  const validMealTypes = ["breakfast", "lunch", "dinner"];
   const initialIngredients = [...new Map(
     (params.get("ingredients") || "")
       .split(",")
@@ -149,8 +150,9 @@ export default function Recipes() {
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
       let mealLinkWarning = "";
-      if (returnToMealPlan && planId && mealDay && mealType) {
+      if (returnToMealPlan && planId && mealDay) {
         try {
+          if (!validMealTypes.includes(mealType)) throw new Error("The meal type is missing from this meal-plan link. Return to your meal plan and try again.");
           if (!token) throw new Error("Your login session is missing. Please sign in again.");
           const saveResponse = await fetch(`http://localhost:5000/api/meal-plans/${planId}/selection`, {
             method: "PATCH",
