@@ -43,6 +43,9 @@ export default function GroceryStore() {
     .split(",")
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean);
+  const recipeNameFromUrl = params.get("recipeName") || "Selected recipe";
+  let allRecipeIngredientsFromUrl = [];
+  try { const parsed = JSON.parse(params.get("allIngredients") || "[]"); if (Array.isArray(parsed)) allRecipeIngredientsFromUrl = parsed.filter((item) => item && item.name); } catch { allRecipeIngredientsFromUrl = []; }
 
   const [requestedItems, setRequestedItems] = useState([]);
   const [products, setProducts] = useState([]);
@@ -396,12 +399,38 @@ export default function GroceryStore() {
       <PageHeroBanner title="Grocery Store" description="Find and purchase the ingredients your meal plan needs." eyebrow="GROCERY MARKET" icon={ShoppingBasket} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        {allRecipeIngredientsFromUrl.length > 0 && (
+          <section className="mb-6 rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
+            <div className="mb-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">Recipe ingredient breakdown</p>
+              <h2 className="mt-1 text-lg font-black text-gray-900">{recipeNameFromUrl}</h2>
+              <p className="mt-1 text-sm text-gray-500">See what the recipe requires, what you already have, and what you need to buy.</p>
+            </div>
+            <div className="space-y-2">
+              {allRecipeIngredientsFromUrl.map((item, index) => {
+                const available = item.status === "available";
+                const needsBuy = requestedIngredients.some((name) => name === String(item.name).trim().toLowerCase());
+                return <div key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2.5">
+                  <span className="text-sm font-medium text-gray-800">{item.name}</span>
+                  <span className={"rounded-full px-2.5 py-1 text-[11px] font-bold " + (available ? "bg-green-50 text-green-700" : needsBuy ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600")}>
+                    {available ? "Already in pantry" : needsBuy ? "Need to buy" : item.status === "unknown" ? "Pantry status unavailable" : item.message || "Check pantry"}
+                  </span>
+                </div>;
+              })}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-semibold">
+              <span className="text-green-700">● Already in pantry</span>
+              <span className="text-amber-700">● Need to buy</span>
+              <span className="text-gray-500">● Check pantry</span>
+            </div>
+          </section>
+        )}
         {requestedIngredients.length > 0 && (
           <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div>
-                <p className="font-bold text-gray-900">Ingredients you need to buy</p>
-                <p className="text-sm text-gray-500 mt-1">Only missing ingredients are shown, organized by the meal that needs them.</p>
+                <p className="font-bold text-gray-900">Items to purchase</p>
+                <p className="text-sm text-gray-500 mt-1">Only selected missing ingredients are sent to the cart. Check the recipe breakdown above for pantry status.</p>
               </div>
               {matchedRequestedProducts.length > 0 && (
                 <button onClick={addAllRequested} disabled={addingRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-60 transition">
@@ -529,8 +558,8 @@ export default function GroceryStore() {
       )}
 
       {cartOpen && (
-        <div className="fixed inset-0 z-50 bg-black/30 flex justify-end" onClick={() => setCartOpen(false)}>
-          <aside className="w-full max-w-md bg-white h-full p-6 overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] isolate bg-black/40 flex justify-end" onClick={() => setCartOpen(false)}>
+          <aside className="relative z-[10000] w-full max-w-md !bg-white h-full p-6 overflow-y-auto shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-black text-gray-900">Your Cart</h2>
               <button onClick={() => setCartOpen(false)} className="text-gray-500">Close</button>
@@ -586,8 +615,8 @@ export default function GroceryStore() {
 
       {/* ================= ORDER HISTORY DRAWER ================= */}
       {ordersOpen && (
-        <div className="fixed inset-0 z-50 bg-black/30 flex justify-end" onClick={() => setOrdersOpen(false)}>
-          <aside className="w-full max-w-md bg-white h-full p-6 overflow-y-auto" onClick={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[9999] isolate bg-black/40 flex justify-end" onClick={() => setOrdersOpen(false)}>
+          <aside className="relative z-[10000] w-full max-w-md !bg-white h-full p-6 overflow-y-auto shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-black text-gray-900">My Orders</h2>
               <button onClick={() => setOrdersOpen(false)} className="text-gray-500">Close</button>
