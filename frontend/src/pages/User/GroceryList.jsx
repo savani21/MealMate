@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -130,6 +131,7 @@ export default function GroceryList() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
+      <PageHeroBanner title="My Grocery List" description="Keep every ingredient organized for your next meal." eyebrow="SMART GROCERY" icon={ShoppingBasket} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="text-center mb-10">
