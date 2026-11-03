@@ -1,5 +1,4 @@
 import AppNavbar from "@/components/AppNavbar";
-import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -212,7 +211,6 @@ export default function Recipes() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
-      <PageHeroBanner title="Explore Recipes" description="Discover delicious recipes and find your next favourite meal." eyebrow="RECIPE DISCOVERY" icon={ChefHat} />
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {returnToMealPlan && planId && (
           <div className="mb-5 flex items-center gap-2 text-sm text-gray-500">
