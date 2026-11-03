@@ -265,17 +265,34 @@ export default function GroceryStore() {
     });
   }, [products, searchText, requestedIngredients.join(",")]);
 
-  const normalizeSearchIngredient = (value) => String(value || "")
-    .toLowerCase()
-    .replace(/^as\\s+needed\\s*[:,-]?\\s*/i, "")
-    .replace(/^\\s*[\\d./]+\\s*/, "")
-    .replace(/\\b(?:cups?|tbsp|tsp|kg|g|gm|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\\b/gi, " ")
-    .replace(/\\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|to taste)\\b/gi, " ")
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\\s+/g, " ")
-    .trim()
-    .replace(/ies$/, "y")
-    .replace(/s$/, "");
+  const normalizeSearchIngredient = (value) => {
+    const cleaned = String(value || "")
+      .toLowerCase()
+      .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
+      .replace(/^\s*[\d./]+\s*/, "")
+      .replace(/\b(?:cups?|tbsp|tablespoons?|tsp|teaspoons?|kg|g|gm|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\b/gi, " ")
+      .replace(/\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\b/gi, " ")
+      .replace(/[^a-z0-9 ]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/ies$/, "y")
+      .replace(/s$/, "");
+    const aliases = {
+      "whole milk": "milk",
+      "warm milk": "milk",
+      "full cream milk": "milk",
+      "toned milk": "milk",
+      "basmati rice": "rice",
+      "long grain rice": "rice",
+      "atta": "wheat flour",
+      "whole wheat flour": "wheat flour",
+      "wheat atta": "wheat flour",
+      "green chilli": "green chili",
+      "sunflower oil": "oil",
+      "vegetable oil": "oil"
+    };
+    return aliases[cleaned] || cleaned;
+  };
 
   const productMatchesIngredient = (product, ingredient) => {
     const productName = normalizeSearchIngredient(product?.name);
