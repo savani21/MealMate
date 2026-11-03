@@ -335,9 +335,9 @@ body::before {
   z-index: 999;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 230px 470px at 0% 34%, rgba(34, 197, 94, 0.17) 0%, rgba(34, 197, 94, 0.08) 42%, transparent 78%),
-    radial-gradient(ellipse 250px 520px at 100% 56%, rgba(74, 222, 128, 0.16) 0%, rgba(74, 222, 128, 0.07) 44%, transparent 78%),
-    radial-gradient(ellipse 190px 360px at 2% 88%, rgba(22, 163, 74, 0.10) 0%, transparent 76%);
+    radial-gradient(ellipse 230px 470px at 0% 34%, rgba(34, 197, 94, 0.045) 0%, rgba(34, 197, 94, 0.018) 42%, transparent 78%),
+    radial-gradient(ellipse 250px 520px at 100% 56%, rgba(74, 222, 128, 0.04) 0%, rgba(74, 222, 128, 0.016) 44%, transparent 78%),
+    radial-gradient(ellipse 190px 360px at 2% 88%, rgba(22, 163, 74, 0.025) 0%, transparent 76%);
   background-repeat: no-repeat;
 }
 
@@ -345,8 +345,8 @@ body::before {
 @media (max-width: 640px) {
   body::before {
     background:
-      radial-gradient(ellipse 110px 360px at 0% 40%, rgba(34, 197, 94, 0.09) 0%, transparent 78%),
-      radial-gradient(ellipse 110px 380px at 100% 60%, rgba(74, 222, 128, 0.08) 0%, transparent 78%);
+      radial-gradient(ellipse 110px 360px at 0% 40%, rgba(34, 197, 94, 0.025) 0%, transparent 78%),
+      radial-gradient(ellipse 110px 380px at 100% 60%, rgba(74, 222, 128, 0.022) 0%, transparent 78%);
   }
 }
 
