@@ -19,8 +19,8 @@ export default function PageHeroBanner({ title, description, eyebrow = "MEALMATE
   }, []);
 
   return (
-    <div className={`mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 ${compact ? "sticky top-[76px] z-30" : "relative"}`}>
-      <section className={`relative mb-7 overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-all duration-300 ease-in-out ${compact ? "px-5 py-3 sm:px-7" : "px-6 py-8 sm:px-10 sm:py-10"}`}>
+    <div className={`relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 ${compact ? "min-h-[190px]" : ""}`}>
+      <section className={`${compact ? "fixed left-4 right-4 top-[88px] z-30 mx-auto max-w-[1120px] px-5 py-3 sm:px-7" : "relative mb-7 px-6 py-8 sm:px-10 sm:py-10"} overflow-hidden rounded-3xl bg-gradient-to-br from-[#173f2b] via-[#23633f] to-[#367c4e] text-white shadow-md transition-[padding] duration-200 ease-out`}>
         <div className="relative z-10 flex items-center justify-between gap-4">
           <div className="min-w-0">
             {!compact && <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-green-50"><Sparkles className="h-4 w-4" /> {eyebrow}</div>}
