@@ -327,7 +327,7 @@ export default function MealPlanner() {
               <p className="mb-3 text-xs text-gray-500">Choose ingredients from your pantry. You can also add ingredients that are not in your pantry.</p>
               <button type="button" onClick={() => setShowIngredientPicker(true)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-left transition hover:border-green-300 hover:bg-green-50/40">
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-gray-800">Select ingredients</span>
+                  <span className="block text-sm font-semibold text-gray-800">Selected ingredients</span>
                   <span className="mt-0.5 block text-xs text-gray-500">{getAvailableIngredients().length ? `${getAvailableIngredients().length} ingredients selected` : "Choose items you want to use for this meal plan"}</span>
                 </span>
                 <span className="shrink-0 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-primary">Select ingredients</span>
