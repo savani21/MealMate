@@ -104,6 +104,17 @@ function makeIngredient(name, quantity) {
   return { name, quantity };
 }
 
+function isPlanDayEditable(mealPlan, dayNumber, now = new Date()) {
+  if (!mealPlan || mealPlan.isArchived || !mealPlan.createdAt) return false;
+  const start = new Date(mealPlan.createdAt);
+  if (Number.isNaN(start.getTime())) return false;
+  const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const elapsedDays = Math.floor((todayDate - startDate) / 86400000);
+  const day = Number(dayNumber);
+  return Number.isInteger(day) && day >= Math.max(1, elapsedDays + 1) && day <= Number(mealPlan.duration);
+}
+
 const CANONICAL_RECIPE_INGREDIENTS = {
   "vegetable pulao": [
     ["Rice", "1/2 cup"], ["Mixed vegetables (carrot, peas, beans)", "3/4 cup"],
@@ -376,6 +387,13 @@ exports.createMealPlan = async (req, res) => {
       });
     }
 
+    if (![1, 3, 7].includes(Number(duration))) {
+      return res.status(400).json({
+        success: false,
+        message: "Meal plan duration must be 1, 3 or 7 days.",
+      });
+    }
+
     const available = cleanList(availableIngredients || ingredients);
     // Pantry ingredients are user-confirmed; recommended ingredients are filtered
     // to the selected diet so stale or unfiltered suggestions cannot block planning.
@@ -488,6 +506,13 @@ Do not include markdown or explanations outside JSON.
     }
 
     const days = Array.isArray(generatedMeals.days) ? generatedMeals.days : [];
+
+    if (days.length !== Number(duration) || days.some((day, index) => Number(day?.day) !== index + 1)) {
+      return res.status(422).json({
+        success: false,
+        message: "Meal plan response does not contain the correct number of ordered days. Please generate it again.",
+      });
+    }
 
     // Replace incomplete AI ingredient guesses with a complete, recipe-specific ingredient list
     // whenever MealMate has a verified-style canonical template for that dish.
@@ -742,6 +767,12 @@ exports.updateMealSelection = async (req, res) => {
     if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
     const dayPlan = mealPlan.meals.find((item) => Number(item.day) === Number(day));
     if (!dayPlan) return res.status(404).json({ success: false, message: "Meal-plan day not found." });
+    if (!isPlanDayEditable(mealPlan, day)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only today's and upcoming meals in an active plan can be changed.",
+      });
+    }
     let selected;
     if (recipeId) {
       const recipe = await Recipe.findById(recipeId).lean();
