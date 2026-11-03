@@ -87,11 +87,23 @@ function normalizeAmount(quantity, unit) {
   if (/^(g|gm|gms|gram|grams)$/.test(normalizedUnit)) return { quantity, unit: "g" };
   if (/^(l|liter|liters|litre|litres)$/.test(normalizedUnit)) return { quantity: quantity * 1000, unit: "ml" };
   if (/^(ml|milliliter|milliliters|millilitre|millilitres)$/.test(normalizedUnit)) return { quantity, unit: "ml" };
-  if (/^(cup|cups)$/.test(normalizedUnit)) return { quantity: quantity * 100, unit: "g" };
+  if (/^(cup|cups)$/.test(normalizedUnit)) return { quantity, unit: "cup" };
   if (/^(piece|pieces)$/.test(normalizedUnit)) return { quantity, unit: "piece" };
   if (/^(tbsp|tablespoon|tablespoons)$/.test(normalizedUnit)) return { quantity, unit: "tbsp" };
   if (/^(tsp|teaspoon|teaspoons)$/.test(normalizedUnit)) return { quantity, unit: "tsp" };
   return { quantity, unit: normalizedUnit };
+}
+
+function normalizeIngredientName(value) {
+  const cleaned = String(value || "").toLowerCase()
+    .replace(/\\([^)]*\\)/g, " ")
+    .replace(/\\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional)\\b/g, " ")
+    .replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+  const words = cleaned.split(" ").filter(Boolean);
+  if (words.length && /s$/.test(words[words.length - 1]) && !/ss$/.test(words[words.length - 1])) words[words.length - 1] = words[words.length - 1].slice(0, -1);
+  const name = words.join(" ");
+  const aliases = { "basmati rice":"rice", "long grain rice":"rice", atta:"wheat flour", "whole wheat flour":"wheat flour", "wheat atta":"wheat flour", "tuver dal":"toor dal", "tuvar dal":"toor dal", "tur dal":"toor dal", "arhar dal":"toor dal", "green chilli":"green chili", "sunflower oil":"oil", "vegetable oil":"oil" };
+  return aliases[name] || name;
 }
 
 const COMMON_HOUSEHOLD_INGREDIENTS = new Set(["water"]);
@@ -110,13 +122,7 @@ exports.consumeRecipeIngredients = async (req, res) => {
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 
-    const normalizeName = (value) => String(value || "")
-      .toLowerCase()
-      .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted)\b/g, "")
-      .replace(/\s+/g, " ").trim()
-      .replace(/s$/, "");
-    const aliases = { "basmati rice": "rice", "long grain rice": "rice", "atta": "wheat flour", "whole wheat flour": "wheat flour" };
-    const canonical = (value) => aliases[normalizeName(value)] || normalizeName(value);
+    const canonical = normalizeIngredientName;
     const toStoredUnit = (amount, normalizedUnit, targetUnit) => {
       const target = String(targetUnit || "").toLowerCase().replace(/\([^)]*\)/g, "").replace(/\./g, "").trim();
       if (normalizedUnit === "g" && /^(kg|kgs|kilogram|kilograms)$/.test(target)) return amount / 1000;
@@ -212,7 +218,7 @@ exports.compareRecipeWithPantry = async (req, res) => {
       if (isCommonHouseholdIngredient(required.name)) {
         return { ingredient: raw, status: "available", message: "As needed" };
       }
-      const match = pantry.find((item) => item.name === required.name || required.name.includes(item.name) || item.name.includes(required.name));
+      const match = pantry.find((item) => normalizeIngredientName(item.name) === normalizeIngredientName(required.name));
       if (!match) return { ingredient: raw, available: 0, availableUnit: required.unit || "", status: "missing", message: "Not in pantry" };
       if (required.quantity === null) return { ingredient: raw, available: match.quantity, availableUnit: match.unit, status: "quantity-unknown", message: "Check required quantity" };
       const need = normalizeAmount(required.quantity, required.unit);
