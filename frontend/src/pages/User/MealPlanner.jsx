@@ -28,10 +28,13 @@ export default function MealPlanner() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const scrollPosition = window.scrollY;
+      const preferences = document.getElementById("meal-plan-preferences");
+      if (!preferences) return;
+
+      const formTop = preferences.getBoundingClientRect().top;
       setIsBannerCompact((currentlyCompact) => {
-        if (!currentlyCompact && scrollPosition > 180) return true;
-        if (currentlyCompact && scrollPosition < 70) return false;
+        if (!currentlyCompact && formTop <= 150) return true;
+        if (currentlyCompact && formTop > 260) return false;
         return currentlyCompact;
       });
     };
