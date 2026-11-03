@@ -1,63 +1,58 @@
-import { motion, useSpring, useTransform, useInView } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { AnimatedSection } from '../AnimatedSection';
-import { Star } from 'lucide-react';
-function Counter({ from, to, delay = 0, suffix = "" }) {
-    const ref = useRef(null);
-    const isInView = useInView(ref, { once: true, amount: 0.5 });
-    const [hasStarted, setHasStarted] = useState(false);
-    const spring = useSpring(from, {
-        stiffness: 50,
-        damping: 20,
-        bounce: 0,
-        duration: 2000
-    });
-    const display = useTransform(spring, (current) => Math.round(current).toLocaleString() + suffix);
-    useEffect(() => {
-        if (isInView && !hasStarted) {
-            setTimeout(() => {
-                spring.set(to);
-                setHasStarted(true);
-            }, delay * 1000);
-        }
-    }, [isInView, spring, to, delay, hasStarted]);
-    return <motion.span ref={ref}>{display}</motion.span>;
-}
+import { ChefHat, CalendarDays, ShoppingBasket, Star } from 'lucide-react';
+
 export function StatsSection() {
-    const stats = [
-        { value: 50000, suffix: "+", label: "Recipes Available" },
-        { value: 20000, suffix: "+", label: "Healthy Users" },
-        { value: 200, suffix: "+", label: "Partner Stores" },
+    const highlights = [
+        {
+            icon: CalendarDays,
+            title: "Personalized Meal Planning",
+            description: "Build meal plans around your food preferences and daily goals."
+        },
+        {
+            icon: ChefHat,
+            title: "Recipes for Your Kitchen",
+            description: "Discover recipes and make better use of ingredients you have."
+        },
+        {
+            icon: ShoppingBasket,
+            title: "Smarter Grocery Lists",
+            description: "Organize the ingredients you need for your planned meals."
+        },
+        {
+            icon: Star,
+            title: "Community Recipe Ratings",
+            description: "Share cooking feedback and help others choose what to cook."
+        }
     ];
-    return (<section className="py-16 bg-white border-y border-gray-100" id="about">
-      <div className="container mx-auto px-4 md:px-6">
-        <AnimatedSection>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            
-            {stats.map((stat, i) => (<div key={i} className="bg-white rounded-2xl p-6 text-center border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-4xl md:text-5xl font-black text-primary mb-2 tracking-tight">
-                  <Counter from={0} to={stat.value} suffix={stat.suffix} delay={0.1 * i}/>
-                </div>
-                <div className="text-sm md:text-base font-medium text-gray-500">
-                  {stat.label}
-                </div>
-              </div>))}
 
-            {/* Rating Card */}
-            <div className="bg-white rounded-2xl p-6 text-center border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-center items-center">
-              <div className="flex items-center gap-1 mb-3">
-                {[1, 2, 3, 4, 5].map((star) => (<Star key={star} className="w-6 h-6 fill-amber-400 text-amber-400"/>))}
-              </div>
-              <div className="text-3xl font-black text-gray-900 mb-1">
-                4.9<span className="text-xl text-gray-400 font-bold ml-1">/ 5</span>
-              </div>
-              <div className="text-sm md:text-base font-medium text-gray-500">
-                Average Rating
-              </div>
+    return (
+        <section className="py-12 md:py-14 bg-white border-y border-gray-100" id="about">
+            <div className="container mx-auto px-4 md:px-6">
+                <AnimatedSection>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+                        {highlights.map((item, index) => {
+                            const Icon = item.icon;
+                            return (
+                                <motion.div
+                                    key={item.title}
+                                    initial={{ opacity: 0, y: 16 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: index * 0.08 }}
+                                    className="rounded-2xl border border-gray-100 bg-white p-5 md:p-6 text-center shadow-sm hover:shadow-md transition-shadow"
+                                >
+                                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                        <Icon className="h-6 w-6" />
+                                    </div>
+                                    <h3 className="mb-2 text-base font-bold text-gray-900">{item.title}</h3>
+                                    <p className="text-sm leading-relaxed text-gray-500">{item.description}</p>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+                </AnimatedSection>
             </div>
-
-          </div>
-        </AnimatedSection>
-      </div>
-    </section>);
+        </section>
+    );
 }
