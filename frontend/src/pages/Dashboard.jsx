@@ -61,7 +61,7 @@ export default function Dashboard() {
           if (!Array.isArray(plan.meals)) return total;
 
           return total + plan.meals.reduce((dayTotal, day) => {
-            const mealTypes = ["breakfast", "lunch", "dinner", "snack"];
+            const mealTypes = ["breakfast", "lunch", "dinner"];
             return dayTotal + mealTypes.filter(
               (mealType) => day && typeof day[mealType] === "string" && day[mealType].trim() !== ""
             ).length;
