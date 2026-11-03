@@ -7,6 +7,7 @@ import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import Dashboard from '@/pages/Dashboard';
 import { Route, Switch } from 'wouter';
+import { Leaf, Carrot, Apple, Sprout } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import MealPlanner from "@/pages/User/MealPlanner";
@@ -64,12 +65,27 @@ function Router() {
   );
 }
 
+function GlobalFoodDecorations() {
+  return (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none fixed inset-0 z-[60] hidden xl:block overflow-hidden"
+    >
+      <Leaf className="absolute left-[2.5%] top-[24%] h-24 w-24 -rotate-12 text-green-700/[0.10]" strokeWidth={1.1} />
+      <Carrot className="absolute right-[2.5%] top-[43%] h-28 w-28 rotate-12 text-green-700/[0.10]" strokeWidth={1.1} />
+      <Sprout className="absolute left-[3.5%] top-[73%] h-28 w-28 rotate-6 text-green-700/[0.09]" strokeWidth={1.1} />
+      <Apple className="absolute right-[4%] top-[82%] h-24 w-24 -rotate-12 text-green-700/[0.09]" strokeWidth={1.1} />
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={ queryClient }>
       <AuthProvider>
         <TooltipProvider>
           <Router />
+          <GlobalFoodDecorations />
           <MealMateAssistant />
           <Toaster />
         </TooltipProvider>
