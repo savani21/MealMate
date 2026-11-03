@@ -236,7 +236,7 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       "Vegetable Dalia": ["Broken wheat (dalia)", "Mixed vegetables", "Onion", "Cumin", "Turmeric", "Oil", "Salt"],
       "Curd Rice": ["Rice", "Curd", "Mustard seeds", "Curry leaves", "Ginger", "Green chilli", "Salt"]
     };
-    const fullList = completeRecipeIngredients[candidate.name] || candidate.matched;
+    const fullList = completeRecipeIngredients[candidate.name] || (candidate.matched.length ? candidate.matched : pool.slice(0, 4));
     const ingredients = [...new Map(fullList.map((name) => [name.toLowerCase(), name])).values()].map((name) => ({
       name,
       quantity: "as needed",
