@@ -40,6 +40,7 @@ app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
 app.use("/api/user/pantry", require("./routes/user/pantryRoutes"));
 app.use("/api/store", storeRoutes);
 app.use("/api/recipes", recipeRoutes);
+app.use("/api/stats", require("./routes/statsRoutes"));
 app.use("/api/recipe-reviews", recipeReviewRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/ai", aiRoutes);
