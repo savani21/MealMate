@@ -270,7 +270,7 @@ export default function GroceryStore() {
       .toLowerCase()
       .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
       .replace(/^\s*[\d./]+\s*/, "")
-      .replace(/\b(?:cups?|tbsp|tablespoons?|tsp|teaspoons?|kg|g|gm|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\b/gi, " ")
+      .replace(/\b(?:cups?|tbsp|tablespoons?|tsp|teaspoons?|kg|g|gm|gms|grm|grms|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\b/gi, " ")
       .replace(/\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
