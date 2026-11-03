@@ -321,20 +321,20 @@ Cuisine preference:
 - Suggest a varied mix of regional Indian dishes rather than repeating the same generic rice or vegetable bowl.
 - Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
 - These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet.
-- Do not invent missing ingredients or force an Indian dish when the available ingredients do not support one. In that case, suggest the closest practical recipe and retain Indian flavors where appropriate.
+- Prefer meals that make good use of pantry ingredients, but include all other essential ingredients needed to prepare a complete, realistic dish.
 - Keep the three choices in each meal category meaningfully different from one another.
 
 Rules:
 1. Every meal must have its own complete ingredient list.
 2. Use pantry ingredients first whenever practical.
-3. In Available + Recommended mode, use ingredients only from the allowed ingredient pool.
-4. In Only Available mode, use ONLY pantry ingredients.
-5. Never add an ingredient outside the allowed ingredient pool.
-6. Follow the diet restriction strictly.
+3. Treat the allowed ingredient pool as ingredients the user already has; prioritize these ingredients in every meal.
+4. Each meal option must include its COMPLETE practical recipe ingredient list, not only ingredients from the user's pantry. Add essential ingredients that are normally required for that dish even when the user does not already have them.
+5. Do not omit oil, salt, basic spices, aromatics, garnishes, or other essential ingredients merely because they are not in the pantry list. Avoid unnecessary extras.
+6. Follow the selected diet restriction strictly for every ingredient.
 7. Do not put the recipe name in its ingredient list.
-8. Keep ingredients specific to the meal.
+8. Keep ingredients specific to the meal and include realistic quantities.
 9. Quantities should be short and practical.
-10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Keep every option within the allowed ingredient pool and selected diet.
+10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Each option must have a complete ingredient list, including pantry items and items the user may need to buy.
 11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
