@@ -5,27 +5,19 @@ const Order = require("../../models/user/Order");
 const User = require("../../models/User");
 const GroceryList = require("../../models/user/GroceryList");
 const PantryItem = require("../../models/user/PantryItem");
+const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
-function normalizePurchasedIngredient(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "")
-    .replace(/^\s*[\d./]+\s*/, "")
-    .replace(/[^a-z0-9 ]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/s$/, "");
-}
+
 
 async function markPurchasedGroceryItems(userId, orderItems) {
-  const purchasedNames = new Set(orderItems.map((item) => normalizePurchasedIngredient(item.name)).filter(Boolean));
+  const purchasedNames = new Set(orderItems.map((item) => normalizeIngredientName(item.name)).filter(Boolean));
   if (!purchasedNames.size) return;
 
   const lists = await GroceryList.find({ user: userId });
   for (const list of lists) {
     let changed = false;
     for (const item of list.items) {
-      if (purchasedNames.has(normalizePurchasedIngredient(item.name)) && !item.checked) {
+      if (purchasedNames.has(normalizeIngredientName(item.name)) && !item.checked) {
         item.checked = true;
         changed = true;
       }
@@ -67,11 +59,13 @@ function convertPantryQuantity(quantity, fromUnit, toUnit) {
 }
 
 async function addDeliveredOrderItem(userId, orderId, item, index) {
-  const name = String(item.name || "").trim().toLowerCase();
+  const originalName = String(item.name || "").trim().toLowerCase();
+  const name = normalizeIngredientName(originalName);
   if (!name) return;
   const incoming = parseStorePack(item.unit, item.quantity);
   const receiptKey = `${orderId}:${index}`;
-  let existing = await PantryItem.findOne({ user: userId, name });
+  let pantryItems = await PantryItem.find({ user: userId });
+  let existing = pantryItems.find((entry) => normalizeIngredientName(entry.name) === name);
   if (existing) {
     if ((existing.receivedOrderItems || []).includes(receiptKey)) return;
     const amount = convertPantryQuantity(incoming.quantity, incoming.unit, existing.unit);
@@ -89,7 +83,8 @@ async function addDeliveredOrderItem(userId, orderId, item, index) {
     });
   } catch (error) {
     if (error.code !== 11000) throw error;
-    existing = await PantryItem.findOne({ user: userId, name });
+    pantryItems = await PantryItem.find({ user: userId });
+    existing = pantryItems.find((entry) => normalizeIngredientName(entry.name) === name);
     if (!existing || (existing.receivedOrderItems || []).includes(receiptKey)) return;
     const amount = convertPantryQuantity(incoming.quantity, incoming.unit, existing.unit);
     if (amount === null) throw new Error(`Cannot combine delivered ${name} units (${incoming.unit} and ${existing.unit}).`);
