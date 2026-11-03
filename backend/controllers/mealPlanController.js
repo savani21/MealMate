@@ -200,10 +200,31 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
   }
 
   return chosen.slice(0, 3).map((candidate, index) => {
-    const picked = candidate.matched.length
-      ? candidate.matched.slice(0, 4)
-      : pool.slice(index % pool.length, index % pool.length + 3);
-    const ingredients = (picked.length ? picked : pool.slice(0, 3)).map((name) => ({
+    const completeRecipeIngredients = {
+      "Poha": ["Poha (flattened rice)", "Onion", "Potato", "Peanuts", "Oil", "Mustard seeds", "Cumin seeds", "Turmeric", "Green chilli", "Curry leaves", "Salt", "Lemon", "Coriander"],
+      "Aloo Paratha": ["Wheat flour", "Potatoes", "Onion", "Green chilli", "Coriander", "Cumin", "Garam masala", "Salt", "Oil or ghee", "Curd"],
+      "Vegetable Upma": ["Semolina (rava)", "Onion", "Mixed vegetables", "Green chilli", "Mustard seeds", "Cumin seeds", "Curry leaves", "Oil", "Salt", "Lemon", "Coriander"],
+      "Besan Chilla": ["Besan (gram flour)", "Onion", "Tomato", "Green chilli", "Turmeric", "Cumin", "Salt", "Oil", "Coriander"],
+      "Idli Sambar": ["Idli batter", "Toor dal", "Onion", "Tomato", "Mixed vegetables", "Tamarind", "Mustard seeds", "Curry leaves", "Turmeric", "Salt", "Oil"],
+      "Sweet Wheat Porridge": ["Wheat flour", "Milk", "Sugar", "Ghee", "Cardamom", "Nuts"],
+      "Banana Milk Smoothie": ["Banana", "Milk", "Curd", "Honey", "Cardamom"],
+      "Paneer Sandwich": ["Bread", "Paneer", "Tomato", "Onion", "Green chilli", "Butter", "Salt", "Black pepper"],
+      "Vegetable Pulao": ["Rice", "Mixed vegetables", "Carrot", "Peas", "Onion", "Ginger-garlic", "Cumin", "Whole spices", "Oil", "Salt"],
+      "Dal Rice": ["Rice", "Toor dal", "Tomato", "Onion", "Garlic", "Turmeric", "Cumin", "Ghee", "Salt"],
+      "Chana Masala": ["Chickpeas", "Tomato", "Onion", "Ginger-garlic", "Chana masala", "Cumin", "Oil", "Salt", "Coriander"],
+      "Paneer Bhurji with Roti": ["Paneer", "Wheat flour", "Tomato", "Onion", "Green chilli", "Turmeric", "Garam masala", "Oil", "Salt"],
+      "Tomato Rice": ["Rice", "Tomato", "Onion", "Green chilli", "Mustard seeds", "Curry leaves", "Oil", "Salt"],
+      "Aloo Roti": ["Potatoes", "Wheat flour", "Onion", "Green chilli", "Cumin", "Oil", "Salt"],
+      "Vegetable Khichdi": ["Rice", "Moong dal", "Mixed vegetables", "Turmeric", "Cumin", "Ghee", "Salt"],
+      "Dal Khichdi": ["Rice", "Moong dal", "Turmeric", "Cumin", "Ghee", "Salt"],
+      "Roti with Aloo Sabzi": ["Wheat flour", "Potatoes", "Tomato", "Onion", "Cumin", "Turmeric", "Oil", "Salt"],
+      "Paneer Rice Bowl": ["Paneer", "Rice", "Tomato", "Onion", "Ginger-garlic", "Cumin", "Oil", "Salt"],
+      "Tomato Pulao": ["Rice", "Tomato", "Onion", "Ginger-garlic", "Cumin", "Whole spices", "Oil", "Salt"],
+      "Vegetable Dalia": ["Broken wheat (dalia)", "Mixed vegetables", "Onion", "Cumin", "Turmeric", "Oil", "Salt"],
+      "Curd Rice": ["Rice", "Curd", "Mustard seeds", "Curry leaves", "Ginger", "Green chilli", "Salt"]
+    };
+    const fullList = completeRecipeIngredients[candidate.name] || candidate.matched;
+    const ingredients = [...new Map(fullList.map((name) => [name.toLowerCase(), name])).values()].map((name) => ({
       name,
       quantity: "as needed",
     }));
