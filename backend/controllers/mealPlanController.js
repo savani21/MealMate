@@ -59,6 +59,7 @@ async function generateWithOpenRouter(prompt) {
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     }),
+    signal: AbortSignal.timeout(10000),
   });
 
   const data = await response.json();
@@ -445,7 +446,7 @@ Cuisine preference:
 - Suggest a varied mix of regional Indian dishes rather than repeating the same generic rice or vegetable bowl.
 - Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
 - These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet.
-- Prefer meals that make good use of pantry ingredients, but include all other essential ingredients needed to prepare a complete, realistic dish.
+- ${ingredientMode === "recommended" ? "Use only ingredients from the allowed ingredient pool (pantry + recommended). Do not add ingredients outside that pool." : "STRICT MODE: every ingredient in every recipe MUST exist in the selected pantry ingredient list. Never add an unselected ingredient, even as a garnish, spice, oil, salt or optional item. If a dish needs an ingredient not in the list, choose another dish."}.
 - Keep the three choices in each meal category meaningfully different from one another.
 - Within the same day, breakfast, lunch and dinner MUST have different recipe names and must not repeat the same dish under different meal categories.
 - Across a 3-day or 7-day plan, avoid repeating a recipe name wherever practical; prioritize variety.
@@ -454,8 +455,8 @@ Rules:
 1. Every meal must have its own complete ingredient list.
 2. Use pantry ingredients first whenever practical.
 3. Treat the allowed ingredient pool as ingredients the user already has; prioritize these ingredients in every meal.
-4. Each meal option must include its COMPLETE practical recipe ingredient list, not only ingredients from the user's pantry. Add essential ingredients that are normally required for that dish even when the user does not already have them.
-5. Do not omit oil, salt, basic spices, aromatics, garnishes, or other essential ingredients merely because they are not in the pantry list. Avoid unnecessary extras.
+4. Every recipe ingredient must come from the allowed ingredient pool. Do not add ingredients outside the pool.
+5. In "Only Available Ingredients" mode, every recipe must be fully cookable using only selected pantry ingredients. In "Available + Recommended Ingredients" mode, use pantry and recommended ingredients only.
 6. Follow the selected diet restriction strictly for every ingredient.
 7. Do not put the recipe name in its ingredient list.
 8. Keep ingredients specific to the meal and include realistic quantities.
@@ -583,13 +584,33 @@ Do not include markdown or explanations outside JSON.
       });
     });
 
+    const allowedIngredientNames = new Set(allowedPool.map((item) => normalizeIngredientName(item)));
+    days.forEach((day) => {
+      ["breakfast", "lunch", "dinner"].forEach((type) => {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+        const validOptions = options.filter((option) =>
+          Array.isArray(option?.ingredients) &&
+          option.ingredients.length > 0 &&
+          option.ingredients.every((item) => {
+            const name = normalizeIngredientName(typeof item === "string" ? item : item?.name);
+            return name && allowedIngredientNames.has(name);
+          })
+        );
+        day[type + "Options"] = validOptions;
+        if (validOptions[0]) {
+          day[type] = validOptions[0].name;
+          day[type + "Ingredients"] = validOptions[0].ingredients;
+        }
+      });
+    });
+
     if (days.some((day) => ["breakfast", "lunch", "dinner"].some((type) => {
       const options = day[type + "Options"] || [];
       return options.length < 2;
     }))) {
       return res.status(422).json({
         success: false,
-        message: "MealMate could not create at least two choices for every meal. Please try generating the options again.",
+        message: "MealMate could not find at least two complete recipes using only your selected ingredients for every meal. Select more pantry ingredients or switch to Available + Recommended Ingredients.",
       });
     }
 
