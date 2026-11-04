@@ -66,9 +66,14 @@ async function generateWithOpenRouter(prompt, duration = 1) {
     Number(process.env.OPENROUTER_TIMEOUT_MS) || 75000
   );
   const dayCount = Math.max(1, Math.min(7, Number(duration) || 1));
+  // Three candidates for breakfast, lunch and dinner produce a sizeable JSON
+  // response. A fixed 3,500-token budget truncates even short plans, while
+  // multi-day plans need a larger output allowance. Treat the env value as an
+  // optional extra budget, not a low ceiling that silently breaks generation.
+  const configuredTokenBudget = Number(process.env.OPENROUTER_MAX_TOKENS) || 0;
   const maxTokens = Math.min(
-    14000,
-    Math.max(3500, Number(process.env.OPENROUTER_MAX_TOKENS) || dayCount * 1800)
+    24000,
+    Math.max(6000, dayCount * 5000, configuredTokenBudget)
   );
 
   const startedAt = Date.now();
