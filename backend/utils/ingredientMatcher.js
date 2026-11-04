@@ -13,7 +13,7 @@ function normalizeIngredientName(value) {
     atta: "wheat flour", "whole wheat flour": "wheat flour", "wheat atta": "wheat flour",
     "tuver dal": "toor dal", "tuvar dal": "toor dal", "tur dal": "toor dal", "arhar dal": "toor dal",
     "green chilli": "green chili", "sunflower oil": "oil", "vegetable oil": "oil",
-    "whole milk": "milk", "warm milk": "milk", "full cream milk": "milk", "toned milk": "milk"
+    "whole milk": "milk", "warm milk": "milk", "full cream milk": "milk", "toned milk": "milk", "cooking oil": "oil", "green peas": "peas", "bell pepper": "capsicum", "sweet pepper": "capsicum"
   };
   return aliases[name] || name;
 }
