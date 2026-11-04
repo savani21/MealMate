@@ -367,14 +367,30 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       "Vegetable Dalia": ["Broken wheat (dalia)", "Mixed vegetables", "Onion", "Cumin", "Turmeric", "Oil", "Salt"],
       "Curd Rice": ["Rice", "Curd", "Mustard seeds", "Curry leaves", "Ginger", "Green chilli", "Salt"]
     };
-    const fullList = completeRecipeIngredients[candidate.name] || (candidate.matched.length ? candidate.matched : pool.slice(0, 4));
-    const ingredients = [...new Map(fullList.map((name) => [name.toLowerCase(), name])).values()].map((name) => ({
+    // Local fallback recipes must never invent pantry items. The old
+    // canonical lists included oil, spices and vegetables the user had not
+    // selected, so strict validation rejected every fallback option.
+    const start = (index * 2) % pool.length;
+    const rotatedPool = [...pool.slice(start), ...pool.slice(0, start)];
+    const selectedForRecipe = candidate.matched.length >= 2
+      ? candidate.matched
+      : rotatedPool.slice(0, Math.min(4, rotatedPool.length));
+    const fullList = [...new Map(selectedForRecipe.map((name) => [
+      normalizeIngredientName(name), name
+    ])).values()];
+    const ingredientLabel = fullList.slice(0, 2).map((name) =>
+      name.charAt(0).toUpperCase() + name.slice(1)
+    ).join(" & ");
+    const mealLabel = type.charAt(0).toUpperCase() + type.slice(1);
+    const ingredients = fullList.map((name) => ({
       name,
       quantity: "as needed",
     }));
     return {
-      name: candidate.name,
-      description: "A quick Indian home-style meal using your selected ingredients.",
+      // Use a transparent pantry-based name rather than claiming a traditional
+      // recipe (such as Poha) when its defining ingredient is not selected.
+      name: `${ingredientLabel || "Selected Pantry"} ${mealLabel} Bowl ${index + 1}`,
+      description: "A quick meal composed only of ingredients you selected from your pantry.",
       prepTime: index === 0 ? "20 minutes" : "25 minutes",
       ingredients,
     };
@@ -622,6 +638,23 @@ Do not include markdown or explanations outside JSON.
           validOptions.push(option);
           usedNames.add(nameKey);
         });
+
+        // If the AI response contains no valid candidate for this meal,
+        // recover with a pantry-only local option set instead of failing the
+        // entire plan. These options are built exclusively from allowedPool.
+        if (validOptions.length === 0 && generatedBy === "openrouter") {
+          const pantryFallback = buildLocalOptions(allowedPool, type, day.day, diet);
+          pantryFallback.forEach((option) => {
+            const key = String(option.name).trim().toLowerCase();
+            if (!usedNames.has(key) && validOptions.length < 3) {
+              validOptions.push(option);
+              usedNames.add(key);
+            }
+          });
+          if (validOptions.length) {
+            console.warn(`AI candidates for ${type} on day ${day.day} failed pantry validation; using pantry-only local options.`);
+          }
+        }
 
         day[type + "Options"] = validOptions;
         if (validOptions[0]) {
