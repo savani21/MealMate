@@ -264,137 +264,89 @@ function localMeal(name, pool, keywords, count = 3) {
 }
 
 function buildLocalOptions(pool, type, dayNumber, diet) {
-  const templates = {
+  // Each recipe has defining ingredient groups. A recipe is offered only
+  // when every defining group is present in the user's allowed ingredient pool.
+  // Additional ingredients are included only when the user selected them.
+  const recipes = {
     breakfast: [
-      ["Poha", ["poha", "flattened rice", "onion", "potato", "peanut"]],
-      ["Aloo Paratha", ["wheat", "atta", "flour", "potato", "curd"]],
-      ["Vegetable Upma", ["rava", "sooji", "semolina", "onion", "vegetable"]],
-      ["Besan Chilla", ["besan", "gram flour", "onion", "tomato"]],
-      ["Idli Sambar", ["idli", "batter", "urad", "dal", "rice"]],
-      ["Sweet Wheat Porridge", ["wheat", "atta", "flour", "sugar", "milk"]],
-      ["Banana Milk Smoothie", ["banana", "milk", "curd"]],
-      ["Paneer Sandwich", ["bread", "paneer", "tomato", "onion"]],
+      { name: "Poha", required: [["poha", "flattened rice"]] },
+      { name: "Vegetable Upma", required: [["rava", "sooji", "semolina"]] },
+      { name: "Besan Chilla", required: [["besan", "gram flour"]] },
+      { name: "Aloo Paratha", required: [["wheat", "atta"], ["potato", "aloo"]] },
+      { name: "Paneer Bhurji", required: [["paneer"], ["onion", "tomato"]] },
+      { name: "Paneer Sandwich", required: [["paneer"], ["bread"]] },
+      { name: "Vegetable Sandwich", required: [["bread"], ["potato", "carrot", "cucumber", "tomato"]] },
+      { name: "Dalia Upma", required: [["dalia", "broken wheat"]] },
+      { name: "Moong Dal Chilla", required: [["moong dal", "mung dal"]] },
+      { name: "Thepla", required: [["wheat", "atta"], ["methi", "fenugreek"]] },
     ],
     lunch: [
-      ["Vegetable Pulao", ["rice", "vegetable", "carrot", "peas", "onion"]],
-      ["Dal Rice", ["rice", "dal", "lentil", "tomato"]],
-      ["Chana Masala", ["chana", "chickpea", "tomato", "onion"]],
-      ["Paneer Bhurji with Roti", ["paneer", "wheat", "atta", "flour", "tomato"]],
-      ["Tomato Rice", ["rice", "tomato", "onion"]],
-      ["Aloo Roti", ["potato", "wheat", "atta", "flour"]],
-      ["Vegetable Khichdi", ["rice", "dal", "lentil", "vegetable"]],
+      { name: "Dal Rice", required: [["rice"], ["dal", "lentil"]] },
+      { name: "Vegetable Pulao", required: [["rice"], ["vegetable", "carrot", "peas", "beans"]] },
+      { name: "Rajma Chawal", required: [["rajma", "kidney bean"], ["rice"]] },
+      { name: "Chole Chawal", required: [["chana", "chickpea"], ["rice"]] },
+      { name: "Vegetable Khichdi", required: [["rice"], ["dal", "lentil"]] },
+      { name: "Tomato Rice", required: [["rice"], ["tomato"]] },
+      { name: "Jeera Rice", required: [["rice"], ["cumin", "jeera"]] },
+      { name: "Paneer Masala", required: [["paneer"], ["tomato"]] },
+      { name: "Aloo Roti", required: [["potato", "aloo"], ["wheat", "atta"]] },
+      { name: "Kadhi Chawal", required: [["curd", "yogurt"], ["besan", "gram flour"], ["rice"]] },
     ],
     dinner: [
-      ["Dal Khichdi", ["rice", "dal", "lentil", "turmeric"]],
-      ["Roti with Aloo Sabzi", ["wheat", "atta", "flour", "potato", "tomato"]],
-      ["Paneer Rice Bowl", ["paneer", "rice", "tomato", "onion"]],
-      ["Tomato Pulao", ["rice", "tomato", "onion"]],
-      ["Vegetable Dalia", ["dalia", "broken wheat", "vegetable", "onion"]],
-      ["Curd Rice", ["rice", "curd", "yogurt"]],
+      { name: "Dal Khichdi", required: [["rice"], ["dal", "lentil"]] },
+      { name: "Roti with Aloo Sabzi", required: [["wheat", "atta"], ["potato", "aloo"]] },
+      { name: "Paneer Bhurji with Roti", required: [["paneer"], ["wheat", "atta"]] },
+      { name: "Tomato Pulao", required: [["rice"], ["tomato"]] },
+      { name: "Vegetable Dalia", required: [["dalia", "broken wheat"], ["vegetable", "carrot", "peas"]] },
+      { name: "Curd Rice", required: [["rice"], ["curd", "yogurt"]] },
+      { name: "Moong Dal Khichdi", required: [["rice"], ["moong dal", "mung dal"]] },
+      { name: "Chana Masala with Roti", required: [["chana", "chickpea"], ["wheat", "atta"]] },
+      { name: "Vegetable Pulao", required: [["rice"], ["vegetable", "carrot", "peas", "beans"]] },
+      { name: "Jeera Rice with Dal", required: [["rice"], ["cumin", "jeera"], ["dal", "lentil"]] },
     ],
   };
-  const normalized = pool.map((item) => item.toLowerCase());
-  const candidates = (templates[type] || templates.lunch).filter(([name]) =>
-    !DIET_FORBIDDEN[diet]?.test(name)
+
+  const normalizedPool = pool.map((name) => ({
+    name,
+    normalized: normalizeIngredientName(name),
+    lower: String(name).toLowerCase(),
+  }));
+  const matches = (entry, aliases) => aliases.some((alias) =>
+    entry.lower.includes(alias) || entry.normalized.includes(normalizeIngredientName(alias))
   );
-  const ranked = candidates.map(([name, keywords], index) => {
-    const matched = pool.filter((item, i) =>
-      keywords.some((keyword) => normalized[i].includes(keyword))
-    );
-    return { name, keywords, matched, score: matched.length, index };
-  }).sort((a, b) => b.score - a.score || a.index - b.index);
 
-  const chosen = [];
-  for (const candidate of ranked) {
-    if (chosen.length === 3) break;
-    if (candidate.score > 0 && !chosen.some((item) => item.name === candidate.name)) {
-      chosen.push(candidate);
-    }
-  }
+  const valid = (recipes[type] || recipes.lunch)
+    .filter((recipe) =>
+      !DIET_FORBIDDEN[diet]?.test(recipe.name) &&
+      recipe.required.every((group) => normalizedPool.some((entry) => matches(entry, group)))
+    )
+    .map((recipe) => {
+      const relevant = normalizedPool
+        .filter((entry) => recipe.required.some((group) => matches(entry, group)))
+        .map((entry) => entry.name);
+      // Include other selected pantry ingredients that can reasonably be used
+      // in the dish, but never add an ingredient the user did not select.
+      const optional = normalizedPool
+        .filter((entry) => /onion|tomato|garlic|ginger|chilli|pepper|salt|oil|ghee|cumin|turmeric|coriander|peas|carrot|beans|potato|lemon/i.test(entry.lower))
+        .map((entry) => entry.name);
+      const ingredients = [...new Map([...relevant, ...optional].map((name) => [
+        normalizeIngredientName(name), name
+      ])).values()];
+      return { ...recipe, ingredients };
+    });
 
-  // Always return three distinct, usable options, even when the pantry is sparse.
-  const fallbacksByType = {
-    breakfast: [
-      ["Savory Vegetable Breakfast Bowl", ["vegetable", "potato", "tomato", "onion"]],
-      ["Quick Spiced Breakfast Toast", ["bread", "tomato", "onion"]],
-      ["Warm Lentil Breakfast Pancakes", ["dal", "lentil", "besan"]],
-    ],
-    lunch: [
-      ["Indian Masala Rice Bowl", ["rice", "potato", "tomato", "onion"]],
-      ["Homestyle Dal and Roti", ["dal", "lentil", "wheat", "atta"]],
-      ["Vegetable Curry with Rice", ["vegetable", "rice", "tomato"]],
-    ],
-    dinner: [
-      ["Light Vegetable Soup and Toast", ["vegetable", "carrot", "bread"]],
-      ["One-Pot Savory Millet", ["millet", "dalia", "vegetable"]],
-      ["Stuffed Vegetable Roti", ["wheat", "atta", "potato", "vegetable"]],
-    ],
-  };
-  const fallbacks = fallbacksByType[type] || fallbacksByType.lunch;
-  for (const [name, keywords] of fallbacks) {
-    if (chosen.length >= 3) break;
-    if (!chosen.some((item) => item.name === name)) {
-      chosen.push({
-        name,
-        keywords,
-        matched: pool.filter((item) => keywords.some((keyword) => item.toLowerCase().includes(keyword))),
-        score: 0,
-      });
-    }
-  }
-
-  return chosen.slice(0, 3).map((candidate, index) => {
-    const completeRecipeIngredients = {
-      "Poha": ["Poha (flattened rice)", "Onion", "Potato", "Peanuts", "Oil", "Mustard seeds", "Cumin seeds", "Turmeric", "Green chilli", "Curry leaves", "Salt", "Lemon", "Coriander"],
-      "Aloo Paratha": ["Wheat flour", "Potatoes", "Onion", "Green chilli", "Coriander", "Cumin", "Garam masala", "Salt", "Oil or ghee", "Curd"],
-      "Vegetable Upma": ["Semolina (rava)", "Onion", "Mixed vegetables", "Green chilli", "Mustard seeds", "Cumin seeds", "Curry leaves", "Oil", "Salt", "Lemon", "Coriander"],
-      "Besan Chilla": ["Besan (gram flour)", "Onion", "Tomato", "Green chilli", "Turmeric", "Cumin", "Salt", "Oil", "Coriander"],
-      "Idli Sambar": ["Idli batter", "Toor dal", "Onion", "Tomato", "Mixed vegetables", "Tamarind", "Mustard seeds", "Curry leaves", "Turmeric", "Salt", "Oil"],
-      "Sweet Wheat Porridge": ["Wheat flour", "Milk", "Sugar", "Ghee", "Cardamom", "Nuts"],
-      "Banana Milk Smoothie": ["Banana", "Milk", "Curd", "Honey", "Cardamom"],
-      "Paneer Sandwich": ["Bread", "Paneer", "Tomato", "Onion", "Green chilli", "Butter", "Salt", "Black pepper"],
-      "Vegetable Pulao": ["Rice", "Mixed vegetables", "Carrot", "Peas", "Onion", "Ginger-garlic", "Cumin", "Whole spices", "Oil", "Salt"],
-      "Dal Rice": ["Rice", "Toor dal", "Tomato", "Onion", "Garlic", "Turmeric", "Cumin", "Ghee", "Salt"],
-      "Chana Masala": ["Chickpeas", "Tomato", "Onion", "Ginger-garlic", "Chana masala", "Cumin", "Oil", "Salt", "Coriander"],
-      "Paneer Bhurji with Roti": ["Paneer", "Wheat flour", "Tomato", "Onion", "Green chilli", "Turmeric", "Garam masala", "Oil", "Salt"],
-      "Tomato Rice": ["Rice", "Tomato", "Onion", "Green chilli", "Mustard seeds", "Curry leaves", "Oil", "Salt"],
-      "Aloo Roti": ["Potatoes", "Wheat flour", "Onion", "Green chilli", "Cumin", "Oil", "Salt"],
-      "Vegetable Khichdi": ["Rice", "Moong dal", "Mixed vegetables", "Turmeric", "Cumin", "Ghee", "Salt"],
-      "Dal Khichdi": ["Rice", "Moong dal", "Turmeric", "Cumin", "Ghee", "Salt"],
-      "Roti with Aloo Sabzi": ["Wheat flour", "Potatoes", "Tomato", "Onion", "Cumin", "Turmeric", "Oil", "Salt"],
-      "Paneer Rice Bowl": ["Paneer", "Rice", "Tomato", "Onion", "Ginger-garlic", "Cumin", "Oil", "Salt"],
-      "Tomato Pulao": ["Rice", "Tomato", "Onion", "Ginger-garlic", "Cumin", "Whole spices", "Oil", "Salt"],
-      "Vegetable Dalia": ["Broken wheat (dalia)", "Mixed vegetables", "Onion", "Cumin", "Turmeric", "Oil", "Salt"],
-      "Curd Rice": ["Rice", "Curd", "Mustard seeds", "Curry leaves", "Ginger", "Green chilli", "Salt"]
-    };
-    // Local fallback recipes must never invent pantry items. The old
-    // canonical lists included oil, spices and vegetables the user had not
-    // selected, so strict validation rejected every fallback option.
-    const start = (index * 2) % pool.length;
-    const rotatedPool = [...pool.slice(start), ...pool.slice(0, start)];
-    const selectedForRecipe = candidate.matched.length >= 2
-      ? candidate.matched
-      : rotatedPool.slice(0, Math.min(4, rotatedPool.length));
-    const fullList = [...new Map(selectedForRecipe.map((name) => [
-      normalizeIngredientName(name), name
-    ])).values()];
-    const ingredientLabel = fullList.slice(0, 2).map((name) =>
-      name.charAt(0).toUpperCase() + name.slice(1)
-    ).join(" & ");
-    const mealLabel = type.charAt(0).toUpperCase() + type.slice(1);
-    const ingredients = fullList.map((name) => ({
+  // Do not invent dish names or append artificial "Bowl 1/2/3" labels.
+  // If the selected pantry cannot support three distinct Indian recipes,
+  // return the genuine recipes that can be prepared from those ingredients.
+  return valid.slice(0, 3).map((recipe, index) => ({
+    name: recipe.name,
+    description: `${recipe.name} prepared with your selected pantry ingredients.`,
+    prepTime: index === 0 ? "20 minutes" : "25 minutes",
+    ingredients: recipe.ingredients.map((name) => ({
       name,
       quantity: "as needed",
-    }));
-    return {
-      // Use a transparent pantry-based name rather than claiming a traditional
-      // recipe (such as Poha) when its defining ingredient is not selected.
-      name: `${ingredientLabel || "Selected Pantry"} ${mealLabel} Bowl ${index + 1}`,
-      description: "A quick meal composed only of ingredients you selected from your pantry.",
-      prepTime: index === 0 ? "20 minutes" : "25 minutes",
-      ingredients,
-    };
-  });
+    })),
+  }));
 }
 
 function generateLocalMealPlan({ duration, diet, allowedPool }) {
