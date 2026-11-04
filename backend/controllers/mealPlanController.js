@@ -59,8 +59,11 @@ async function generateWithOpenRouter(prompt) {
       model: "openrouter/free",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
+      provider: { sort: "throughput", allow_fallbacks: true },
+      temperature: 0.6,
+      max_tokens: 7000,
     }),
-    signal: AbortSignal.timeout(10000),
+    signal: AbortSignal.timeout(60000),
   });
 
   const data = await response.json();
@@ -503,9 +506,17 @@ Do not include markdown or explanations outside JSON.
         generatedMeals = null;
       }
 
+      if (!generatedMeals && process.env.OPENROUTER_API_KEY) {
+        return res.status(503).json({
+          success: false,
+          generatedBy: "openrouter-unavailable",
+          message: "MealMate AI is temporarily unavailable. OpenRouter did not return a response in time. Please retry in a moment.",
+        });
+      }
+
       if (!generatedMeals) {
         generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
-        generatedBy = process.env.OPENROUTER_API_KEY ? "local-fallback" : "local-no-api-key";
+        generatedBy = "local-no-api-key";
       }
     }
 
@@ -517,18 +528,6 @@ Do not include markdown or explanations outside JSON.
         message: "Meal plan response does not contain the correct number of ordered days. Please generate it again.",
       });
     }
-
-    // Replace incomplete AI ingredient guesses with a complete, recipe-specific ingredient list
-    // whenever MealMate has a verified-style canonical template for that dish.
-    days.forEach((day) => {
-      ["breakfast", "lunch", "dinner"].forEach((type) => {
-        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
-        options.forEach((option) => {
-          const canonical = getCanonicalRecipeIngredients(option?.name);
-          if (canonical) option.ingredients = canonical;
-        });
-      });
-    });
 
     // Enforce different selected dishes across breakfast, lunch and dinner,
     // even when an AI model ignores the uniqueness instruction.
@@ -607,11 +606,11 @@ Do not include markdown or explanations outside JSON.
 
     if (days.some((day) => ["breakfast", "lunch", "dinner"].some((type) => {
       const options = day[type + "Options"] || [];
-      return options.length < 2;
+      return options.length < 1;
     }))) {
       return res.status(422).json({
         success: false,
-        message: "MealMate could not find at least two complete recipes using only your selected ingredients for every meal. Select more pantry ingredients or switch to Available + Recommended Ingredients.",
+        message: "MealMate could not find a complete recipe for every meal using only your selected ingredients. Select more ingredients or switch to Available + Recommended Ingredients.",
       });
     }
 
