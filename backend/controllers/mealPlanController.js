@@ -478,7 +478,7 @@ Cuisine preference:
 - Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
 - These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet.
 - ${ingredientMode === "recommended" ? "Use only ingredients from the allowed ingredient pool (pantry + recommended). Do not add ingredients outside that pool." : "STRICT MODE: every ingredient in every recipe MUST exist in the selected pantry ingredient list. Never add an unselected ingredient, even as a garnish, spice, oil, salt or optional item. If a dish needs an ingredient not in the list, choose another dish."}.
-- Keep the three choices in each meal category meaningfully different from one another.
+- Generate up to FIVE candidate recipes for each meal category so server-side validation can retain the best three valid options. Make candidates meaningfully different from one another. Every candidate must strictly follow the allowed ingredient pool; do not add any outside ingredient.
 - Within the same day, breakfast, lunch and dinner MUST have different recipe names and must not repeat the same dish under different meal categories.
 - Across a 3-day or 7-day plan, avoid repeating a recipe name wherever practical; prioritize variety.
 
@@ -492,7 +492,7 @@ Rules:
 7. Do not put the recipe name in its ingredient list.
 8. Keep ingredients specific to the meal and include realistic quantities.
 9. Quantities should be short and practical.
-10. Return exactly 3 distinct recipe options for breakfast, lunch and dinner. Each option must have a complete ingredient list, including pantry items and items the user may need to buy.
+10. Return up to 5 distinct recipe candidates for breakfast, lunch and dinner. Each candidate must have a complete ingredient list using ONLY ingredients from the allowed ingredient pool. The server will keep up to 3 valid candidates per meal.
 11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
@@ -556,77 +556,75 @@ Do not include markdown or explanations outside JSON.
       });
     }
 
-    // Enforce different selected dishes across breakfast, lunch and dinner,
-    // even when an AI model ignores the uniqueness instruction.
+    // Validate ingredients BEFORE selecting the best three options. This prevents
+    // invalid AI candidates from occupying slots and hiding otherwise valid recipes.
+    const allowedIngredientNames = new Set(
+      allowedPool.map((item) => normalizeIngredientName(item))
+    );
+
     days.forEach((day) => {
       const usedNames = new Set();
       ["breakfast", "lunch", "dinner"].forEach((type) => {
-        const original = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
-        const preferred = original.find((item) => item?.name === day[type]) || original[0];
-        const ordered = preferred ? [preferred, ...original.filter((item) => item !== preferred)] : original;
-        const uniqueOptions = [];
-        ordered.forEach((item) => {
-          const key = String(item?.name || "").trim().toLowerCase();
-          if (key && !usedNames.has(key) && uniqueOptions.length < 3) {
-            uniqueOptions.push(item);
-            usedNames.add(key);
+        const original = Array.isArray(day[type + "Options"])
+          ? day[type + "Options"]
+          : [];
+        const preferred = original.find((item) => item?.name === day[type]);
+        const ordered = preferred
+          ? [preferred, ...original.filter((item) => item !== preferred)]
+          : original;
+
+        const validOptions = [];
+        ordered.forEach((option) => {
+          if (!option?.name || !Array.isArray(option.ingredients) || !option.ingredients.length) {
+            return;
           }
+
+          const optionIngredients = option.ingredients.map((item) =>
+            normalizeIngredientName(typeof item === "string" ? item : item?.name)
+          );
+          const allIngredientsAvailable = optionIngredients.every(
+            (name) => name && allowedIngredientNames.has(name)
+          );
+          const optionText = `${option.name} ${option.ingredients
+            .map((item) => typeof item === "string" ? item : item?.name || "")
+            .join(" ")} `;
+          const forbidden = DIET_FORBIDDEN[diet];
+          const violatesDiet = forbidden ? forbidden.test(optionText) : false;
+          const nameKey = String(option.name).trim().toLowerCase();
+
+          if (
+            !allIngredientsAvailable ||
+            violatesDiet ||
+            usedNames.has(nameKey) ||
+            validOptions.length >= 3
+          ) {
+            return;
+          }
+
+          validOptions.push(option);
+          usedNames.add(nameKey);
         });
-        if (uniqueOptions.length < 3) {
-          buildLocalOptions(allowedPool, type, Number(day.day) || 1, diet).forEach((item) => {
-            const key = String(item?.name || "").trim().toLowerCase();
-            if (key && !usedNames.has(key) && uniqueOptions.length < 3) {
-              uniqueOptions.push(item);
-              usedNames.add(key);
-            }
-          });
-        }
-        day[type + "Options"] = uniqueOptions;
-        const selected = uniqueOptions[0];
-        if (selected) {
-          day[type] = selected.name;
-          day[type + "Ingredients"] = selected.ingredients || [];
-        }
-      });
-    });
 
-    // Keep the legacy selected-meal fields in sync with the first suggested option.
-    // Older saved meal plans without option arrays remain fully compatible.
-    days.forEach((day) => {
-      ["breakfast", "lunch", "dinner"].forEach((type) => {
-        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"].filter((item) => item?.name && Array.isArray(item.ingredients)) : [];
-        if (options.length) {
-          day[type + "Options"] = options.slice(0, 3);
-          const selected = options.find((item) => item.name === day[type]) || options[0];
-          day[type] = selected.name;
-          day[type + "Ingredients"] = selected.ingredients;
-        } else {
-          day[type + "Options"] = [{
-            name: day[type] || "Meal option",
-            description: "Current generated meal",
-            prepTime: "",
-            ingredients: day[type + "Ingredients"] || [],
-          }];
-        }
-      });
-    });
-
-    const allowedIngredientNames = new Set(allowedPool.map((item) => normalizeIngredientName(item)));
-    days.forEach((day) => {
-      ["breakfast", "lunch", "dinner"].forEach((type) => {
-        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
-        const validOptions = options.filter((option) =>
-          Array.isArray(option?.ingredients) &&
-          option.ingredients.length > 0 &&
-          option.ingredients.every((item) => {
-            const name = normalizeIngredientName(typeof item === "string" ? item : item?.name);
-            return name && allowedIngredientNames.has(name);
-          })
-        );
         day[type + "Options"] = validOptions;
         if (validOptions[0]) {
           day[type] = validOptions[0].name;
           day[type + "Ingredients"] = validOptions[0].ingredients;
+        }
+      });
+    });
+
+    // Keep legacy selected-meal fields in sync with the first valid option.
+    // If fewer than three candidates pass strict pantry validation, show only
+    // those valid candidates; never pad the list with recipes needing other items.
+    days.forEach((day) => {
+      ["breakfast", "lunch", "dinner"].forEach((type) => {
+        const options = Array.isArray(day[type + "Options"])
+          ? day[type + "Options"]
+          : [];
+        if (options.length) {
+          const selected = options.find((item) => item.name === day[type]) || options[0];
+          day[type] = selected.name;
+          day[type + "Ingredients"] = selected.ingredients;
         }
       });
     });
