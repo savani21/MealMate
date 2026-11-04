@@ -49,9 +49,20 @@ async function generateWithOpenRouter(prompt, duration = 1) {
   // Use OpenRouter's free-model router by default. It selects a currently
   // available free model instead of pinning every request to one overloaded
   // free provider. A paid model can still be selected through .env.
-  const model = String(process.env.OPENROUTER_MODEL || "openrouter/free").trim();
+  const configuredModel = String(process.env.OPENROUTER_MODEL || "").trim();
+  // Migrate the two previously recommended single-provider free models to
+  // OpenRouter's live free-model router. Existing local .env files may still
+  // contain these older values and would otherwise keep selecting them.
+  const legacyFreeModels = new Set([
+    "xingchen-agi/xing4.0-29b-a4b:free",
+    "recursive/flint-v1.0:free",
+  ]);
+  const model =
+    !configuredModel || legacyFreeModels.has(configuredModel)
+      ? "openrouter/free"
+      : configuredModel;
   const timeoutMs = Math.max(
-    30000,
+    75000,
     Number(process.env.OPENROUTER_TIMEOUT_MS) || 75000
   );
   const dayCount = Math.max(1, Math.min(7, Number(duration) || 1));
