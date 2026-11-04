@@ -42,27 +42,25 @@ function mealViolatesDiet(meal, diet) {
   });
 }
 
-async function generateWithOpenRouter(prompt) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return null;
+async function generateWithOpenRouter(prompt, duration = 1) {
+  const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
+  if (!apiKey || apiKey === "your_openrouter_api_key_here") return null;
 
-  // Use explicit free models with model-level failover instead of the
-  // openrouter/free auto-router, which can select an overloaded provider.
-  const primaryModel =
-    process.env.OPENROUTER_MODEL || "xingchen-agi/xing4.0-29b-a4b:free";
-  const fallbackModels = (
-    process.env.OPENROUTER_FALLBACK_MODELS ||
-    "recursive/flint-v1.0:free"
-  )
-    .split(",")
-    .map((model) => model.trim())
-    .filter((model) => model && model !== primaryModel);
-
+  // Use OpenRouter's free-model router by default. It selects a currently
+  // available free model instead of pinning every request to one overloaded
+  // free provider. A paid model can still be selected through .env.
+  const model = String(process.env.OPENROUTER_MODEL || "openrouter/free").trim();
   const timeoutMs = Math.max(
-    15000,
-    Number(process.env.OPENROUTER_TIMEOUT_MS) || 60000
+    30000,
+    Number(process.env.OPENROUTER_TIMEOUT_MS) || 75000
+  );
+  const dayCount = Math.max(1, Math.min(7, Number(duration) || 1));
+  const maxTokens = Math.min(
+    14000,
+    Math.max(3500, Number(process.env.OPENROUTER_MAX_TOKENS) || dayCount * 1800)
   );
 
+  const startedAt = Date.now();
   let response;
   try {
     response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -71,26 +69,32 @@ async function generateWithOpenRouter(prompt) {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.APP_URL || "http://localhost:5173",
-        "X-Title": "MealMate AI",
+        "X-OpenRouter-Title": "MealMate AI",
       },
       body: JSON.stringify({
-        model: primaryModel,
-        models: fallbackModels,
-        messages: [{ role: "user", content: prompt }],
+        model,
+        messages: [
+          {
+            role: "system",
+            content: "You are MealMate, a practical Indian home-cooking meal planner. Follow the user's ingredient and diet restrictions exactly. Return valid JSON only.",
+          },
+          { role: "user", content: prompt },
+        ],
         response_format: { type: "json_object" },
-        provider: { sort: "throughput", allow_fallbacks: true },
-        temperature: 0.4,
-        max_tokens: 7000,
+        temperature: 0.3,
+        max_tokens: maxTokens,
+        stream: false,
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
+    const elapsed = Math.round((Date.now() - startedAt) / 1000);
     if (error.name === "TimeoutError" || error.name === "AbortError") {
       throw new Error(
-        `OpenRouter request timed out after ${timeoutMs / 1000}s. Models tried: ${[primaryModel, ...fallbackModels].join(", ")}. Check model availability and provider capacity.`
+        `OpenRouter timed out after ${elapsed}s (limit ${timeoutMs / 1000}s, model ${model}). Check OpenRouter model capacity, free-tier limits, and network access.`
       );
     }
-    throw new Error(`Could not reach OpenRouter: ${error.message}`);
+    throw new Error(`OpenRouter connection failed after ${elapsed}s: ${error.message}`);
   }
 
   const responseText = await response.text();
@@ -98,37 +102,38 @@ async function generateWithOpenRouter(prompt) {
   try {
     data = responseText ? JSON.parse(responseText) : {};
   } catch {
-    throw new Error(
-      `OpenRouter returned non-JSON data (HTTP ${response.status}).`
-    );
+    throw new Error(`OpenRouter returned non-JSON data (HTTP ${response.status}).`);
   }
 
   if (!response.ok) {
     const detail = data?.error?.message || data?.message || "Unknown API error";
-    throw new Error(`OpenRouter HTTP ${response.status}: ${detail}`);
+    const code = data?.error?.code ? ` [${data.error.code}]` : "";
+    throw new Error(`OpenRouter HTTP ${response.status}${code}: ${detail}`);
   }
 
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) {
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    const finishReason = data?.choices?.[0]?.finish_reason;
     throw new Error(
-      data?.error?.message || "OpenRouter returned an empty AI response"
+      finishReason === "length"
+        ? `OpenRouter response was truncated at ${maxTokens} tokens. Reduce plan duration or increase OPENROUTER_MAX_TOKENS.`
+        : "OpenRouter returned an empty AI response."
     );
   }
 
   try {
-    return JSON.parse(text);
+    return typeof content === "string" ? JSON.parse(content) : content;
   } catch {
-    const jsonStart = text.indexOf("{");
-    const jsonEnd = text.lastIndexOf("}");
+    const jsonStart = content.indexOf("{");
+    const jsonEnd = content.lastIndexOf("}");
     if (jsonStart !== -1 && jsonEnd > jsonStart) {
       try {
-        return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
+        return JSON.parse(content.slice(jsonStart, jsonEnd + 1));
       } catch {
-        // Report a clean error below.
+        // Fall through to a clear response-format error.
       }
     }
-    console.error("Invalid OpenRouter meal plan response:", text.slice(0, 1200));
-    throw new Error("AI returned invalid meal plan JSON. Please retry.");
+    throw new Error("OpenRouter returned invalid meal-plan JSON. Please retry.");
   }
 }
 
@@ -478,7 +483,7 @@ Cuisine preference:
 - Consider dishes such as poha, upma, idli-sambar, dosa, thepla, paratha, dhokla, dal-khichdi, rajma-chawal, chole, pulao, jeera rice, roti-sabzi, paneer dishes, and Indian-style soups, adapting to the user's diet.
 - These are examples, not mandatory recipes. Choose dishes only when their required ingredients are available in the allowed ingredient pool and compatible with the user's diet.
 - ${ingredientMode === "recommended" ? "Use only ingredients from the allowed ingredient pool (pantry + recommended). Do not add ingredients outside that pool." : "STRICT MODE: every ingredient in every recipe MUST exist in the selected pantry ingredient list. Never add an unselected ingredient, even as a garnish, spice, oil, salt or optional item. If a dish needs an ingredient not in the list, choose another dish."}.
-- Generate up to FIVE candidate recipes for each meal category so server-side validation can retain the best three valid options. Make candidates meaningfully different from one another. Every candidate must strictly follow the allowed ingredient pool; do not add any outside ingredient.
+- Generate up to THREE candidate recipes for each meal category so server-side validation can retain the best three valid options. Make candidates meaningfully different from one another. Every candidate must strictly follow the allowed ingredient pool; do not add any outside ingredient.
 - Within the same day, breakfast, lunch and dinner MUST have different recipe names and must not repeat the same dish under different meal categories.
 - Across a 3-day or 7-day plan, avoid repeating a recipe name wherever practical; prioritize variety.
 
@@ -492,7 +497,7 @@ Rules:
 7. Do not put the recipe name in its ingredient list.
 8. Keep ingredients specific to the meal and include realistic quantities.
 9. Quantities should be short and practical.
-10. Return up to 5 distinct recipe candidates for breakfast, lunch and dinner. Each candidate must have a complete ingredient list using ONLY ingredients from the allowed ingredient pool. The server will keep up to 3 valid candidates per meal.
+10. Return up to 3 distinct recipe candidates for breakfast, lunch and dinner. Each candidate must have a complete ingredient list using ONLY ingredients from the allowed ingredient pool. The server will keep up to 3 valid candidates per meal.
 11. The first option must be the default meal name and ingredient list. Give each option a distinct name, short description, preparation time and complete ingredient list.
 
 Return ONLY valid JSON in exactly this structure:
@@ -528,7 +533,7 @@ Do not include markdown or explanations outside JSON.
       // with the deterministic local recipe templates.
       let aiErrorMessage = null;
       try {
-        generatedMeals = await generateWithOpenRouter(prompt);
+        generatedMeals = await generateWithOpenRouter(prompt, duration);
       } catch (aiError) {
         aiErrorMessage = aiError?.message || "Unknown OpenRouter error";
         console.error("AI meal generation failed:", aiErrorMessage);
