@@ -639,9 +639,9 @@ Do not include markdown or explanations outside JSON.
           usedNames.add(nameKey);
         });
 
-        // If the AI response contains no valid candidate for this meal,
-        // recover with a pantry-only local option set instead of failing the
-        // entire plan. These options are built exclusively from allowedPool.
+        // Complete short AI option lists with pantry-only local choices.
+        // This also recovers when every AI candidate fails strict validation.
+        // These options are built exclusively from allowedPool.
         if (validOptions.length < 3 && generatedBy === "openrouter") {
           const pantryFallback = buildLocalOptions(allowedPool, type, day.day, diet);
           pantryFallback.forEach((option) => {
