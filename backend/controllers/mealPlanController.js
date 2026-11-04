@@ -1,4 +1,5 @@
 const MealPlan = require("../models/MealPlan");
+const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
 const {
   upsertGroceryListForMealPlan,
