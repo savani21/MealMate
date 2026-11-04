@@ -44,64 +44,91 @@ function mealViolatesDiet(meal, diet) {
 
 async function generateWithOpenRouter(prompt) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-
   if (!apiKey) return null;
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "MealMate AI",
-    },
-    body: JSON.stringify({
-      model: "openrouter/free",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      provider: { sort: "throughput", allow_fallbacks: true },
-      temperature: 0.6,
-      max_tokens: 7000,
-    }),
-    signal: AbortSignal.timeout(60000),
-  });
+  // Use explicit free models with model-level failover instead of the
+  // openrouter/free auto-router, which can select an overloaded provider.
+  const primaryModel =
+    process.env.OPENROUTER_MODEL || "xingchen-agi/xing4.0-29b-a4b:free";
+  const fallbackModels = (
+    process.env.OPENROUTER_FALLBACK_MODELS ||
+    "recursive/flint-v1.0:free"
+  )
+    .split(",")
+    .map((model) => model.trim())
+    .filter((model) => model && model !== primaryModel);
 
-  const data = await response.json();
+  const timeoutMs = Math.max(
+    15000,
+    Number(process.env.OPENROUTER_TIMEOUT_MS) || 60000
+  );
 
-  if (!response.ok) {
+  let response;
+  try {
+    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.APP_URL || "http://localhost:5173",
+        "X-Title": "MealMate AI",
+      },
+      body: JSON.stringify({
+        model: primaryModel,
+        models: fallbackModels,
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        provider: { sort: "throughput", allow_fallbacks: true },
+        temperature: 0.4,
+        max_tokens: 7000,
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    if (error.name === "TimeoutError" || error.name === "AbortError") {
+      throw new Error(
+        `OpenRouter request timed out after ${timeoutMs / 1000}s. Models tried: ${[primaryModel, ...fallbackModels].join(", ")}. Check model availability and provider capacity.`
+      );
+    }
+    throw new Error(`Could not reach OpenRouter: ${error.message}`);
+  }
+
+  const responseText = await response.text();
+  let data;
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch {
     throw new Error(
-      data?.error?.message ||
-        `OpenRouter API request failed with status ${response.status}`
+      `OpenRouter returned non-JSON data (HTTP ${response.status}).`
     );
   }
 
-  const text = data?.choices?.[0]?.message?.content;
+  if (!response.ok) {
+    const detail = data?.error?.message || data?.message || "Unknown API error";
+    throw new Error(`OpenRouter HTTP ${response.status}: ${detail}`);
+  }
 
+  const text = data?.choices?.[0]?.message?.content;
   if (!text) {
-    throw new Error("OpenRouter returned an empty AI response");
+    throw new Error(
+      data?.error?.message || "OpenRouter returned an empty AI response"
+    );
   }
 
   try {
     return JSON.parse(text);
-  } catch (parseError) {
-    // Some routed/free models can return non-JSON status or safety text even
-    // when JSON output was requested. Try extracting a JSON object first.
+  } catch {
     const jsonStart = text.indexOf("{");
     const jsonEnd = text.lastIndexOf("}");
-
     if (jsonStart !== -1 && jsonEnd > jsonStart) {
       try {
         return JSON.parse(text.slice(jsonStart, jsonEnd + 1));
       } catch {
-        // Fall through to the clean application error below.
+        // Report a clean error below.
       }
     }
-
-    console.error("Invalid OpenRouter meal plan response:", text);
-
-    throw new Error(
-      "AI returned an invalid meal plan response. Please try again."
-    );
+    console.error("Invalid OpenRouter meal plan response:", text.slice(0, 1200));
+    throw new Error("AI returned invalid meal plan JSON. Please retry.");
   }
 }
 
@@ -502,7 +529,7 @@ Do not include markdown or explanations outside JSON.
       try {
         generatedMeals = await generateWithOpenRouter(prompt);
       } catch (aiError) {
-        console.error("AI meal generation failed; using local fallback:", aiError.message);
+        console.error("AI meal generation failed:", aiError.message);
         generatedMeals = null;
       }
 
@@ -510,7 +537,7 @@ Do not include markdown or explanations outside JSON.
         return res.status(503).json({
           success: false,
           generatedBy: "openrouter-unavailable",
-          message: "MealMate AI is temporarily unavailable. OpenRouter did not return a response in time. Please retry in a moment.",
+          message: aiError?.message || "MealMate AI is temporarily unavailable. Please retry in a moment.",
         });
       }
 
