@@ -279,6 +279,9 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       { name: "Dalia Upma", required: [["dalia", "broken wheat"]] },
       { name: "Moong Dal Chilla", required: [["moong dal", "mung dal"]] },
       { name: "Thepla", required: [["wheat", "atta"], ["methi", "fenugreek"]] },
+      { name: "Masala Vegetable Noodles", required: [["noodles"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Indian Vegetable Pasta", required: [["pasta"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Vegetable Rice", required: [["rice"], ["vegetable", "carrot", "peas", "capsicum"]] },
     ],
     lunch: [
       { name: "Dal Rice", required: [["rice"], ["dal", "lentil"]] },
@@ -291,6 +294,8 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       { name: "Paneer Masala", required: [["paneer"], ["tomato"]] },
       { name: "Aloo Roti", required: [["potato", "aloo"], ["wheat", "atta"]] },
       { name: "Kadhi Chawal", required: [["curd", "yogurt"], ["besan", "gram flour"], ["rice"]] },
+      { name: "Masala Vegetable Noodles", required: [["noodles"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Indian Vegetable Pasta", required: [["pasta"], ["vegetable", "carrot", "peas", "capsicum"]] },
     ],
     dinner: [
       { name: "Dal Khichdi", required: [["rice"], ["dal", "lentil"]] },
@@ -303,6 +308,8 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       { name: "Chana Masala with Roti", required: [["chana", "chickpea"], ["wheat", "atta"]] },
       { name: "Vegetable Pulao", required: [["rice"], ["vegetable", "carrot", "peas", "beans"]] },
       { name: "Jeera Rice with Dal", required: [["rice"], ["cumin", "jeera"], ["dal", "lentil"]] },
+      { name: "Masala Vegetable Noodles", required: [["noodles"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Indian Vegetable Pasta", required: [["pasta"], ["vegetable", "carrot", "peas", "capsicum"]] },
     ],
   };
 
