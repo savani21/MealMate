@@ -102,7 +102,7 @@ const getRecommendedRecipes = async (req, res) => {
         recipeIngredients.some((item) => RECIPE_FORBIDDEN[diet]?.test(item));
       if (violates) return null;
       const matchedAvailableIngredients = recipeIngredients.filter((item) => available.some((allowedItem) =>
-        item === allowedItem || item.includes(allowedItem) || allowedItem.includes(item)));
+        item === allowedItem));
       const matchedIngredients = recipeIngredients.filter((item) => [...allowed].some((allowedItem) =>
         item === allowedItem || item.includes(allowedItem) || allowedItem.includes(item)));
       const missingIngredients = recipeIngredients.filter((item) => !matchedAvailableIngredients.includes(item));
