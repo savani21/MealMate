@@ -1,6 +1,7 @@
 const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
 const RecipeReview = require("../../models/user/RecipeReview");
+const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 const HIGHLY_LIKED_MIN_LIKES = Math.max(1, Number(process.env.HIGHLY_LIKED_MIN_LIKES) || 5);
 
@@ -25,16 +26,7 @@ function attachEngagement(recipe, counts, likedIds = []) {
   };
 }
 
-const normalizeIngredient = (value) =>
-  String(value || "")
-    .toLowerCase()
-    .replace(/^[\s\d./-]+/, "")
-    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?)\s+/i, "")
-    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/[.,;:]+$/, "")
-    .replace(/\b(\w+)s$/, "$1");
+const normalizeIngredient = (value) => normalizeIngredientName(value);
 
 const cleanIngredients = (value) =>
   String(value || "")
@@ -125,6 +117,7 @@ const getRecommendedRecipes = async (req, res) => {
         recommendationScore: matchPercentage * 100 + matchedIngredients.length * 5 + averageRating * 4 + ratingCount * 2,
       };
     }).filter(Boolean)
+      .filter((recipe) => mode !== "available" || recipe.canCookWithAvailable)
       .filter((recipe) => allowed.size === 0 || recipe.matchCount > 0)
       .sort((a,b) => b.ratingCount-a.ratingCount || b.averageRating-a.averageRating || b.recommendationScore-a.recommendationScore || b.matchPercentage-a.matchPercentage);
     const topRecipes = ranked.slice(0,3);
