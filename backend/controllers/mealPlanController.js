@@ -296,6 +296,7 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       { name: "Kadhi Chawal", required: [["curd", "yogurt"], ["besan", "gram flour"], ["rice"]] },
       { name: "Masala Vegetable Noodles", required: [["noodles"], ["vegetable", "carrot", "peas", "capsicum"]] },
       { name: "Indian Vegetable Pasta", required: [["pasta"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Vegetable Fried Rice", required: [["rice"], ["vegetable", "carrot", "peas", "capsicum"]] },
     ],
     dinner: [
       { name: "Dal Khichdi", required: [["rice"], ["dal", "lentil"]] },
@@ -310,6 +311,8 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       { name: "Jeera Rice with Dal", required: [["rice"], ["cumin", "jeera"], ["dal", "lentil"]] },
       { name: "Masala Vegetable Noodles", required: [["noodles"], ["vegetable", "carrot", "peas", "capsicum"]] },
       { name: "Indian Vegetable Pasta", required: [["pasta"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Vegetable Fried Rice", required: [["rice"], ["vegetable", "carrot", "peas", "capsicum"]] },
+      { name: "Capsicum Rice", required: [["rice"], ["capsicum"]] },
     ],
   };
 
