@@ -526,24 +526,26 @@ Do not include markdown or explanations outside JSON.
       // Try the configured AI provider for previews and direct generation.
       // If the key is missing or the provider fails, keep planning available
       // with the deterministic local recipe templates.
+      let aiErrorMessage = null;
       try {
         generatedMeals = await generateWithOpenRouter(prompt);
       } catch (aiError) {
-        console.error("AI meal generation failed:", aiError.message);
+        aiErrorMessage = aiError?.message || "Unknown OpenRouter error";
+        console.error("AI meal generation failed:", aiErrorMessage);
         generatedMeals = null;
       }
 
-      if (!generatedMeals && process.env.OPENROUTER_API_KEY) {
-        return res.status(503).json({
-          success: false,
-          generatedBy: "openrouter-unavailable",
-          message: aiError?.message || "MealMate AI is temporarily unavailable. Please retry in a moment.",
-        });
-      }
-
       if (!generatedMeals) {
+        // Keep meal planning usable when OpenRouter is slow, unavailable,
+        // rate-limited, or the API key is not configured. Local recipes are
+        // still validated against the same selected ingredient pool below.
         generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
-        generatedBy = "local-no-api-key";
+        generatedBy = process.env.OPENROUTER_API_KEY
+          ? "local-fallback"
+          : "local-no-api-key";
+        if (aiErrorMessage) {
+          console.warn("Using local meal fallback:", aiErrorMessage);
+        }
       }
     }
 
