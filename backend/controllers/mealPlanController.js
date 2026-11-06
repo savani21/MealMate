@@ -549,16 +549,27 @@ Do not include any ingredient not in that pool, including oil, salt, spices or g
 In Only Available Ingredients mode, use ONLY the user's selected pantry ingredients.
 Do not return breakfast, lunch, dinner, days, instructions or any other fields.
 `;
-              const result = await generateWithOpenRouter(categoryPrompt, 1);
-              const options = Array.isArray(result?.options)
-                ? result.options
-                : Array.isArray(result?.[type + "Options"])
-                  ? result[type + "Options"]
-                  : [];
-              if (!options.length) {
-                throw new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
+              let result;
+              let lastError;
+              // Retry only this meal category once; successful categories are
+              // retained and are not regenerated.
+              for (let attempt = 1; attempt <= 2; attempt += 1) {
+                try {
+                  result = await generateWithOpenRouter(categoryPrompt, 1);
+                  const candidateOptions = Array.isArray(result?.options)
+                    ? result.options
+                    : Array.isArray(result?.[type + "Options"])
+                      ? result[type + "Options"]
+                      : [];
+                  if (candidateOptions.length) {
+                    return { type, options: candidateOptions };
+                  }
+                  lastError = new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
+                } catch (error) {
+                  lastError = error;
+                }
               }
-              return { type, options };
+              throw lastError || new Error(`AI failed to generate ${type} for day ${dayNumber}.`);
             })
           );
 
