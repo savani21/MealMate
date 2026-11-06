@@ -42,7 +42,7 @@ function mealViolatesDiet(meal, diet) {
   });
 }
 
-async function generateWithOpenRouter(prompt, duration = 1) {
+async function generateWithOpenRouter(prompt, duration = 1, maxTokensOverride = null) {
   const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
   if (!apiKey || apiKey === "your_openrouter_api_key_here") return null;
 
@@ -71,10 +71,12 @@ async function generateWithOpenRouter(prompt, duration = 1) {
   // multi-day plans need a larger output allowance. Treat the env value as an
   // optional extra budget, not a low ceiling that silently breaks generation.
   const configuredTokenBudget = Number(process.env.OPENROUTER_MAX_TOKENS) || 0;
-  const maxTokens = Math.min(
-    32000,
-    Math.max(12000, dayCount * 9000, configuredTokenBudget)
-  );
+  const maxTokens = Number.isFinite(Number(maxTokensOverride)) && Number(maxTokensOverride) > 0
+    ? Math.min(32000, Math.max(1000, Number(maxTokensOverride)))
+    : Math.min(
+        32000,
+        Math.max(12000, dayCount * 9000, configuredTokenBudget)
+      );
 
   const startedAt = Date.now();
   let response;
@@ -547,24 +549,27 @@ Do not include markdown or explanations outside JSON.
             const job = jobs[nextJobIndex++];
             const { dayNumber, type } = job;
             const categoryPrompt = `
-${prompt}
-
-IMPORTANT: Generate ONLY day ${dayNumber}, ONLY the ${type.toUpperCase()} category.
-Return JSON exactly as: {"options":[
-  {"name":"realistic Indian recipe name","description":"short description","prepTime":"20 minutes","ingredients":[{"name":"ingredient exactly from allowed pool","quantity":"practical quantity"}]}
-]}
-Generate up to 3 genuinely different, practical Indian home-cooking recipes.
-Use ONLY ingredients from the allowed ingredient pool already listed above.
-Do not include any ingredient not in that pool, including oil, salt, spices or garnish.
-In Only Available Ingredients mode, use ONLY the user's selected pantry ingredients.
-Do not return breakfast, lunch, dinner, days, instructions or any other fields.
+You are MealMate, an expert Indian home-cooking meal planner.
+Generate ONLY 3 distinct ${type} recipe options for day ${dayNumber}.
+User goal: ${goal}
+Diet: ${diet}. Restriction: ${DIET_RULES[diet] || "Follow the selected diet exactly."}
+Planning mode: ${ingredientMode === "recommended" ? "Pantry + recommended ingredients" : "Selected pantry ingredients only"}.
+Allowed ingredients (the complete permitted list): ${JSON.stringify(allowedPool)}
+Rules:
+- Use ONLY ingredients from the permitted list. Do not add oil, salt, spices, garnish, water or any other unlisted ingredient.
+- Prefer practical, familiar Indian home-style recipes that can genuinely be made from the permitted ingredients.
+- Follow the diet restriction exactly.
+- Return exactly 3 meaningfully different recipes, each with a short description, prepTime, and complete ingredient list with practical quantities.
+- Do not include a recipe name in its own ingredient list.
+- Return valid JSON only, with this exact shape:
+{"options":[{"name":"recipe name","description":"short description","prepTime":"20 minutes","ingredients":[{"name":"ingredient from permitted list","quantity":"quantity"}]}]}
 `;
             let result;
             let lastError;
             // Retry only the failed category once.
             for (let attempt = 1; attempt <= 2; attempt += 1) {
               try {
-                result = await generateWithOpenRouter(categoryPrompt, 1);
+                result = await generateWithOpenRouter(categoryPrompt, 1, 2500);
                 const candidateOptions = Array.isArray(result?.options)
                   ? result.options
                   : Array.isArray(result?.[type + "Options"])
