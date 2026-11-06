@@ -72,8 +72,8 @@ async function generateWithOpenRouter(prompt, duration = 1) {
   // optional extra budget, not a low ceiling that silently breaks generation.
   const configuredTokenBudget = Number(process.env.OPENROUTER_MAX_TOKENS) || 0;
   const maxTokens = Math.min(
-    24000,
-    Math.max(6000, dayCount * 5000, configuredTokenBudget)
+    32000,
+    Math.max(12000, dayCount * 9000, configuredTokenBudget)
   );
 
   const startedAt = Date.now();
