@@ -531,12 +531,22 @@ Do not include markdown or explanations outside JSON.
         // small enough for model output limits while preserving one combined
         // response for the existing frontend.
         const mealTypes = ["breakfast", "lunch", "dinner"];
-        const generatedDays = [];
+        const dayCount = Number(duration);
+        const jobs = [];
+        for (let dayNumber = 1; dayNumber <= dayCount; dayNumber += 1) {
+          for (const type of mealTypes) jobs.push({ dayNumber, type });
+        }
 
-        for (let dayNumber = 1; dayNumber <= Number(duration); dayNumber += 1) {
-          const categoryResults = await Promise.all(
-            mealTypes.map(async (type) => {
-              const categoryPrompt = `
+        // Run a bounded pool across all days instead of waiting for each day's
+        // three requests to finish before starting the next day.
+        const resultsByDay = Array.from({ length: dayCount }, () => ({}));
+        let nextJobIndex = 0;
+        const workerCount = Math.min(6, jobs.length);
+        const workers = Array.from({ length: workerCount }, async () => {
+          while (nextJobIndex < jobs.length) {
+            const job = jobs[nextJobIndex++];
+            const { dayNumber, type } = job;
+            const categoryPrompt = `
 ${prompt}
 
 IMPORTANT: Generate ONLY day ${dayNumber}, ONLY the ${type.toUpperCase()} category.
@@ -549,39 +559,43 @@ Do not include any ingredient not in that pool, including oil, salt, spices or g
 In Only Available Ingredients mode, use ONLY the user's selected pantry ingredients.
 Do not return breakfast, lunch, dinner, days, instructions or any other fields.
 `;
-              let result;
-              let lastError;
-              // Retry only this meal category once; successful categories are
-              // retained and are not regenerated.
-              for (let attempt = 1; attempt <= 2; attempt += 1) {
-                try {
-                  result = await generateWithOpenRouter(categoryPrompt, 1);
-                  const candidateOptions = Array.isArray(result?.options)
-                    ? result.options
-                    : Array.isArray(result?.[type + "Options"])
-                      ? result[type + "Options"]
-                      : [];
-                  if (candidateOptions.length) {
-                    return { type, options: candidateOptions };
-                  }
-                  lastError = new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
-                } catch (error) {
-                  lastError = error;
+            let result;
+            let lastError;
+            // Retry only the failed category once.
+            for (let attempt = 1; attempt <= 2; attempt += 1) {
+              try {
+                result = await generateWithOpenRouter(categoryPrompt, 1);
+                const candidateOptions = Array.isArray(result?.options)
+                  ? result.options
+                  : Array.isArray(result?.[type + "Options"])
+                    ? result[type + "Options"]
+                    : [];
+                if (candidateOptions.length) {
+                  resultsByDay[dayNumber - 1][type] = candidateOptions;
+                  break;
                 }
+                lastError = new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
+              } catch (error) {
+                lastError = error;
               }
+            }
+            if (!resultsByDay[dayNumber - 1][type]) {
               throw lastError || new Error(`AI failed to generate ${type} for day ${dayNumber}.`);
-            })
-          );
+            }
+          }
+        });
+        await Promise.all(workers);
 
-          const day = { day: dayNumber };
-          categoryResults.forEach(({ type, options }) => {
+        const generatedDays = resultsByDay.map((categoryResults, index) => {
+          const day = { day: index + 1 };
+          mealTypes.forEach((type) => {
+            const options = categoryResults[type];
             day[type + "Options"] = options;
             day[type] = options[0]?.name || "";
             day[type + "Ingredients"] = options[0]?.ingredients || [];
           });
-          generatedDays.push(day);
-        }
-
+          return day;
+        });
         generatedMeals = { days: generatedDays };
       } catch (aiError) {
         aiErrorMessage = aiError?.message || "Unknown OpenRouter error";
