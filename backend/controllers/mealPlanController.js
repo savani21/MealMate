@@ -569,7 +569,7 @@ Rules:
             // Retry only the failed category once.
             for (let attempt = 1; attempt <= 2; attempt += 1) {
               try {
-                result = await generateWithOpenRouter(categoryPrompt, 1, 2500);
+                result = await generateWithOpenRouter(categoryPrompt, 1, 12000);
                 const candidateOptions = Array.isArray(result?.options)
                   ? result.options
                   : Array.isArray(result?.[type + "Options"])
