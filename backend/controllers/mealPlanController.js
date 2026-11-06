@@ -527,7 +527,51 @@ Do not include markdown or explanations outside JSON.
       // with the deterministic local recipe templates.
       let aiErrorMessage = null;
       try {
-        generatedMeals = await generateWithOpenRouter(prompt, duration);
+        // Generate each day/category independently. This keeps every response
+        // small enough for model output limits while preserving one combined
+        // response for the existing frontend.
+        const mealTypes = ["breakfast", "lunch", "dinner"];
+        const generatedDays = [];
+
+        for (let dayNumber = 1; dayNumber <= Number(duration); dayNumber += 1) {
+          const categoryResults = await Promise.all(
+            mealTypes.map(async (type) => {
+              const categoryPrompt = `
+${prompt}
+
+IMPORTANT: Generate ONLY day ${dayNumber}, ONLY the ${type.toUpperCase()} category.
+Return JSON exactly as: {"options":[
+  {"name":"realistic Indian recipe name","description":"short description","prepTime":"20 minutes","ingredients":[{"name":"ingredient exactly from allowed pool","quantity":"practical quantity"}]}
+]}
+Generate up to 3 genuinely different, practical Indian home-cooking recipes.
+Use ONLY ingredients from the allowed ingredient pool already listed above.
+Do not include any ingredient not in that pool, including oil, salt, spices or garnish.
+In Only Available Ingredients mode, use ONLY the user's selected pantry ingredients.
+Do not return breakfast, lunch, dinner, days, instructions or any other fields.
+`;
+              const result = await generateWithOpenRouter(categoryPrompt, 1);
+              const options = Array.isArray(result?.options)
+                ? result.options
+                : Array.isArray(result?.[type + "Options"])
+                  ? result[type + "Options"]
+                  : [];
+              if (!options.length) {
+                throw new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
+              }
+              return { type, options };
+            })
+          );
+
+          const day = { day: dayNumber };
+          categoryResults.forEach(({ type, options }) => {
+            day[type + "Options"] = options;
+            day[type] = options[0]?.name || "";
+            day[type + "Ingredients"] = options[0]?.ingredients || [];
+          });
+          generatedDays.push(day);
+        }
+
+        generatedMeals = { days: generatedDays };
       } catch (aiError) {
         aiErrorMessage = aiError?.message || "Unknown OpenRouter error";
         console.error("AI meal generation failed:", aiErrorMessage);
