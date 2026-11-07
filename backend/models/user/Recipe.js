@@ -13,6 +13,8 @@ const recipeSchema = new mongoose.Schema(
     image: { type: String, default: "" },
     imageGeneratedAt: { type: Date, default: null },
     source: { type: String, enum: ["manual", "ai"], default: "manual" },
+    generationMealName: { type: String, default: "", trim: true },
+    generationInputIngredients: { type: [String], default: [] },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
