@@ -1,4 +1,5 @@
 const Recipe = require("../../models/user/Recipe");
+const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 async function generateWithOpenRouter(messages, responseFormat) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -10,11 +11,12 @@ async function generateWithOpenRouter(messages, responseFormat) {
       "X-Title": "MealMate AI",
     },
     body: JSON.stringify({
-      model: "openrouter/free",
+      model: process.env.OPENROUTER_RECIPE_MODEL || "openrouter/free",
       messages,
+      provider: { sort: "throughput", allow_fallbacks: true },
       ...(responseFormat ? { response_format: responseFormat } : {}),
     }),
-    signal: AbortSignal.timeout(45000),
+    signal: AbortSignal.timeout(25000),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data?.error?.message || `OpenRouter request failed with status ${response.status}`);
@@ -87,6 +89,20 @@ const generateRecipe = async (req, res) => {
       ? `The recipe should be specifically suitable for this planned meal: ${mealName}.`
       : "Create a suitable recipe from the ingredients.";
 
+    const normalizedMealName = normalizeIngredientName(mealName);
+    const generationInputIngredients = [...new Set(String(ingredients).split(",").map(normalizeIngredientName).filter(Boolean))].sort();
+
+    // Reuse an existing AI recipe for this user when meal name and input ingredients match.
+    if (normalizedMealName && generationInputIngredients.length) {
+      const previousRecipes = await Recipe.find({ createdBy: req.user.id, source: "ai" }).sort({ createdAt: -1 }).lean();
+      const existingRecipe = previousRecipes.find((recipe) => {
+        if (normalizeIngredientName(recipe.generationMealName || recipe.name) !== normalizedMealName) return false;
+        const previousInputs = [...new Set((recipe.generationInputIngredients?.length ? recipe.generationInputIngredients : recipe.ingredients || []).map(normalizeIngredientName).filter(Boolean))].sort();
+        return previousInputs.length === generationInputIngredients.length && previousInputs.every((item, index) => item === generationInputIngredients[index]);
+      });
+      if (existingRecipe) return res.status(200).json({ message: "You already generated this recipe. Opening your existing recipe.", recipe: existingRecipe, reused: true, usedFallback: false });
+    }
+
     const prompt = `
 Create one complete, practical recipe for the planned meal: ${mealName || "a suitable meal"}.
 The user's pantry/selected ingredients are: ${ingredients}.
@@ -145,6 +161,8 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       instructions: recipeData.instructions || [],
       prepTime: recipeData.prepTime || "",
       source: "ai",
+      generationMealName: normalizedMealName,
+      generationInputIngredients,
       createdBy: req.user.id,
     });
 
