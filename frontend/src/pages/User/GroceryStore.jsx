@@ -48,6 +48,7 @@ export default function GroceryStore() {
   try { const parsed = JSON.parse(params.get("allIngredients") || "[]"); if (Array.isArray(parsed)) allRecipeIngredientsFromUrl = parsed.filter((item) => item && item.name); } catch { allRecipeIngredientsFromUrl = []; }
 
   const [requestedItems, setRequestedItems] = useState([]);
+  const [neededItemsOpen, setNeededItemsOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState({ items: [] });
   const [searchText, setSearchText] = useState("");
@@ -416,79 +417,149 @@ export default function GroceryStore() {
       <PageHeroBanner title="Grocery Store" description="Find and purchase the ingredients your meal plan needs." eyebrow="GROCERY MARKET" icon={ShoppingBasket} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {allRecipeIngredientsFromUrl.length > 0 && (
-          <section className="mb-6 rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-primary">Recipe ingredient breakdown</p>
-              <h2 className="mt-1 text-lg font-black text-gray-900">{recipeNameFromUrl}</h2>
-              <p className="mt-1 text-sm text-gray-500">See what the recipe requires, what you already have, and what you need to buy.</p>
+        {(allRecipeIngredientsFromUrl.length > 0 || requestedIngredients.length > 0) && (
+          <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-primary">
+                <ShoppingBasket className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-bold text-gray-900">Recipe items needed</p>
+                <p className="text-sm text-gray-500">
+                  {recipeNameFromUrl !== "Selected recipe" ? recipeNameFromUrl : "Review ingredients from your meal plan"}
+                  {" · "}{allRecipeIngredientsFromUrl.length || requestedIngredients.length} ingredients
+                </p>
+              </div>
             </div>
-            <div className="space-y-2">
-              {allRecipeIngredientsFromUrl.map((item, index) => {
-                const available = item.status === "available";
-                const needsBuy = requestedIngredients.some((name) => name === String(item.name).trim().toLowerCase());
-                return <div key={index} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 px-3 py-2.5">
-                  <span className="text-sm font-medium text-gray-800">{item.name}</span>
-                  <span className={"rounded-full px-2.5 py-1 text-[11px] font-bold " + (available ? "bg-green-50 text-green-700" : needsBuy ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600")}>
-                    {available ? "Already in pantry" : needsBuy ? "Need to buy" : item.status === "unknown" ? "Pantry status unavailable" : item.message || "Check pantry"}
-                  </span>
-                </div>;
-              })}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-semibold">
-              <span className="text-green-700">● Already in pantry</span>
-              <span className="text-amber-700">● Need to buy</span>
-              <span className="text-gray-500">● Check pantry</span>
-            </div>
+            <button
+              type="button"
+              onClick={() => setNeededItemsOpen(true)}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+            >
+              <ShoppingBasket className="h-4 w-4" />
+              View Items Needed
+              <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                {allRecipeIngredientsFromUrl.length || requestedIngredients.length}
+              </span>
+            </button>
           </section>
         )}
-        {requestedIngredients.length > 0 && (
-          <div className="mb-6 rounded-2xl bg-white border border-green-100 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-              <div>
-                <p className="font-bold text-gray-900">Items to purchase</p>
-                <p className="text-sm text-gray-500 mt-1">Only selected missing ingredients are sent to the cart. Check the recipe breakdown above for pantry status.</p>
-              </div>
-              {matchedRequestedProducts.length > 0 && (
-                <button onClick={addAllRequested} disabled={addingRequested} className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:opacity-90 disabled:opacity-60 transition">
-                  <ShoppingCart className="w-4 h-4" /> {addingRequested ? "Adding..." : `Add All Missing (${matchedRequestedProducts.length})`}
+
+        {neededItemsOpen && (
+          <div
+            className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/50 p-3 sm:p-5"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setNeededItemsOpen(false);
+            }}
+          >
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="needed-items-title"
+              className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+            >
+              <header className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary">Grocery checklist</p>
+                  <h2 id="needed-items-title" className="mt-1 text-xl font-black text-gray-900">Items Needed</h2>
+                  <p className="mt-1 truncate text-sm text-gray-500">
+                    {recipeNameFromUrl !== "Selected recipe" ? recipeNameFromUrl : "Ingredients required by your meal plan"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNeededItemsOpen(false)}
+                  aria-label="Close items needed"
+                  className="rounded-xl p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                >
+                  <X className="h-5 w-5" />
                 </button>
-              )}
-            </div>
+              </header>
 
-            {requestedGroups.length > 0 ? (
-              <div className="space-y-3">
-                {requestedGroups.map((group) => (
-                  <div key={`${group.day}-${group.mealType}-${group.mealName}`} className="rounded-xl border border-gray-100 overflow-hidden">
+              <div className="grid grid-cols-2 gap-2 bg-gray-50 px-5 py-3 text-center sm:px-6">
+                <div className="rounded-xl bg-white p-2">
+                  <p className="text-lg font-black text-gray-900">{allRecipeIngredientsFromUrl.length || requestedIngredients.length}</p>
+                  <p className="text-[11px] font-semibold text-gray-500">Total ingredients</p>
+                </div>
+                <div className="rounded-xl bg-white p-2">
+                  <p className="text-lg font-black text-amber-600">{requestedIngredients.length}</p>
+                  <p className="text-[11px] font-semibold text-gray-500">To purchase</p>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4 sm:px-6">
+                {requestedGroups.length > 0 ? requestedGroups.map((group) => (
+                  <section key={`${group.day}-${group.mealType}-${group.mealName}`} className="overflow-hidden rounded-2xl border border-gray-100">
                     <div className="bg-gray-50 px-4 py-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
-                      <p className="font-bold text-gray-900 mt-1">{group.mealName}</p>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
+                      <p className="mt-0.5 font-bold text-gray-900">{group.mealName}</p>
                     </div>
-                    <div className="px-4 py-3">
-                      <p className="text-sm font-semibold text-gray-700 mb-2">
-                        Items needed: {group.items.map((item) => item.name).join(", ")}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {group.items.filter((item) => !products.some((product) => productMatchesIngredient(product, item.name))).map((item) => (
-                          <span key={item._id} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-                            {item.name} (Not in store)
+                    <div className="space-y-2 p-3">
+                      {group.items.map((item) => {
+                        const matched = products.some((product) => productMatchesIngredient(product, item.name));
+                        return (
+                          <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2.5">
+                            <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
+                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${matched ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
+                              {matched ? "Need to buy" : "Not in store"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                )) : allRecipeIngredientsFromUrl.length > 0 ? (
+                  <section className="space-y-2">
+                    {allRecipeIngredientsFromUrl.map((item, index) => {
+                      const available = item.status === "available";
+                      const needsBuy = requestedIngredients.some((name) => name === String(item.name).trim().toLowerCase());
+                      return (
+                        <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
+                          <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : needsBuy ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
+                            {available ? "In pantry" : needsBuy ? "Need to buy" : item.status === "unknown" ? "Check pantry" : item.message || "Check pantry"}
                           </span>
-                        ))}
-                      </div>
-                    </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {requestedIngredients.map((ingredient) => (
+                      <span key={ingredient} className="rounded-full bg-amber-50 px-3 py-2 text-xs font-semibold capitalize text-amber-700">{ingredient}</span>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {requestedIngredients.map((ingredient) => <span key={ingredient} className="px-3 py-1.5 rounded-full bg-green-50 text-green-700 text-xs font-semibold capitalize">{ingredient}</span>)}
-              </div>
-            )}
+                )}
 
-            {requestedAddMessage && <p role="status" className="mt-3 text-sm font-semibold text-primary">{requestedAddMessage}</p>}
-            {unmatchedRequestedIngredients.length > 0 && (
-              <p className="text-xs text-amber-600 mt-4">Some ingredients are not sold in the store catalog. Search each missing ingredient below and add a suitable alternative manually. Ingredients already marked “Needed” can be added together using Add All Missing.</p>
-            )}
+                {unmatchedRequestedIngredients.length > 0 && (
+                  <p className="rounded-xl bg-amber-50 p-3 text-xs leading-relaxed text-amber-800">
+                    These ingredients are not available in the store catalog: {unmatchedRequestedIngredients.join(", ")}. You can search for alternatives on the store page.
+                  </p>
+                )}
+                {requestedAddMessage && <p role="status" className="text-sm font-semibold text-primary">{requestedAddMessage}</p>}
+              </div>
+
+              <footer className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-white px-5 py-4 sm:flex-row sm:justify-between sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => setNeededItemsOpen(false)}
+                  className="rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Continue Shopping
+                </button>
+                {matchedRequestedProducts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={addAllRequested}
+                    disabled={addingRequested}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 disabled:opacity-60"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {addingRequested ? "Adding..." : `Add All Missing (${matchedRequestedProducts.length})`}
+                  </button>
+                )}
+              </footer>
+            </section>
           </div>
         )}
 
