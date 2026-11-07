@@ -103,7 +103,7 @@ export default function Recipes() {
 
   useEffect(() => {
     if (!generating) { setGenerationSlow(false); return; }
-    const timer = setTimeout(() => setGenerationSlow(true), 25000);
+    const timer = setTimeout(() => setGenerationSlow(true), 15000);
     return () => clearTimeout(timer);
   }, [generating]);
 
@@ -313,8 +313,8 @@ export default function Recipes() {
                 <button onClick={() => setShowGenerator(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-50 hover:text-gray-700" title="Close"><X className="h-4 w-4" /></button>
               </div>
               <div className="mt-2 rounded-xl border border-green-100 bg-green-50 p-3"><label htmlFor="generator-ingredients" className="mb-2 block text-xs font-semibold text-gray-700">Enter your ingredients</label><textarea id="generator-ingredients" rows={4} value={generatorIngredients} onChange={(event) => setGeneratorIngredients(event.target.value)} placeholder="e.g. potato, onion, tomato, rice, paneer..." className="w-full resize-y rounded-lg border border-green-200 bg-white px-3 py-2 text-sm text-gray-800 outline-none placeholder:text-gray-400 focus:border-primary focus:ring-2 focus:ring-green-100" /><p className="mt-2 text-[11px] text-gray-500">Separate ingredients with commas. MealMate will create a complete recipe and include any additional ingredients you may need.</p></div>
-              {generating && <p className="mt-3 text-xs text-gray-500" role="status">{generationSlow ? "The AI service is taking longer than usual. MealMate is preparing a quick backup recipe." : "Creating your recipe. This usually takes a few seconds."}</p>}
-              <div className="mt-3 flex justify-end gap-2"><button onClick={() => setShowGenerator(false)} className="rounded-lg border border-gray-200 px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button><button onClick={generateRecipe} disabled={generating} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">{generating ? (generationSlow ? "Preparing quick recipe..." : "Generating...") : "Generate"}</button></div>
+              {generating && <p className="mt-3 text-xs text-gray-500" role="status">{generationSlow ? "The AI is taking a little longer than usual. Please wait while MealMate finishes your recipe." : "Creating your recipe. This usually takes a few seconds."}</p>}
+              <div className="mt-3 flex justify-end gap-2"><button onClick={() => setShowGenerator(false)} className="rounded-lg border border-gray-200 px-3.5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">Cancel</button><button onClick={generateRecipe} disabled={generating} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">{generating ? (generationSlow ? "Still generating..." : "Generating...") : "Generate"}</button></div>
             </div>
           </div>
         )}
