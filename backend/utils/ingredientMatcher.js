@@ -4,8 +4,23 @@ function normalizeIngredientName(value) {
     .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole)\b/g, " ")
     .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   const words = cleaned.split(" ").filter(Boolean);
-  if (words.length && /s$/.test(words[words.length - 1]) && !/ss$/.test(words[words.length - 1])) {
-    words[words.length - 1] = words[words.length - 1].slice(0, -1);
+  const irregularPlurals = {
+    tomatoes: "tomato",
+    potatoes: "potato",
+    leaves: "leaf",
+    chilies: "chili",
+    chillies: "chilli",
+    berries: "berry",
+  };
+  if (words.length) {
+    const last = words[words.length - 1];
+    if (irregularPlurals[last]) {
+      words[words.length - 1] = irregularPlurals[last];
+    } else if (/ies$/.test(last)) {
+      words[words.length - 1] = last.slice(0, -3) + "y";
+    } else if (/s$/.test(last) && !/ss$/.test(last)) {
+      words[words.length - 1] = last.slice(0, -1);
+    }
   }
   const name = words.join(" ");
   const aliases = {
