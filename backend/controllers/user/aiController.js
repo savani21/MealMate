@@ -96,7 +96,7 @@ const generateRecipe = async (req, res) => {
     if (normalizedMealName && generationInputIngredients.length) {
       const previousRecipes = await Recipe.find({ createdBy: req.user.id, source: "ai" }).sort({ createdAt: -1 }).lean();
       const existingRecipe = previousRecipes.find((recipe) => {
-        if (normalizeIngredientName(recipe.generationMealName || recipe.name) !== normalizedMealName) return false;
+        if (normalizeIngredientName(recipe.name) !== normalizedMealName) return false;
         const previousInputs = [...new Set((recipe.generationInputIngredients?.length ? recipe.generationInputIngredients : recipe.ingredients || []).map(normalizeIngredientName).filter(Boolean))].sort();
         return previousInputs.length === generationInputIngredients.length && previousInputs.every((item, index) => item === generationInputIngredients[index]);
       });
@@ -146,6 +146,16 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       recipeData = buildFallbackRecipe({ ingredients, diet, category, mealName });
     }
 
+    // Check the final AI title too, so generated variants cannot create duplicates.
+    const normalizedGeneratedName = normalizeIngredientName(recipeData.name);
+    const sameTitleRecipes = await Recipe.find({ createdBy: req.user.id, source: "ai" }).sort({ createdAt: -1 }).lean();
+    const matchingGeneratedRecipe = sameTitleRecipes.find((recipe) => {
+      if (normalizeIngredientName(recipe.name) !== normalizedGeneratedName) return false;
+      const previousInputs = [...new Set((recipe.generationInputIngredients || []).map(normalizeIngredientName).filter(Boolean))].sort();
+      return previousInputs.length === generationInputIngredients.length && previousInputs.every((item, index) => item === generationInputIngredients[index]);
+    });
+    if (matchingGeneratedRecipe) return res.status(200).json({ message: "You already generated this recipe. Opening your existing recipe.", recipe: matchingGeneratedRecipe, reused: true, usedFallback });
+
     // Do not make a second AI request just to create a slogan.
     const slogan = String(
       recipeData.slogan || `A delicious way to enjoy ${recipeData.name || "everyday meals"}!`
@@ -161,7 +171,7 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       instructions: recipeData.instructions || [],
       prepTime: recipeData.prepTime || "",
       source: "ai",
-      generationMealName: normalizedMealName,
+      generationMealName: normalizedGeneratedName,
       generationInputIngredients,
       createdBy: req.user.id,
     });
