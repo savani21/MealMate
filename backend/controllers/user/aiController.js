@@ -2,24 +2,53 @@ const Recipe = require("../../models/user/Recipe");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 async function generateWithOpenRouter(messages, responseFormat) {
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "http://localhost:5173",
-      "X-Title": "MealMate AI",
-    },
-    body: JSON.stringify({
-      model: process.env.OPENROUTER_RECIPE_MODEL || "openrouter/free",
-      messages,
-      provider: { sort: "throughput", allow_fallbacks: true },
-      ...(responseFormat ? { response_format: responseFormat } : {}),
-    }),
-    signal: AbortSignal.timeout(25000),
-  });
-  const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || `OpenRouter request failed with status ${response.status}`);
+  const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
+  if (!apiKey || apiKey === "your_openrouter_api_key_here") {
+    throw new Error("OPENROUTER_API_KEY is missing or not configured");
+  }
+
+  // Match the meal planner timeout: free models can take longer during busy periods.
+  const timeoutMs = Math.max(
+    75000,
+    Number(process.env.OPENROUTER_RECIPE_TIMEOUT_MS) || 75000
+  );
+  const startedAt = Date.now();
+  let response;
+  try {
+    response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.APP_URL || "http://localhost:5173",
+        "X-Title": "MealMate AI",
+      },
+      body: JSON.stringify({
+        model: process.env.OPENROUTER_RECIPE_MODEL || "openrouter/free",
+        messages,
+        provider: { sort: "throughput", allow_fallbacks: true },
+        ...(responseFormat ? { response_format: responseFormat } : {}),
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (error) {
+    const elapsed = Math.round((Date.now() - startedAt) / 1000);
+    if (error.name === "TimeoutError" || error.name === "AbortError") {
+      throw new Error(`OpenRouter recipe request timed out after ${elapsed}s (limit ${timeoutMs / 1000}s). The selected model may be busy; check OpenRouter availability and limits.`);
+    }
+    throw new Error(`OpenRouter recipe connection failed after ${elapsed}s: ${error.message}`);
+  }
+
+  const responseText = await response.text();
+  let data;
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    throw new Error(`OpenRouter returned a non-JSON response (HTTP ${response.status})`);
+  }
+  if (!response.ok) {
+    throw new Error(data?.error?.message || `OpenRouter request failed with status ${response.status}`);
+  }
   const content = data?.choices?.[0]?.message?.content;
   if (!content) throw new Error("OpenRouter returned an empty AI response");
   return content;
