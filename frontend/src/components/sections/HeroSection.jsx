@@ -135,21 +135,8 @@ export function HeroSection() {
               </div>
             </motion.div>
 
-            {/* Floating Food Icons */}
-            <motion.div className="absolute top-[22%] left-[calc(100%-30rem)] bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}>
-              <div className="bg-green-100 p-2 rounded-lg"><Salad className="w-5 h-5 text-green-600"/></div>
-              <span className="text-sm font-semibold text-gray-800 pr-2">Salad</span>
-            </motion.div>
-
-            <motion.div className="absolute bottom-1/4 -right-8 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}>
-              <div className="bg-orange-100 p-2 rounded-lg"><Carrot className="w-5 h-5 text-orange-600"/></div>
-              <span className="text-sm font-semibold text-gray-800 pr-2">Carrot</span>
-            </motion.div>
-
-            <motion.div className="absolute top-1/2 -right-16 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30 hidden md:flex" animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 0.5 }}>
-              <div className="bg-red-100 p-2 rounded-lg"><Apple className="w-5 h-5 text-red-600"/></div>
-              <span className="text-sm font-semibold text-gray-800 pr-2">Apple</span>
-            </motion.div>
+            {/* Keep the phone mockup visually clear; decorative food cards were
+                overlapping its frame and competing with the hero content. */}
 
           </div>
         </div>
