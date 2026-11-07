@@ -277,12 +277,12 @@ export default function GroceryStore() {
   const normalizeSearchIngredient = (value) => {
     const cleaned = String(value || "")
       .toLowerCase()
-      .replace(/^as\\s+needed\\s*[:,-]?\\s*/i, "")
-      .replace(/^\\s*\\d+(?:\\s*\\/\\s*\\d+)?\\s*/, "")
-      .replace(/\\b(?:cups?|tbsp|tblspoons?|tablespoons?|tsp|teaspoons?|kg|g|gm|gms|grm|grms|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\\b/gi, " ")
-      .replace(/\\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\\b/gi, " ")
+      .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
+      .replace(/^\s*\d+(?:\s*\/\s*\d+)?\s*/, "")
+      .replace(/\b(?:cups?|tbsp|tblspoons?|tablespoons?|tsp|teaspoons?|kg|g|gm|gms|grm|grms|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\b/gi, " ")
+      .replace(/\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim()
       .replace(/ies$/, "y")
       .replace(/s$/, "");
