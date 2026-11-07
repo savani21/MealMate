@@ -640,14 +640,14 @@ export default function GroceryStore() {
 
       {/* ================= CART DRAWER ================= */}
       {cartCount > 0 && (
-        <div className="fixed bottom-24 right-5 z-40 w-[min(380px,calc(100vw-2rem))]">
+        <div className="fixed bottom-24 right-5 z-[70] isolate w-[min(380px,calc(100vw-2rem))]">
           {cartNotice && (
             <div className="mb-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white shadow-lg">
               ✓ {lastAddedProduct} {cartNotice}
             </div>
           )}
 
-          <div className="rounded-2xl bg-white border border-gray-200 shadow-2xl p-4">
+          <div className="relative z-[71] rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold text-gray-500">
