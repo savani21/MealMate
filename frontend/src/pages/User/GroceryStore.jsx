@@ -504,7 +504,7 @@ export default function GroceryStore() {
                         return (
                           <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2.5">
                             <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                            {matched && <span className="shrink-0 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">Need to buy</span>}
+                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${matched ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{matched ? "Need to buy" : "Not in store"}</span>
                           </div>
                         );
                       })}
@@ -515,11 +515,11 @@ export default function GroceryStore() {
                     {allRecipeIngredientsFromUrl.map((item, index) => {
                       const available = item.status === "available";
                       const storeMatch = products.some((product) => productMatchesIngredient(product, item.name));
-                      const statusLabel = available ? "In pantry" : storeMatch ? "Need to buy" : "";
+                      const statusLabel = available ? "In pantry" : storeMatch ? "Need to buy" : "Not in store";
                       return (
                         <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
                           <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                          {statusLabel && <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>{statusLabel}</span>}
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : storeMatch ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{statusLabel}</span>
                         </div>
                       );
                     })}
