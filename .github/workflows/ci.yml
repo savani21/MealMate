@@ -60,3 +60,6 @@ jobs:
       - name: Check JavaScript syntax
         working-directory: backend
         run: find . -path './node_modules' -prune -o -name '*.js' -type f -print0 | xargs -0 -n1 node --check
+      - name: Run backend unit tests
+        working-directory: backend
+        run: npm test
