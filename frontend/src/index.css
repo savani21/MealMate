@@ -332,7 +332,8 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 999;
+  /* Decorative atmosphere belongs behind page content, never above it. */
+  z-index: -1;
   pointer-events: none;
   background:
     radial-gradient(ellipse 230px 470px at 0% 34%, rgba(34, 197, 94, 0.045) 0%, rgba(34, 197, 94, 0.018) 42%, transparent 78%),
