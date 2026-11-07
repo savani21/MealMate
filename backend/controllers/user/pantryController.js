@@ -215,10 +215,39 @@ exports.compareRecipeWithPantry = async (req, res) => {
       if (!match) {
         return { ingredient: raw, status: "missing", message: "Not in pantry" };
       }
+      if (required.quantity === null) {
+        return {
+          ingredient: raw,
+          status: "unknown",
+          message: "Ingredient found · recipe quantity not specified",
+          pantryItemId: match._id,
+          pantryName: match.name,
+        };
+      }
+      const needed = normalizeAmount(required.quantity, required.unit);
+      const available = normalizeAmount(match.quantity, match.unit);
+      if (needed.unit !== available.unit) {
+        return {
+          ingredient: raw,
+          status: "unit_mismatch",
+          message: `Ingredient found · cannot compare ${required.unit} with ${match.unit}`,
+          pantryItemId: match._id,
+          pantryName: match.name,
+        };
+      }
+      if (available.quantity + 0.000001 < needed.quantity) {
+        return {
+          ingredient: raw,
+          status: "insufficient",
+          message: `Not enough in pantry · need ${required.quantity} ${required.unit}, have ${match.quantity} ${match.unit}`,
+          pantryItemId: match._id,
+          pantryName: match.name,
+        };
+      }
       return {
         ingredient: raw,
         status: "available",
-        message: `Already in pantry · ${match.name}`,
+        message: `In pantry · ${match.quantity} ${match.unit} available`,
         pantryItemId: match._id,
         pantryName: match.name,
       };
