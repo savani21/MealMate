@@ -322,6 +322,16 @@ export default function GroceryStore() {
       String(item.product?._id || item.product || item.productId || "") === String(product._id)
     );
 
+  const goToStoreProduct = (product) => {
+    if (!product) return;
+    setNeededItemsOpen(false);
+    setSearchText(product.name);
+    window.setTimeout(() => {
+      const card = document.getElementById(`grocery-product-${product._id}`);
+      card?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+  };
+
   // Only show products that are still missing from the cart.
   const matchedRequestedProducts = useMemo(
     () => products.filter((product) => isRequestedProduct(product) && !isProductInCart(product)),
@@ -505,7 +515,13 @@ export default function GroceryStore() {
                         return (
                           <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2.5">
                             <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${inCart ? "bg-blue-50 text-blue-700" : matched ? "bg-rose-50 text-rose-700" : "bg-gray-100 text-gray-600"}`}>{inCart ? "In cart" : matched ? "Add failed" : "Not in store"}</span>
+                            {inCart ? (
+                              <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">In cart</span>
+                            ) : matched ? (
+                              <button type="button" onClick={() => goToStoreProduct(matchedProducts[0])} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">Buy</button>
+                            ) : (
+                              <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">Not in store</span>
+                            )}
                           </div>
                         );
                       })}
@@ -522,7 +538,15 @@ export default function GroceryStore() {
                       return (
                         <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
                           <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : inCart ? "bg-blue-50 text-blue-700" : storeMatch ? "bg-rose-50 text-rose-700" : "bg-gray-100 text-gray-600"}`}>{statusLabel}</span>
+                          {available ? (
+                            <span className="shrink-0 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">In pantry</span>
+                          ) : inCart ? (
+                            <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">In cart</span>
+                          ) : storeMatch ? (
+                            <button type="button" onClick={() => goToStoreProduct(matchingProducts[0])} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">Buy</button>
+                          ) : (
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">Not in store</span>
+                          )}
                         </div>
                       );
                     })}
@@ -577,6 +601,7 @@ export default function GroceryStore() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {visibleProducts.map((product) => (
               <div
+                id={`grocery-product-${product._id}`}
                 key={product._id}
                 className={`bg-white rounded-2xl border p-5 transition ${
                   isRequestedProduct(product)
