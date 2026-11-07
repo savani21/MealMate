@@ -307,12 +307,11 @@ export default function GroceryStore() {
     const productName = normalizeSearchIngredient(product?.name);
     const ingredientName = normalizeSearchIngredient(ingredient);
     if (!productName || !ingredientName) return false;
-    if (productName === ingredientName || productName.includes(ingredientName) || ingredientName.includes(productName)) return true;
-    const ignored = new Set(["and", "or", "whole", "white", "fresh"]);
-    const productTokens = productName.split(" ").filter((token) => token.length > 2 && !ignored.has(token));
-    const ingredientTokens = ingredientName.split(" ").filter((token) => token.length > 2 && !ignored.has(token));
-    return ingredientTokens.some((token) => productTokens.includes(token)) &&
-      ingredientTokens.filter((token) => productTokens.includes(token)).length >= Math.min(1, ingredientTokens.length);
+    // Match complete ingredient names, not shared words such as "green".
+    // A green vegetable must never be mistaken for green chili.
+    return productName === ingredientName ||
+      productName.includes(ingredientName + " ") ||
+      ingredientName.includes(productName + " ");
   };
 
   const isRequestedProduct = (product) =>
@@ -500,11 +499,13 @@ export default function GroceryStore() {
                     </div>
                     <div className="space-y-2 p-3">
                       {group.items.map((item) => {
-                        const matched = products.some((product) => productMatchesIngredient(product, item.name));
+                        const matchedProducts = products.filter((product) => productMatchesIngredient(product, item.name));
+                        const inCart = matchedProducts.some((product) => isProductInCart(product));
+                        const matched = matchedProducts.length > 0;
                         return (
                           <div key={item._id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-2.5">
                             <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${matched ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{matched ? "Need to buy" : "Not in store"}</span>
+                            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${inCart ? "bg-blue-50 text-blue-700" : matched ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{inCart ? "In cart" : matched ? "Need to buy" : "Not in store"}</span>
                           </div>
                         );
                       })}
@@ -514,12 +515,14 @@ export default function GroceryStore() {
                   <section className="space-y-2">
                     {allRecipeIngredientsFromUrl.map((item, index) => {
                       const available = item.status === "available";
-                      const storeMatch = products.some((product) => productMatchesIngredient(product, item.name));
-                      const statusLabel = available ? "In pantry" : storeMatch ? "Need to buy" : "Not in store";
+                      const matchingProducts = products.filter((product) => productMatchesIngredient(product, item.name));
+                      const storeMatch = matchingProducts.length > 0;
+                      const inCart = matchingProducts.some((product) => isProductInCart(product));
+                      const statusLabel = available ? "In pantry" : inCart ? "In cart" : storeMatch ? "Need to buy" : "Not in store";
                       return (
                         <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
                           <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : storeMatch ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{statusLabel}</span>
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : inCart ? "bg-blue-50 text-blue-700" : storeMatch ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>{statusLabel}</span>
                         </div>
                       );
                     })}
