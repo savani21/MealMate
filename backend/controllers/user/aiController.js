@@ -1,5 +1,6 @@
 const Recipe = require("../../models/user/Recipe");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
+const { buildCuratedFallback, curatedRecipeCount } = require("../../utils/curatedFallbackRecipes");
 
 async function generateWithOpenRouter(messages, responseFormat) {
   const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
@@ -171,8 +172,12 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       }
     } catch (aiError) {
       usedFallback = true;
-      console.warn("AI recipe generation unavailable; using quick local fallback:", aiError.message);
-      recipeData = buildFallbackRecipe({ ingredients, diet, category, mealName });
+      console.warn("AI recipe generation unavailable; using curated local fallback:", aiError.message);
+      recipeData = buildCuratedFallback({ ingredients, diet, category, mealName });
+      if (!recipeData) {
+        console.warn(`No curated recipe matched the supplied ingredients and diet. Using safe basic fallback. Curated recipes available: ${curatedRecipeCount}.`);
+        recipeData = buildFallbackRecipe({ ingredients, diet, category, mealName });
+      }
     }
 
     // Check the final AI title too, so generated variants cannot create duplicates.
