@@ -103,7 +103,7 @@ export default function Recipes() {
 
   useEffect(() => {
     if (!generating) { setGenerationSlow(false); return; }
-    const timer = setTimeout(() => setGenerationSlow(true), 8000);
+    const timer = setTimeout(() => setGenerationSlow(true), 25000);
     return () => clearTimeout(timer);
   }, [generating]);
 
