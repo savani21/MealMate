@@ -1,6 +1,8 @@
 const GroceryList = require("../../models/user/GroceryList");
 const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
+const PantryItem = require("../../models/user/PantryItem");
+const { calculateSmartGroceryItems } = require("../../utils/smartGroceryCalculator");
 
 const DIET_FORBIDDEN = {
   vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
@@ -151,11 +153,14 @@ async function buildGroceryItems(mealPlan) {
   }
 
   const uniqueMealNames = [...new Set(mealNames)];
-  const recipes = await Recipe.find({ name: { $in: uniqueMealNames } }).lean();
-  const recipeMap = new Map(recipes.map((r) => [r.name.trim().toLowerCase(), r]));
+  const [recipes, pantryItems] = await Promise.all([
+    Recipe.find({ name: { $in: uniqueMealNames } }).lean(),
+    PantryItem.find({ user: mealPlan.user }).lean(),
+  ]);
+  const recipeMap = new Map(recipes.map((recipe) => [recipe.name.trim().toLowerCase(), recipe]));
 
-  // New OpenRouter meal plans already contain per-meal ingredients.
-  // Only legacy plans need recipe/AI fallback.
+  // New AI meal plans already contain ingredient quantities. Legacy plans use
+  // saved recipes first and the existing AI lookup only as a final fallback.
   const legacyMeals = [];
   for (const day of mealPlan.meals || []) {
     for (const [key] of mealTypes) {
@@ -167,8 +172,7 @@ async function buildGroceryItems(mealPlan) {
   }
 
   const aiIngredients = await getAIIngredientsForMeals([...new Set(legacyMeals)]);
-  const availableIngredients = parseIngredients(mealPlan.availableIngredients || "");
-  const items = [];
+  const requiredItems = [];
 
   for (const day of mealPlan.meals || []) {
     for (const [key, label] of mealTypes) {
@@ -176,7 +180,6 @@ async function buildGroceryItems(mealPlan) {
       if (!mealName) continue;
 
       let entries = Array.isArray(day[key + "Ingredients"]) ? day[key + "Ingredients"] : [];
-
       if (!entries.length) {
         const recipe = recipeMap.get(mealName.toLowerCase());
         if (recipe?.ingredients?.length) {
@@ -186,27 +189,15 @@ async function buildGroceryItems(mealPlan) {
         }
       }
 
-      const cleanEntries = [];
-      const seen = new Set();
-
       for (const raw of entries) {
-        const name = typeof raw === "string" ? raw : raw?.name;
-        const quantity = typeof raw === "string" ? "" : raw?.quantity || "";
-        const normalized = normalizeIngredient(name);
-        const canonical = canonicalIngredient(normalized);
-
-        if (!normalized || !canonical || seen.has(canonical) || isForbiddenForDiet(normalized, mealPlan.diet)) continue;
-
-        seen.add(canonical);
-        cleanEntries.push({ name: normalized, quantity });
-      }
-
-      for (const item of removeAvailable(cleanEntries, availableIngredients)) {
-        items.push({
-          name: item.name,
-          quantity: item.quantity || "",
-          checked: false,
-          day: Number(day.day),
+        const rawName = typeof raw === "string" ? raw : raw?.name;
+        const name = normalizeIngredient(rawName);
+        const quantity = typeof raw === "string" ? "" : String(raw?.quantity || "").trim();
+        if (!name || isForbiddenForDiet(name, mealPlan.diet)) continue;
+        requiredItems.push({
+          name,
+          quantity,
+          day: Number(day.day) || null,
           mealType: label,
           mealName,
         });
@@ -214,7 +205,11 @@ async function buildGroceryItems(mealPlan) {
     }
   }
 
-  return items;
+  return calculateSmartGroceryItems({
+    requiredItems,
+    pantryItems,
+    availableIngredients: parseIngredients(mealPlan.availableIngredients || ""),
+  });
 }
 
 function mergeCheckedState(freshItems, oldItems) {
