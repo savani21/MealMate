@@ -398,11 +398,13 @@ export default function GroceryStore() {
         }
         await loadCart();
         setCartOpen(true);
-        setRequestedAddMessage(failures.length
-          ? `Some ingredients could not be added: ${failures.join(", ")}. Please add them manually.`
-          : matches.length
-            ? `Added ${matches.length} matching ingredient(s) to your cart.`
-            : "No matching store products were found, or all matching items are already in your cart.");
+        setRequestedAddMessage(
+          failures.length
+            ? `Some ingredients could not be added: ${failures.join(", ")}. Please use the Buy button to add them manually.`
+            : matches.length
+              ? `Added ${matches.length} matching ingredient(s) to your cart.`
+              : ""
+        );
       } catch (error) {
         console.error("Recipe grocery auto-add error:", error);
         setRequestedAddMessage("Could not automatically add items. Please add them from the store.");
