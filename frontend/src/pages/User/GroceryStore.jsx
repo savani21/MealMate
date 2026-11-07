@@ -39,10 +39,18 @@ export default function GroceryStore() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const listId = params.get("listId");
-  const requestedIngredientsFromUrl = (params.get("ingredients") || "")
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
+  let requestedIngredientsFromUrl = [];
+  try {
+    const structured = JSON.parse(params.get("ingredientsJson") || "null");
+    if (Array.isArray(structured)) requestedIngredientsFromUrl = structured.map((item) => String(item || "").trim()).filter(Boolean);
+  } catch { requestedIngredientsFromUrl = []; }
+  // Backward compatibility for older links that used comma-separated values.
+  if (!requestedIngredientsFromUrl.length) {
+    requestedIngredientsFromUrl = (params.get("ingredients") || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
   const recipeNameFromUrl = params.get("recipeName") || "Selected recipe";
   let allRecipeIngredientsFromUrl = [];
   try { const parsed = JSON.parse(params.get("allIngredients") || "[]"); if (Array.isArray(parsed)) allRecipeIngredientsFromUrl = parsed.filter((item) => item && item.name); } catch { allRecipeIngredientsFromUrl = []; }
@@ -269,12 +277,12 @@ export default function GroceryStore() {
   const normalizeSearchIngredient = (value) => {
     const cleaned = String(value || "")
       .toLowerCase()
-      .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
-      .replace(/^\s*[\d./]+\s*/, "")
-      .replace(/\b(?:cups?|tbsp|tblspoons?|tablespoons?|tsp|teaspoons?|kg|g|gm|gms|grm|grms|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\b/gi, " ")
-      .replace(/\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\b/gi, " ")
+      .replace(/^as\\s+needed\\s*[:,-]?\\s*/i, "")
+      .replace(/^\\s*\\d+(?:\\s*\\/\\s*\\d+)?\\s*/, "")
+      .replace(/\\b(?:cups?|tbsp|tblspoons?|tablespoons?|tsp|teaspoons?|kg|g|gm|gms|grm|grms|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\\b/gi, " ")
+      .replace(/\\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
-      .replace(/\s+/g, " ")
+      .replace(/\\s+/g, " ")
       .trim()
       .replace(/ies$/, "y")
       .replace(/s$/, "");
@@ -321,9 +329,10 @@ export default function GroceryStore() {
     [products, requestedIngredients.join(","), cart.items]
   );
 
-  const unmatchedRequestedIngredients = requestedIngredients.filter(
-    (ingredient) => !products.some((product) => productMatchesIngredient(product, ingredient))
-  );
+  const unmatchedRequestedIngredients = requestedIngredients.filter((ingredient) => {
+    const normalized = normalizeSearchIngredient(ingredient);
+    return normalized && !products.some((product) => productMatchesIngredient(product, ingredient));
+  });
 
   const [addingRequested, setAddingRequested] = useState(false);
   const [requestedAddMessage, setRequestedAddMessage] = useState("");
@@ -512,12 +521,13 @@ export default function GroceryStore() {
                   <section className="space-y-2">
                     {allRecipeIngredientsFromUrl.map((item, index) => {
                       const available = item.status === "available";
-                      const needsBuy = requestedIngredients.some((name) => name === String(item.name).trim().toLowerCase());
+                      const storeMatch = products.some((product) => productMatchesIngredient(product, item.name));
+                      const statusLabel = available ? "In pantry" : storeMatch ? "Need to buy" : "Not in store";
                       return (
                         <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
                           <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : needsBuy ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-600"}`}>
-                            {available ? "In pantry" : needsBuy ? "Need to buy" : item.status === "unknown" ? "Check pantry" : item.message || "Check pantry"}
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold ${available ? "bg-green-50 text-green-700" : storeMatch ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"}`}>
+                            {statusLabel}
                           </span>
                         </div>
                       );
