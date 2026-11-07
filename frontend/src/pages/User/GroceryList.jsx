@@ -184,7 +184,7 @@ export default function GroceryList() {
                         return (
                           <div key={`${group.day}-${group.mealType}-${group.mealName}`} className="rounded-2xl border border-gray-100 overflow-hidden">
                             <div className="bg-gray-50 px-5 py-4">
-                              <p className="text-xs font-bold uppercase tracking-wide text-primary">Day {group.day} · {group.mealType}</p>
+                              <p className="text-xs font-bold uppercase tracking-wide text-primary">{group.day ? `Day ${group.day} · ` : "Across meal plan · "}{group.mealType}</p>
                               <h3 className="font-black text-gray-900 mt-1">{group.mealName}</h3>
                             </div>
                             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
