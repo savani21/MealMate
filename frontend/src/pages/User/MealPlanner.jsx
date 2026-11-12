@@ -15,6 +15,10 @@ export default function MealPlanner() {
   const [selectedPantryNames, setSelectedPantryNames] = useState([]);
   const [pantryLoading, setPantryLoading] = useState(true);
   const [newIngredient, setNewIngredient] = useState("");
+  const [newIngredientQuantity, setNewIngredientQuantity] = useState("1");
+  const [newIngredientUnit, setNewIngredientUnit] = useState("g");
+  const [addingIngredient, setAddingIngredient] = useState(false);
+  const [ingredientMessage, setIngredientMessage] = useState("");
   const [showIngredientPicker, setShowIngredientPicker] = useState(false);
   const [duration, setDuration] = useState("3");
   const [ingredientMode, setIngredientMode] = useState(params.get("mode") || "available");
@@ -98,13 +102,68 @@ export default function MealPlanner() {
 
   const getAvailableIngredients = () => [...new Set([...selectedPantryNames, ...ingredients.split(",").map((item) => item.trim()).filter(Boolean)])];
 
-  const addCustomIngredient = () => {
-    const value = newIngredient.trim().replace(/,+$/, "");
-    if (!value) return;
-    const exists = getAvailableIngredients().some((item) => item.toLowerCase() === value.toLowerCase());
-    if (!exists) setIngredients((current) => [...current.split(",").map((item) => item.trim()).filter(Boolean), value].join(", "));
-    setNewIngredient("");
-    setPreviewReady(false);
+  const addCustomIngredient = async () => {
+    const name = newIngredient.trim().replace(/,+$/, "");
+    const quantity = Number(newIngredientQuantity);
+    const unit = newIngredientUnit.trim().toLowerCase();
+    if (!name) {
+      setIngredientMessage("Enter an ingredient name.");
+      return;
+    }
+    if (!Number.isFinite(quantity) || quantity <= 0 || !unit) {
+      setIngredientMessage("Enter a quantity greater than zero and select a unit.");
+      return;
+    }
+
+    const existingItem = pantryItems.find((item) => String(item.name || "").trim().toLowerCase() === name.toLowerCase());
+    if (existingItem) {
+      setSelectedPantryNames((current) => current.some((item) => item.toLowerCase() === existingItem.name.toLowerCase()) ? current : [...current, existingItem.name]);
+      setIngredientMessage(`${existingItem.name} is already in your pantry and has been selected.`);
+      setNewIngredient("");
+      setPreviewReady(false);
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setIngredientMessage("Please log in before adding ingredients to your pantry.");
+      setLocation("/login");
+      return;
+    }
+
+    setAddingIngredient(true);
+    setIngredientMessage("");
+    try {
+      const response = await fetch("http://localhost:5000/api/user/pantry", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, quantity, unit }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to save ingredient to your pantry.");
+
+      const savedItem = data.item;
+      if (!savedItem?.name) throw new Error("The pantry saved the ingredient but returned no ingredient details. Refresh your pantry and try again.");
+
+      setPantryItems((current) => {
+        const exists = current.some((item) => String(item.name || "").toLowerCase() === savedItem.name.toLowerCase());
+        return exists ? current.map((item) => item.name.toLowerCase() === savedItem.name.toLowerCase() ? savedItem : item) : [...current, savedItem].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setSelectedPantryNames((current) => current.some((item) => item.toLowerCase() === savedItem.name.toLowerCase()) ? current : [...current, savedItem.name]);
+      setNewIngredient("");
+      setNewIngredientQuantity("1");
+      setNewIngredientUnit("g");
+      setPreviewReady(false);
+      setIngredientMessage(`${savedItem.name} was saved to your pantry and selected for this meal plan.`);
+    } catch (error) {
+      console.error("Add pantry ingredient error:", error);
+      setIngredientMessage(error.message || "Unable to add ingredient. Please try again.");
+    } finally {
+      setAddingIngredient(false);
+    }
   };
 
   const togglePantryIngredient = (name) => {
@@ -390,11 +449,17 @@ export default function MealPlanner() {
                   </div>
                 ) : <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. You can still add ingredients below, or add pantry items in My Kitchen → Pantry.</p>}
                 <div className="mt-5">
-                  <label className="mb-2 block text-sm font-semibold text-gray-700">Add another ingredient</label>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <input value={newIngredient} onChange={(event) => setNewIngredient(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomIngredient(); } }} placeholder="e.g. fresh coriander" className="min-w-0 flex-1 rounded-xl border border-gray-200 px-4 py-2.5 outline-none focus:border-primary" />
-                    <button type="button" onClick={addCustomIngredient} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-green-50"><Plus className="h-4 w-4" /> Add ingredient</button>
+                  <label className="mb-2 block text-sm font-semibold text-gray-700">Add another ingredient to your pantry and this meal plan</label>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_90px_110px_auto]">
+                    <input value={newIngredient} onChange={(event) => { setNewIngredient(event.target.value); setIngredientMessage(""); }} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addCustomIngredient(); } }} placeholder="e.g. fresh coriander" className="min-w-0 rounded-xl border border-gray-200 px-4 py-2.5 outline-none focus:border-primary" />
+                    <input type="number" min="0.01" step="any" value={newIngredientQuantity} onChange={(event) => setNewIngredientQuantity(event.target.value)} aria-label="Ingredient quantity" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:border-primary" />
+                    <select value={newIngredientUnit} onChange={(event) => setNewIngredientUnit(event.target.value)} aria-label="Ingredient unit" className="w-full rounded-xl border border-gray-200 px-3 py-2.5 outline-none focus:border-primary">
+                      {["g", "kg", "ml", "l", "piece", "pieces", "bunch", "pack"].map((unit) => <option key={unit} value={unit}>{unit}</option>)}
+                    </select>
+                    <button type="button" onClick={addCustomIngredient} disabled={addingIngredient} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 px-4 py-2.5 text-sm font-semibold text-primary hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-60"><Plus className="h-4 w-4" /> {addingIngredient ? "Saving..." : "Add ingredient"}</button>
                   </div>
+                  {ingredientMessage && <p role="status" className="mt-2 text-xs text-gray-600">{ingredientMessage}</p>}
+                  <p className="mt-2 text-xs text-gray-500">New ingredients are saved to your pantry and automatically selected for this meal plan.</p>
                   {ingredients.split(",").map((item) => item.trim()).filter(Boolean).length > 0 && <p className="mt-2 text-xs text-gray-500">Additional ingredients: {ingredients.split(",").map((item) => item.trim()).filter(Boolean).join(", ")}</p>}
                 </div>
               </div>
