@@ -17,6 +17,8 @@ exports.addPantryItem = async (req, res) => {
     const name = String(req.body.name || "").trim().toLowerCase();
     const quantity = Number(req.body.quantity);
     const unit = String(req.body.unit || "").trim().toLowerCase();
+    const expiryDate = req.body.expiryDate ? new Date(req.body.expiryDate) : null;
+    if (req.body.expiryDate && Number.isNaN(expiryDate.getTime())) return res.status(400).json({ message: "Enter a valid expiry date." });
     if (!name || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       return res.status(400).json({ message: "Ingredient name, positive quantity and unit are required." });
     }
@@ -25,10 +27,11 @@ exports.addPantryItem = async (req, res) => {
     if (existing) {
       if (existing.unit !== unit) return res.status(409).json({ message: "This ingredient already exists with a different unit. Edit the existing item instead." });
       existing.quantity += quantity;
+      if (expiryDate && (!existing.expiryDate || expiryDate < existing.expiryDate)) existing.expiryDate = expiryDate;
       await existing.save();
       return res.status(200).json({ message: "Pantry quantity updated", item: existing });
     }
-    const item = await PantryItem.create({ user: req.user.id, name, quantity, unit });
+    const item = await PantryItem.create({ user: req.user.id, name, quantity, unit, expiryDate });
     res.status(201).json({ message: "Ingredient added to pantry", item });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ message: "Ingredient already exists in your pantry." });
@@ -41,6 +44,10 @@ exports.updatePantryItem = async (req, res) => {
     const updates = {};
     if (req.body.name !== undefined) updates.name = String(req.body.name).trim().toLowerCase();
     if (req.body.unit !== undefined) updates.unit = String(req.body.unit).trim().toLowerCase();
+    if (req.body.expiryDate !== undefined) {
+      if (req.body.expiryDate === null || req.body.expiryDate === "") updates.expiryDate = null;
+      else { const expiryDate = new Date(req.body.expiryDate); if (Number.isNaN(expiryDate.getTime())) return res.status(400).json({ message: "Enter a valid expiry date." }); updates.expiryDate = expiryDate; }
+    }
     if (req.body.quantity !== undefined) {
       const quantity = Number(req.body.quantity);
       if (!Number.isFinite(quantity) || quantity < 0) return res.status(400).json({ message: "Quantity must be zero or greater." });
@@ -195,6 +202,64 @@ exports.consumeRecipeIngredients = async (req, res) => {
     }
     console.error("Consume recipe ingredients error:", error);
     res.status(500).json({ message: "Could not update pantry quantities.", error: error.message });
+  }
+};
+
+
+exports.getExpiryBasedRecipeRecommendations = async (req, res) => {
+  try {
+    const days = Math.min(30, Math.max(1, Number(req.query.days) || 7));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const throughDate = new Date(today);
+    throughDate.setDate(throughDate.getDate() + days);
+    throughDate.setHours(23, 59, 59, 999);
+
+    const [expiringItems, recipes] = await Promise.all([
+      PantryItem.find({
+        user: req.user.id,
+        quantity: { $gt: 0 },
+        expiryDate: { $gte: today, $lte: throughDate },
+      }).sort({ expiryDate: 1 }).lean(),
+      Recipe.find().lean(),
+    ]);
+
+    const expiringByName = new Map(
+      expiringItems.map((item) => [normalizeIngredientName(item.name), item])
+    );
+    const recommendations = recipes.map((recipe) => {
+      const matched = (recipe.ingredients || []).map((raw) => {
+        const name = normalizeIngredientName(parseRequiredIngredient(raw).name);
+        const item = expiringByName.get(name);
+        return item ? {
+          pantryItemId: item._id,
+          name: item.name,
+          expiryDate: item.expiryDate,
+          quantity: item.quantity,
+          unit: item.unit,
+        } : null;
+      }).filter(Boolean);
+      const uniqueMatched = [...new Map(matched.map((item) => [String(item.pantryItemId), item])).values()];
+      if (!uniqueMatched.length) return null;
+      const nearestExpiryDate = uniqueMatched.reduce((earliest, item) =>
+        !earliest || new Date(item.expiryDate) < new Date(earliest) ? item.expiryDate : earliest, null);
+      return { ...recipe, expiringIngredients: uniqueMatched, expiringIngredientCount: uniqueMatched.length, nearestExpiryDate };
+    }).filter(Boolean).sort((a, b) =>
+      b.expiringIngredientCount - a.expiringIngredientCount ||
+      new Date(a.nearestExpiryDate) - new Date(b.nearestExpiryDate)
+    );
+
+    return res.json({
+      days,
+      expiringItems,
+      recommendations: recommendations.slice(0, 5),
+      message: recommendations.length
+        ? "Recipes using ingredients nearing expiry."
+        : "No matching recipes found for ingredients nearing expiry.",
+    });
+  } catch (error) {
+    console.error("Expiry-based recipe recommendations error:", error);
+    return res.status(500).json({ message: "Could not load expiry-based recipe recommendations." });
   }
 };
 
