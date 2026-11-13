@@ -5,6 +5,7 @@ const Order = require("../../models/user/Order");
 const User = require("../../models/User");
 const GroceryList = require("../../models/user/GroceryList");
 const PantryItem = require("../../models/user/PantryItem");
+const Notification = require("../../models/user/Notification");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 
@@ -124,6 +125,26 @@ exports.processDueOrders = async () => {
           { _id: order._id },
           { $set: { status: "delivered", inventoryAppliedAt: new Date(), inventorySyncing: false }, $unset: { inventorySyncingAt: 1 } }
         );
+
+        // Persist one delivery notification per order; a retry cannot duplicate it.
+        try {
+          await Notification.updateOne(
+            { user: order.user, type: "order-delivered", referenceId: String(order._id) },
+            {
+              $setOnInsert: {
+                user: order.user,
+                type: "order-delivered",
+                referenceId: String(order._id),
+                title: "Your grocery order has arrived!",
+                message: `Order ${order.orderId} has been delivered successfully. Your purchased ingredients have been added to your pantry.`,
+                read: false,
+              },
+            },
+            { upsert: true }
+          );
+        } catch (notificationError) {
+          console.error(`Could not create delivery notification for ${order.orderId}:`, notificationError.message);
+        }
       } catch (error) {
         await Order.updateOne(
           { _id: order._id },
