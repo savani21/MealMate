@@ -17,6 +17,8 @@ exports.addPantryItem = async (req, res) => {
     const name = String(req.body.name || "").trim().toLowerCase();
     const quantity = Number(req.body.quantity);
     const unit = String(req.body.unit || "").trim().toLowerCase();
+    const expiryDate = req.body.expiryDate ? new Date(req.body.expiryDate) : null;
+    if (req.body.expiryDate && Number.isNaN(expiryDate.getTime())) return res.status(400).json({ message: "Enter a valid expiry date." });
     if (!name || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       return res.status(400).json({ message: "Ingredient name, positive quantity and unit are required." });
     }
@@ -25,10 +27,11 @@ exports.addPantryItem = async (req, res) => {
     if (existing) {
       if (existing.unit !== unit) return res.status(409).json({ message: "This ingredient already exists with a different unit. Edit the existing item instead." });
       existing.quantity += quantity;
+      if (expiryDate && (!existing.expiryDate || expiryDate < existing.expiryDate)) existing.expiryDate = expiryDate;
       await existing.save();
       return res.status(200).json({ message: "Pantry quantity updated", item: existing });
     }
-    const item = await PantryItem.create({ user: req.user.id, name, quantity, unit });
+    const item = await PantryItem.create({ user: req.user.id, name, quantity, unit, expiryDate });
     res.status(201).json({ message: "Ingredient added to pantry", item });
   } catch (error) {
     if (error.code === 11000) return res.status(409).json({ message: "Ingredient already exists in your pantry." });
@@ -41,6 +44,10 @@ exports.updatePantryItem = async (req, res) => {
     const updates = {};
     if (req.body.name !== undefined) updates.name = String(req.body.name).trim().toLowerCase();
     if (req.body.unit !== undefined) updates.unit = String(req.body.unit).trim().toLowerCase();
+    if (req.body.expiryDate !== undefined) {
+      if (req.body.expiryDate === null || req.body.expiryDate === "") updates.expiryDate = null;
+      else { const expiryDate = new Date(req.body.expiryDate); if (Number.isNaN(expiryDate.getTime())) return res.status(400).json({ message: "Enter a valid expiry date." }); updates.expiryDate = expiryDate; }
+    }
     if (req.body.quantity !== undefined) {
       const quantity = Number(req.body.quantity);
       if (!Number.isFinite(quantity) || quantity < 0) return res.status(400).json({ message: "Quantity must be zero or greater." });
