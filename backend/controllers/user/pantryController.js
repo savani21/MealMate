@@ -205,55 +205,32 @@ exports.compareRecipeWithPantry = async (req, res) => {
       PantryItem.find({ user: req.user.id }).lean(),
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
+
+    // Pantry status is presence-only. Recipe quantities and pantry quantities
+    // are deliberately not compared; users choose what to purchase manually.
     const rows = (recipe.ingredients || []).map((raw) => {
       const required = parseRequiredIngredient(raw);
-      if (isCommonHouseholdIngredient(required.name)) {
-        return { ingredient: raw, status: "available", message: "Common household item" };
-      }
       const normalizedRequired = normalizeIngredientName(required.name);
-      const match = pantry.find((item) => normalizeIngredientName(item.name) === normalizedRequired);
-      if (!match) {
-        return { ingredient: raw, status: "missing", message: "Not in pantry" };
-      }
-      if (required.quantity === null) {
-        return {
-          ingredient: raw,
-          status: "unknown",
-          message: "Ingredient found · recipe quantity not specified",
-          pantryItemId: match._id,
-          pantryName: match.name,
-        };
-      }
-      const needed = normalizeAmount(required.quantity, required.unit);
-      const available = normalizeAmount(match.quantity, match.unit);
-      if (needed.unit !== available.unit) {
-        return {
-          ingredient: raw,
-          status: "unit_mismatch",
-          message: `Ingredient found · cannot compare ${required.unit} with ${match.unit}`,
-          pantryItemId: match._id,
-          pantryName: match.name,
-        };
-      }
-      if (available.quantity + 0.000001 < needed.quantity) {
-        return {
-          ingredient: raw,
-          status: "insufficient",
-          message: `Not enough in pantry · need ${required.quantity} ${required.unit}, have ${match.quantity} ${match.unit}`,
-          pantryItemId: match._id,
-          pantryName: match.name,
-        };
-      }
-      return {
-        ingredient: raw,
-        status: "available",
-        message: `In pantry · ${match.quantity} ${match.unit} available`,
-        pantryItemId: match._id,
-        pantryName: match.name,
-      };
+      const match = pantry.find((item) =>
+        normalizeIngredientName(item.name) === normalizedRequired
+      );
+      return match
+        ? {
+            ingredient: raw,
+            status: "available",
+            message: "Available in Pantry",
+            pantryItemId: match._id,
+            pantryName: match.name,
+          }
+        : {
+            ingredient: raw,
+            status: "missing",
+            message: "Not in Pantry",
+          };
     });
-    res.json({ recipeId: recipe._id, comparison: rows });
+
+    return res.json({ recipeId: recipe._id, comparison: rows });
   } catch (error) {
-    res.status(500).json({ message: "Failed to compare recipe ingredients", error: error.message });
+    return res.status(500).json({ message: "Failed to compare recipe ingredients", error: error.message });
   }
 };
