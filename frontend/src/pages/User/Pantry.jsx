@@ -1,4 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
+import { getIngredientImageCandidates } from "@/utils/ingredientImageDatabase";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import {
@@ -10,50 +11,30 @@ import {
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const API = `${API_BASE}/user/pantry`;
 
-const ingredientImageAliases = {
-  capsicum: "Bell Pepper", bellpepper: "Bell Pepper", "bell pepper": "Bell Pepper",
-  potato: "Potatoes", tomato: "Tomato", onion: "Onion", carrot: "Carrots",
-  cucumber: "Cucumber", spinach: "Spinach", broccoli: "Broccoli", cauliflower: "Cauliflower",
-  cabbage: "Cabbage", garlic: "Garlic", ginger: "Ginger", peas: "Peas",
-  "green peas": "Peas", corn: "Sweetcorn", sweetcorn: "Sweetcorn", mushroom: "Mushrooms",
-  apple: "Apple", banana: "Banana", orange: "Orange", mango: "Mango",
-  lemon: "Lemon", lime: "Lime", papaya: "Papaya", pineapple: "Pineapple",
-  grapes: "Grapes", strawberry: "Strawberries", strawberries: "Strawberries",
-  rice: "Rice", "basmati rice": "Rice", flour: "Flour", wheat: "Wheat",
-  "wheat flour": "Flour", atta: "Flour", oats: "Oats", pasta: "Pasta",
-  lentils: "Lentils", dal: "Lentils", chickpeas: "Chickpeas", kidneybeans: "Kidney Beans",
-  "kidney beans": "Kidney Beans", milk: "Milk", paneer: "Paneer", cheese: "Cheese",
-  butter: "Butter", yogurt: "Yogurt", curd: "Yogurt", cream: "Cream",
-  egg: "Egg", eggs: "Eggs", chicken: "Chicken", "chicken breast": "Chicken Breast",
-  fish: "Fish", salmon: "Salmon", prawns: "Prawns", shrimp: "Shrimp",
-  turmeric: "Turmeric", cumin: "Cumin", coriander: "Coriander", "coriander powder": "Coriander",
-  chilli: "Chilli", chili: "Chilli", "green chili": "Green Chilli", "green chilli": "Green Chilli",
-  cinnamon: "Cinnamon", cloves: "Cloves", cardamom: "Cardamom", pepper: "Black Pepper",
-  "black pepper": "Black Pepper", sugar: "Sugar", salt: "Salt", honey: "Honey",
-  oil: "Oil", "cooking oil": "Oil", ghee: "Ghee", coconut: "Coconut",
-  "coconut milk": "Coconut Milk", tofu: "Tofu", bread: "Bread", semolina: "Semolina",
-  poha: "Poha", "flattened rice": "Poha", quinoa: "Quinoa", avocado: "Avocado",
-};
-const ingredientImageUrl = (name) => {
-  const key = String(name || "").toLowerCase().trim().replace(/\\s+/g, " ");
-  const exact = ingredientImageAliases[key] || key.replace(/\\b\\w/g, (letter) => letter.toUpperCase());
-  return `https://www.themealdb.com/images/ingredients/${encodeURIComponent(exact)}-Small.png`;
-};
-
 function IngredientImage({ name }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [name]);
+  const candidates = useMemo(() => getIngredientImageCandidates(name), [name]);
+  const [imageIndex, setImageIndex] = useState(0);
+  useEffect(() => setImageIndex(0), [name]);
+  const imageUrl = candidates[imageIndex];
+
   return (
     <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#f5f8ef] to-[#e8efdf]">
-      {!failed ? (
+      {imageUrl ? (
         <img
-          src={ingredientImageUrl(name)}
+          src={imageUrl}
           alt={name}
           loading="lazy"
           className="h-full w-full object-contain p-3"
-          onError={() => setFailed(true)}
+          onError={() => setImageIndex((index) => index + 1)}
         />
       ) : (
+        <div className="flex h-full flex-col items-center justify-center px-3 text-center text-[#71856d]">
+          <Leaf className="h-9 w-9 opacity-60" />
+          <span className="mt-2 max-w-full truncate text-xs font-semibold capitalize">{name}</span>
+          <span className="mt-0.5 text-[10px] text-[#9aa894]">No matching ingredient image</span>
+        </div>
+      )}
+      {imageUrl && imageIndex >= candidates.length && (
         <div className="flex h-full flex-col items-center justify-center px-3 text-center text-[#71856d]">
           <Leaf className="h-9 w-9 opacity-60" />
           <span className="mt-2 max-w-full truncate text-xs font-semibold capitalize">{name}</span>
