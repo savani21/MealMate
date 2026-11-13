@@ -280,7 +280,7 @@ export default function Notifications() {
 
   const getIcon = (type) => {
     if (type === "meal") return <CalendarDays className="w-5 h-5 text-primary" />;
-    if (type === "grocery") return <ShoppingBasket className="w-5 h-5 text-primary" />;
+    if (type === "grocery" || type === "pantry-expiry") return <ShoppingBasket className="w-5 h-5 text-primary" />;
     if (type === "recipe") return <ChefHat className="w-5 h-5 text-primary" />;
     return <Info className="w-5 h-5 text-primary" />;
   };
