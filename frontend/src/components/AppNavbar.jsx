@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -54,8 +54,42 @@ export default function AppNavbar({ children }) {
   const [openMenu, setOpenMenu] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [deliveryAlert, setDeliveryAlert] = useState(false);
+  const previousUnreadCount = useRef(null);
   const isAdmin = user?.role === "admin" || location.startsWith("/admin/");
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
+
+  useEffect(() => {
+    if (!user || isAdmin) {
+      previousUnreadCount.current = null;
+      setDeliveryAlert(false);
+      setUnreadNotifications(0);
+      return;
+    }
+    const loadUnreadCount = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch("http://localhost:5000/api/notifications", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const nextUnreadCount = Number(data.unreadCount) || 0;
+        if (previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
+          setDeliveryAlert(true);
+        }
+        previousUnreadCount.current = nextUnreadCount;
+        setUnreadNotifications(nextUnreadCount);
+      } catch (error) {
+        console.error("Notification badge error:", error);
+      }
+    };
+    loadUnreadCount();
+    const timer = setInterval(loadUnreadCount, 15000);
+    return () => clearInterval(timer);
+  }, [user, isAdmin, location]);
 
   const navigate = (path) => {
     setLocation(path);
@@ -79,7 +113,7 @@ export default function AppNavbar({ children }) {
         aria-expanded={openMenu === group.label}
         className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${openMenu === group.label || group.items.some((item) => active(item.path)) ? "bg-green-50 text-primary" : "text-gray-700 hover:bg-gray-50 hover:text-primary"}`}
       >
-        {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+        {group.label}{group.label === "Explore" && unreadNotifications > 0 && <span className="ml-0.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
       </button>
       {openMenu === group.label && (
         <div className="absolute left-0 top-full z-50 mt-3 w-64 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
@@ -96,6 +130,17 @@ export default function AppNavbar({ children }) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-xl">
+      {deliveryAlert && (
+        <div role="status" className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-2xl">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50"><Bell className="h-5 w-5 text-primary" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-gray-900">Your grocery order has arrived!</p>
+            <p className="mt-1 text-sm text-gray-500">Your delivery is complete. Check your notifications for order details.</p>
+            <button type="button" onClick={() => { setDeliveryAlert(false); navigate("/notifications"); }} className="mt-2 text-sm font-semibold text-primary hover:underline">View notification</button>
+          </div>
+          <button type="button" onClick={() => setDeliveryAlert(false)} aria-label="Dismiss delivery notification" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
+        </div>
+      )}
       <div className="mx-auto flex min-h-[76px] w-full max-w-7xl items-center gap-5 px-4 sm:px-6 lg:px-8">
         <button type="button" onClick={() => navigate("/dashboard")} aria-label="MealMate dashboard" className="flex shrink-0 items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-50"><ChefHat className="h-6 w-6 text-primary" /></span>
@@ -135,10 +180,10 @@ export default function AppNavbar({ children }) {
           {groups.map((group) => (
             <section key={group.label} className="border-t border-gray-100 py-2">
               <button type="button" onClick={() => setOpenMenu((current) => current === group.label ? "" : group.label)} aria-expanded={openMenu === group.label} className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-bold text-gray-900">
-                {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+                {group.label}{group.label === "Explore" && unreadNotifications > 0 && <span className="ml-auto mr-2 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
               </button>
               {openMenu === group.label && <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}</button>)}
+                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}{label === "Notifications" && unreadNotifications > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}</button>)}
               </div>}
             </section>
           ))}
