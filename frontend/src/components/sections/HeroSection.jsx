@@ -140,7 +140,7 @@ export function HeroSection() {
               initial={{ opacity: 0, x: -18 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.8, duration: 0.5 }}
-              className="absolute left-[2rem] top-[18%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:left-[2.25rem]"
+              className="absolute left-[9rem] top-[18%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:left-[9.5rem]"
             >
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-green-100"><Salad className="h-4 w-4 text-green-600"/></span>
               Salad
