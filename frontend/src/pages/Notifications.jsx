@@ -69,6 +69,7 @@ export default function Notifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [mealPlans, setMealPlans] = useState([]);
+  const [orderNotifications, setOrderNotifications] = useState([]);
   const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
 
@@ -79,6 +80,34 @@ export default function Notifications() {
     const timer = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const loadOrderNotifications = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch("http://localhost:5000/api/notifications", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setOrderNotifications((data.notifications || []).map((item) => ({
+          id: item._id,
+          type: item.type === "order-delivered" ? "grocery" : item.type,
+          title: item.title,
+          message: item.message,
+          time: new Date(item.createdAt).toLocaleString(),
+          read: item.read,
+          backend: true,
+        })));
+      } catch (error) {
+        console.error("Order notification error:", error);
+      }
+    };
+    loadOrderNotifications();
+    const timer = setInterval(loadOrderNotifications, 15000);
+    return () => clearInterval(timer);
+  }, [user]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -173,15 +202,15 @@ export default function Notifications() {
 
     const visibleDynamic = dynamic.filter((item) => !deletedDynamic.includes(item.id));
     const dynamicIds = new Set(visibleDynamic.map((item) => item.id));
-    const retainedStored = stored.filter((item) => !item.dynamic || dynamicIds.has(item.id));
+    const retainedStored = stored.filter((item) => !item.backend && (!item.dynamic || dynamicIds.has(item.id)));
     const merged = visibleDynamic.map((item) => {
       const existing = retainedStored.find((storedItem) => storedItem.id === item.id);
       return existing ? { ...item, read: existing.read } : item;
     });
 
     const otherStored = retainedStored.filter((item) => !dynamicIds.has(item.id));
-    setNotifications([...merged, ...otherStored]);
-  }, [loading, todayPlan, todayMeals, now, notificationStorageKey, deletedDynamicKey]);
+    setNotifications([...merged, ...otherStored, ...orderNotifications]);
+  }, [loading, todayPlan, todayMeals, now, notificationStorageKey, deletedDynamicKey, orderNotifications]);
 
   useEffect(() => {
     if (!loading) {
@@ -189,12 +218,33 @@ export default function Notifications() {
     }
   }, [notifications, loading, notificationStorageKey]);
 
-  const markAsRead = (id) => {
+  const markAsRead = async (id) => {
+    const notification = notifications.find((item) => item.id === id);
     setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, read: true } : item));
+    if (notification?.backend) {
+      const token = localStorage.getItem("token");
+      try {
+        await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+          method: "PATCH",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (error) {
+        console.error("Could not mark notification as read:", error);
+      }
+    }
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+    const token = localStorage.getItem("token");
+    try {
+      await fetch("http://localhost:5000/api/notifications/read-all", {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (error) {
+      console.error("Could not mark all notifications as read:", error);
+    }
   };
 
   const deleteNotification = (id) => {
@@ -206,6 +256,13 @@ export default function Notifications() {
       }
     }
     setNotifications((prev) => prev.filter((item) => item.id !== id));
+    if (notification?.backend) {
+      const token = localStorage.getItem("token");
+      fetch(`http://localhost:5000/api/notifications/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch((error) => console.error("Could not delete notification:", error));
+    }
   };
 
   const clearAll = () => {
@@ -214,6 +271,11 @@ export default function Notifications() {
     const merged = [...new Set([...existing, ...dynamicIds])];
     localStorage.setItem(deletedDynamicKey, JSON.stringify(merged));
     setNotifications([]);
+    const token = localStorage.getItem("token");
+    fetch("http://localhost:5000/api/notifications", {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    }).catch((error) => console.error("Could not clear notifications:", error));
   };
 
   const getIcon = (type) => {
