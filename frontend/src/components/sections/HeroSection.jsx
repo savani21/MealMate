@@ -135,8 +135,34 @@ export function HeroSection() {
               </div>
             </motion.div>
 
-            {/* Keep the phone mockup visually clear; decorative food cards were
-                overlapping its frame and competing with the hero content. */}
+            {/* Floating food labels around the phone mockup */}
+            <motion.div
+              initial={{ opacity: 0, x: -18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              className="absolute left-[-1.5rem] top-[18%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:left-[-2rem]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-green-100"><Salad className="h-4 w-4 text-green-600"/></span>
+              Salad
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1, duration: 0.5 }}
+              className="absolute right-[-0.5rem] top-[42%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:right-[-1.5rem]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100"><Apple className="h-4 w-4 text-red-500"/></span>
+              Apple
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 1.2, duration: 0.5 }}
+              className="absolute right-[0.25rem] top-[61%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:right-[-0.5rem]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100"><Carrot className="h-4 w-4 text-orange-500"/></span>
+              Carrot
+            </motion.div>
 
           </div>
         </div>
