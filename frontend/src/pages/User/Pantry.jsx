@@ -7,7 +7,8 @@ import {
   Carrot, Wheat, Milk, Sparkles, Clock3, ShoppingBasket
 } from "lucide-react";
 
-const API = "http://localhost:5000/api/user/pantry";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const API = `${API_BASE}/user/pantry`;
 const foodImages = {
   vegetables: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=640&auto=format&fit=crop&q=85",
   fruits: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=640&auto=format&fit=crop&q=85",
@@ -36,7 +37,13 @@ const classify = (name = "") => {
 const readJson = async (response) => {
   const raw = await response.text();
   try { return raw ? JSON.parse(raw) : {}; }
-  catch { throw new Error(response.status === 404 ? "Pantry API route was not found. Check that the latest backend is running." : "The server returned an invalid response. Check that the MealMate backend is running on port 5000."); }
+  catch {
+    const isHtml = /<!doctype html|<html/i.test(raw);
+    const hint = isHtml
+      ? "The request returned an HTML page instead of the Pantry API. The API is mounted at /api/user/pantry; check that the backend (not the Vite frontend) is running on port 5000 and restart it."
+      : "The Pantry server returned an invalid response.";
+    throw new Error(`Pantry API ${response.status} at ${response.url}. ${hint}`);
+  }
 };
 
 export default function Pantry() {
@@ -75,7 +82,7 @@ export default function Pantry() {
 
   useEffect(() => {
     load();
-    fetch("http://localhost:5000/api/recipes")
+    fetch(`${API_BASE}/recipes`)
       .then(readJson)
       .then((data) => {
         const names = (data.recipes || []).flatMap((recipe) => recipe.ingredients || [])
@@ -137,22 +144,13 @@ export default function Pantry() {
   return <div className="min-h-screen bg-[#f7f8f2] text-[#202b22]">
     <AppNavbar />
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-7 sm:px-6 lg:px-8">
-      <section className="relative mb-8 overflow-hidden rounded-[30px] bg-[#173f2b] px-6 py-8 text-white shadow-[0_18px_45px_rgba(24,63,43,.16)] sm:px-10 sm:py-10">
-        <div className="pointer-events-none absolute -right-10 -top-24 h-72 w-72 rounded-full border-[36px] border-white/5" />
-        <div className="pointer-events-none absolute -bottom-28 right-36 h-64 w-64 rounded-full bg-[#9acb78]/10 blur-2xl" />
-        <div className="relative grid items-center gap-8 lg:grid-cols-[1.2fr_.8fr]">
-          <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-[#d9f1cb]"><Leaf className="h-3.5 w-3.5"/> MY KITCHEN · PANTRY</div>
-            <h1 className="max-w-xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">A fresher kitchen starts with <span className="text-[#b9e38e]">what you have.</span></h1>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-white/75 sm:text-base">Keep track of your ingredients, use food before it expires, and find something delicious to make.</p>
-            <button onClick={() => document.getElementById("add-pantry-item")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#c8ed9f] px-5 py-3 text-sm font-bold text-[#173f2b] shadow-lg transition hover:-translate-y-0.5 hover:bg-white"><Plus className="h-4 w-4"/> Add ingredients</button>
-          </div>
-          <div className="relative hidden h-56 overflow-hidden rounded-[24px] lg:block">
-            <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=1100&auto=format&fit=crop&q=90" alt="Fresh vegetables and ingredients" className="h-full w-full object-cover"/>
-            <div className="absolute inset-0 bg-gradient-to-r from-[#173f2b]/40 to-transparent"/>
-            <div className="absolute bottom-4 left-4 rounded-2xl border border-white/30 bg-white/90 px-4 py-3 text-[#173f2b] shadow-lg backdrop-blur"><p className="text-xs font-medium text-[#63806a]">Your kitchen, your way</p><p className="mt-0.5 text-sm font-bold">Plan · Cook · Enjoy</p></div>
-          </div>
+      <section className="mb-5 flex items-center justify-between gap-4 rounded-2xl bg-[#173f2b] px-5 py-4 text-white shadow-sm sm:px-6">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#b9e38e]">My kitchen</p>
+          <h1 className="mt-1 text-xl font-extrabold sm:text-2xl">Your Pantry</h1>
+          <p className="mt-1 text-xs text-white/75 sm:text-sm">Manage ingredients, track freshness and plan what to cook.</p>
         </div>
+        <button onClick={() => document.getElementById("add-pantry-item")?.scrollIntoView({ behavior: "smooth", block: "center" })} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-[#c8ed9f] px-4 py-2.5 text-xs font-bold text-[#173f2b] transition hover:bg-white"><Plus className="h-4 w-4"/> Add item</button>
       </section>
 
       <section className="mb-7 grid gap-3 sm:grid-cols-3">
