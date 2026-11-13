@@ -5,6 +5,7 @@ const pantryItemSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, lowercase: true },
   quantity: { type: Number, required: true, min: 0 },
   unit: { type: String, required: true, trim: true, lowercase: true },
+  expiryDate: { type: Date, default: null },
   receivedOrderItems: { type: [String], default: [] },
 }, { timestamps: true });
 
