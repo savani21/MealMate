@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -55,11 +55,15 @@ export default function AppNavbar({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [deliveryAlert, setDeliveryAlert] = useState(false);
+  const previousUnreadCount = useRef(null);
   const isAdmin = user?.role === "admin" || location.startsWith("/admin/");
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
 
   useEffect(() => {
     if (!user || isAdmin) {
+      previousUnreadCount.current = null;
+      setDeliveryAlert(false);
       setUnreadNotifications(0);
       return;
     }
@@ -72,7 +76,12 @@ export default function AppNavbar({ children }) {
         });
         if (!response.ok) return;
         const data = await response.json();
-        setUnreadNotifications(Number(data.unreadCount) || 0);
+        const nextUnreadCount = Number(data.unreadCount) || 0;
+        if (previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
+          setDeliveryAlert(true);
+        }
+        previousUnreadCount.current = nextUnreadCount;
+        setUnreadNotifications(nextUnreadCount);
       } catch (error) {
         console.error("Notification badge error:", error);
       }
@@ -121,6 +130,17 @@ export default function AppNavbar({ children }) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-xl">
+      {deliveryAlert && (
+        <div role="status" className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-2xl">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50"><Bell className="h-5 w-5 text-primary" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-gray-900">Your grocery order has arrived!</p>
+            <p className="mt-1 text-sm text-gray-500">Your delivery is complete. Check your notifications for order details.</p>
+            <button type="button" onClick={() => { setDeliveryAlert(false); navigate("/notifications"); }} className="mt-2 text-sm font-semibold text-primary hover:underline">View notification</button>
+          </div>
+          <button type="button" onClick={() => setDeliveryAlert(false)} aria-label="Dismiss delivery notification" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
+        </div>
+      )}
       <div className="mx-auto flex min-h-[76px] w-full max-w-7xl items-center gap-5 px-4 sm:px-6 lg:px-8">
         <button type="button" onClick={() => navigate("/dashboard")} aria-label="MealMate dashboard" className="flex shrink-0 items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-50"><ChefHat className="h-6 w-6 text-primary" /></span>
