@@ -180,7 +180,7 @@ export default function AppNavbar({ children }) {
           {groups.map((group) => (
             <section key={group.label} className="border-t border-gray-100 py-2">
               <button type="button" onClick={() => setOpenMenu((current) => current === group.label ? "" : group.label)} aria-expanded={openMenu === group.label} className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-bold text-gray-900">
-                {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+                {group.label}{group.label === "Explore" && unreadNotifications > 0 && <span className="ml-auto mr-2 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
               </button>
               {openMenu === group.label && <div className="grid grid-cols-2 gap-2 px-2 pb-2">
                 {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}{label === "Notifications" && unreadNotifications > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}</button>)}
