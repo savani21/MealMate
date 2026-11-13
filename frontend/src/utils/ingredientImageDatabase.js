@@ -118,11 +118,17 @@ export function findIngredientImageName(name = "") {
   return candidates[0]?.imageName || null;
 }
 
+const toImageTitle = (value = "") =>
+  String(value)
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+
 export function getIngredientImageCandidates(name = "") {
   const matched = findIngredientImageName(name);
   const raw = String(name || "").trim().replace(/\s+/g, " ");
-  const title = raw.replace(/\b\w/g, (letter) => letter.toUpperCase());
-  return [...new Set([matched, title].filter(Boolean))].map(
+  const labels = [...new Set([toImageTitle(matched || ""), toImageTitle(raw)].filter(Boolean))];
+  return labels.map(
     (label) => `https://www.themealdb.com/images/ingredients/${encodeURIComponent(label)}-Small.png`
   );
 }
