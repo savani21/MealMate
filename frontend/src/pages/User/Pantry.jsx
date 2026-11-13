@@ -63,14 +63,6 @@ function IngredientImage({ name }) {
     </div>
   );
 }
-\nconst foodImages = {
-  vegetables: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=640&auto=format&fit=crop&q=85",
-  fruits: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=640&auto=format&fit=crop&q=85",
-  grains: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=640&auto=format&fit=crop&q=85",
-  dairy: "https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=640&auto=format&fit=crop&q=85",
-  spices: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=640&auto=format&fit=crop&q=85",
-  other: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=640&auto=format&fit=crop&q=85",
-};
 const groups = [
   { id: "all", label: "All items", icon: Package },
   { id: "vegetables", label: "Vegetables", icon: Carrot },
