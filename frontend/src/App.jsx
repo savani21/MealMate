@@ -6,7 +6,7 @@ import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import Dashboard from '@/pages/Dashboard';
-import { Route, Switch } from 'wouter';
+import { Route, Switch, useLocation } from 'wouter';
 import { Leaf, Carrot, Apple, Sprout } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -66,6 +66,11 @@ function Router() {
 }
 
 function GlobalFoodDecorations() {
+  const [location] = useLocation();
+
+  // Keep the landing-page hero clean; the fixed food icons overlap its phone mockup.
+  if (location === '/') return null;
+
   return (
     <div
       aria-hidden="true"
