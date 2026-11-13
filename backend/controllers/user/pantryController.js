@@ -205,6 +205,64 @@ exports.consumeRecipeIngredients = async (req, res) => {
   }
 };
 
+
+exports.getExpiryBasedRecipeRecommendations = async (req, res) => {
+  try {
+    const days = Math.min(30, Math.max(1, Number(req.query.days) || 7));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const throughDate = new Date(today);
+    throughDate.setDate(throughDate.getDate() + days);
+    throughDate.setHours(23, 59, 59, 999);
+
+    const [expiringItems, recipes] = await Promise.all([
+      PantryItem.find({
+        user: req.user.id,
+        quantity: { $gt: 0 },
+        expiryDate: { $gte: today, $lte: throughDate },
+      }).sort({ expiryDate: 1 }).lean(),
+      Recipe.find().lean(),
+    ]);
+
+    const expiringByName = new Map(
+      expiringItems.map((item) => [normalizeIngredientName(item.name), item])
+    );
+    const recommendations = recipes.map((recipe) => {
+      const matched = (recipe.ingredients || []).map((raw) => {
+        const name = normalizeIngredientName(parseRequiredIngredient(raw).name);
+        const item = expiringByName.get(name);
+        return item ? {
+          pantryItemId: item._id,
+          name: item.name,
+          expiryDate: item.expiryDate,
+          quantity: item.quantity,
+          unit: item.unit,
+        } : null;
+      }).filter(Boolean);
+      const uniqueMatched = [...new Map(matched.map((item) => [String(item.pantryItemId), item])).values()];
+      if (!uniqueMatched.length) return null;
+      const nearestExpiryDate = uniqueMatched.reduce((earliest, item) =>
+        !earliest || new Date(item.expiryDate) < new Date(earliest) ? item.expiryDate : earliest, null);
+      return { ...recipe, expiringIngredients: uniqueMatched, expiringIngredientCount: uniqueMatched.length, nearestExpiryDate };
+    }).filter(Boolean).sort((a, b) =>
+      b.expiringIngredientCount - a.expiringIngredientCount ||
+      new Date(a.nearestExpiryDate) - new Date(b.nearestExpiryDate)
+    );
+
+    return res.json({
+      days,
+      expiringItems,
+      recommendations: recommendations.slice(0, 5),
+      message: recommendations.length
+        ? "Recipes using ingredients nearing expiry."
+        : "No matching recipes found for ingredients nearing expiry.",
+    });
+  } catch (error) {
+    console.error("Expiry-based recipe recommendations error:", error);
+    return res.status(500).json({ message: "Could not load expiry-based recipe recommendations." });
+  }
+};
+
 exports.compareRecipeWithPantry = async (req, res) => {
   try {
     const [recipe, pantry] = await Promise.all([
