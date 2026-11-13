@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -54,8 +54,33 @@ export default function AppNavbar({ children }) {
   const [openMenu, setOpenMenu] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const isAdmin = user?.role === "admin" || location.startsWith("/admin/");
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
+
+  useEffect(() => {
+    if (!user || isAdmin) {
+      setUnreadNotifications(0);
+      return;
+    }
+    const loadUnreadCount = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      try {
+        const response = await fetch("http://localhost:5000/api/notifications", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setUnreadNotifications(Number(data.unreadCount) || 0);
+      } catch (error) {
+        console.error("Notification badge error:", error);
+      }
+    };
+    loadUnreadCount();
+    const timer = setInterval(loadUnreadCount, 15000);
+    return () => clearInterval(timer);
+  }, [user, isAdmin, location]);
 
   const navigate = (path) => {
     setLocation(path);
@@ -138,7 +163,7 @@ export default function AppNavbar({ children }) {
                 {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
               </button>
               {openMenu === group.label && <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}</button>)}
+                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}{label === "Notifications" && unreadNotifications > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}</button>)}
               </div>}
             </section>
           ))}
