@@ -12,6 +12,7 @@ const favoriteRoutes = require("./routes/user/favoriteRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
+const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
 const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
@@ -29,8 +30,20 @@ mongoose
   .then(async () => {
     console.log("MongoDB Connected");
     await processDueOrders();
+    // Persist two-day pantry expiry reminders even when the user is not on the app.
+    const checkPantryExpiries = async () => {
+      try {
+        const result = await createPantryExpiryNotifications();
+        if (result.created) console.log(`Created ${result.created} pantry expiry reminder(s).`);
+      } catch (error) {
+        console.error("Pantry expiry notification check failed:", error);
+      }
+    };
+    await checkPantryExpiries();
+    setInterval(checkPantryExpiries, 60 * 60 * 1000);
+
     // Check due grocery deliveries in the background, even when the user is offline.
-    setInterval(() => processDueOrders(), 15000);
+    setInterval(() => processDueOrders().catch((error) => console.error("Order processing failed:", error)), 15000);
   })
   .catch((err) => console.log(err));
 

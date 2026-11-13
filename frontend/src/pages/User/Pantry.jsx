@@ -9,7 +9,61 @@ import {
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const API = `${API_BASE}/user/pantry`;
-const foodImages = {
+
+const ingredientImageAliases = {
+  capsicum: "Bell Pepper", bellpepper: "Bell Pepper", "bell pepper": "Bell Pepper",
+  potato: "Potatoes", tomato: "Tomato", onion: "Onion", carrot: "Carrots",
+  cucumber: "Cucumber", spinach: "Spinach", broccoli: "Broccoli", cauliflower: "Cauliflower",
+  cabbage: "Cabbage", garlic: "Garlic", ginger: "Ginger", peas: "Peas",
+  "green peas": "Peas", corn: "Sweetcorn", sweetcorn: "Sweetcorn", mushroom: "Mushrooms",
+  apple: "Apple", banana: "Banana", orange: "Orange", mango: "Mango",
+  lemon: "Lemon", lime: "Lime", papaya: "Papaya", pineapple: "Pineapple",
+  grapes: "Grapes", strawberry: "Strawberries", strawberries: "Strawberries",
+  rice: "Rice", "basmati rice": "Rice", flour: "Flour", wheat: "Wheat",
+  "wheat flour": "Flour", atta: "Flour", oats: "Oats", pasta: "Pasta",
+  lentils: "Lentils", dal: "Lentils", chickpeas: "Chickpeas", kidneybeans: "Kidney Beans",
+  "kidney beans": "Kidney Beans", milk: "Milk", paneer: "Paneer", cheese: "Cheese",
+  butter: "Butter", yogurt: "Yogurt", curd: "Yogurt", cream: "Cream",
+  egg: "Egg", eggs: "Eggs", chicken: "Chicken", "chicken breast": "Chicken Breast",
+  fish: "Fish", salmon: "Salmon", prawns: "Prawns", shrimp: "Shrimp",
+  turmeric: "Turmeric", cumin: "Cumin", coriander: "Coriander", "coriander powder": "Coriander",
+  chilli: "Chilli", chili: "Chilli", "green chili": "Green Chilli", "green chilli": "Green Chilli",
+  cinnamon: "Cinnamon", cloves: "Cloves", cardamom: "Cardamom", pepper: "Black Pepper",
+  "black pepper": "Black Pepper", sugar: "Sugar", salt: "Salt", honey: "Honey",
+  oil: "Oil", "cooking oil": "Oil", ghee: "Ghee", coconut: "Coconut",
+  "coconut milk": "Coconut Milk", tofu: "Tofu", bread: "Bread", semolina: "Semolina",
+  poha: "Poha", "flattened rice": "Poha", quinoa: "Quinoa", avocado: "Avocado",
+};
+const ingredientImageUrl = (name) => {
+  const key = String(name || "").toLowerCase().trim().replace(/\\s+/g, " ");
+  const exact = ingredientImageAliases[key] || key.replace(/\\b\\w/g, (letter) => letter.toUpperCase());
+  return `https://www.themealdb.com/images/ingredients/${encodeURIComponent(exact)}-Small.png`;
+};
+
+function IngredientImage({ name }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [name]);
+  return (
+    <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#f5f8ef] to-[#e8efdf]">
+      {!failed ? (
+        <img
+          src={ingredientImageUrl(name)}
+          alt={name}
+          loading="lazy"
+          className="h-full w-full object-contain p-3"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center px-3 text-center text-[#71856d]">
+          <Leaf className="h-9 w-9 opacity-60" />
+          <span className="mt-2 max-w-full truncate text-xs font-semibold capitalize">{name}</span>
+          <span className="mt-0.5 text-[10px] text-[#9aa894]">Image not available</span>
+        </div>
+      )}
+    </div>
+  );
+}
+\nconst foodImages = {
   vegetables: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=640&auto=format&fit=crop&q=85",
   fruits: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=640&auto=format&fit=crop&q=85",
   grains: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=640&auto=format&fit=crop&q=85",
@@ -181,7 +235,7 @@ export default function Pantry() {
       <section>
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-[#719077]">Your kitchen inventory</p><h2 className="mt-1 text-2xl font-extrabold tracking-tight">Everything in your pantry</h2><p className="mt-1 text-sm text-[#849084]">{items.length} ingredients ready for your next meal</p></div><div className="relative w-full sm:max-w-xs"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa49a]"/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search your ingredients..." className="w-full rounded-full border border-[#e3e9df] bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#72a66b]"/></div></div>
         <div className="mb-5 flex gap-2 overflow-x-auto pb-1">{groups.map((group) => { const Icon = group.icon; const active = category === group.id; return <button key={group.id} onClick={() => setCategory(group.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition ${active ? "bg-[#267342] text-white shadow-md shadow-[#267342]/15" : "border border-[#e5eae1] bg-white text-[#718073] hover:border-[#9cbd91]"}`}><Icon className="h-3.5 w-3.5"/>{group.label}{group.id === "all" ? ` · ${items.length}` : ""}</button>; })}</div>
-        {loading ? <div className="rounded-3xl bg-white p-14 text-center text-sm text-[#849084]">Loading your pantry...</div> : filtered.length === 0 ? <div className="rounded-3xl border border-dashed border-[#dce5d8] bg-white px-5 py-14 text-center"><Package className="mx-auto h-10 w-10 text-[#a9b8a5]"/><p className="mt-3 font-bold">{search || category !== "all" ? "No ingredients found" : "Your pantry is waiting"}</p><p className="mt-1 text-sm text-[#849084]">Try another category or add ingredients to get started.</p><button onClick={() => {setCategory("all");setSearch("");}} className="mt-4 text-xs font-bold text-[#267342]">Show all ingredients</button></div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => { const group = classify(item.name); const image = foodImages[group] || foodImages.other; return <article key={item._id} className="group overflow-hidden rounded-[22px] border border-[#e8ece2] bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg"><div className="relative h-36 overflow-hidden bg-[#f1f5ed]"><img src={image} alt={group} className="h-full w-full object-cover transition duration-500 group-hover:scale-105"/><span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold capitalize text-[#426b48] backdrop-blur">{group === "other" ? "Pantry staple" : group}</span><div className="absolute right-3 top-3 flex gap-1"><button onClick={() => startEdit(item)} aria-label={`Edit ${item.name}`} className="rounded-full bg-white/90 p-2 text-[#536655] shadow-sm hover:bg-white hover:text-[#267342]"><Pencil className="h-3.5 w-3.5"/></button><button onClick={() => remove(item._id)} aria-label={`Remove ${item.name}`} className="rounded-full bg-white/90 p-2 text-[#8a7771] shadow-sm hover:bg-white hover:text-red-600"><Trash2 className="h-3.5 w-3.5"/></button></div></div><div className="p-4"><h3 className="truncate text-base font-extrabold capitalize">{item.name}</h3><p className="mt-1 text-sm text-[#7d8b7e]">{item.quantity} {item.unit}</p>{item.expiryDate ? <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#fff5e3] px-2.5 py-1 text-[10px] font-semibold text-[#9a702b]"><CalendarClock className="h-3 w-3"/> Best before {new Date(item.expiryDate).toLocaleDateString()}</p> : <p className="mt-3 text-[10px] text-[#a2aca0]">No expiry date added</p>}</div></article>; })}</div>}
+        {loading ? <div className="rounded-3xl bg-white p-14 text-center text-sm text-[#849084]">Loading your pantry...</div> : filtered.length === 0 ? <div className="rounded-3xl border border-dashed border-[#dce5d8] bg-white px-5 py-14 text-center"><Package className="mx-auto h-10 w-10 text-[#a9b8a5]"/><p className="mt-3 font-bold">{search || category !== "all" ? "No ingredients found" : "Your pantry is waiting"}</p><p className="mt-1 text-sm text-[#849084]">Try another category or add ingredients to get started.</p><button onClick={() => {setCategory("all");setSearch("");}} className="mt-4 text-xs font-bold text-[#267342]">Show all ingredients</button></div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => { const group = classify(item.name); return <article key={item._id} className="group overflow-hidden rounded-[22px] border border-[#e8ece2] bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg"><IngredientImage name={item.name}/><span className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-[10px] font-bold capitalize text-[#426b48] backdrop-blur">{group === "other" ? "Pantry staple" : group}</span><div className="absolute right-3 top-3 flex gap-1"><button onClick={() => startEdit(item)} aria-label={`Edit ${item.name}`} className="rounded-full bg-white/90 p-2 text-[#536655] shadow-sm hover:bg-white hover:text-[#267342]"><Pencil className="h-3.5 w-3.5"/></button><button onClick={() => remove(item._id)} aria-label={`Remove ${item.name}`} className="rounded-full bg-white/90 p-2 text-[#8a7771] shadow-sm hover:bg-white hover:text-red-600"><Trash2 className="h-3.5 w-3.5"/></button></div></div><div className="p-4"><h3 className="truncate text-base font-extrabold capitalize">{item.name}</h3><p className="mt-1 text-sm text-[#7d8b7e]">{item.quantity} {item.unit}</p>{item.expiryDate ? <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#fff5e3] px-2.5 py-1 text-[10px] font-semibold text-[#9a702b]"><CalendarClock className="h-3 w-3"/> Best before {new Date(item.expiryDate).toLocaleDateString()}</p> : <p className="mt-3 text-[10px] text-[#a2aca0]">No expiry date added</p>}</div></article>; })}</div>}
       </section>
     </main>
   </div>;
