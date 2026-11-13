@@ -135,33 +135,20 @@ export function HeroSection() {
               </div>
             </motion.div>
 
-            {/* Floating food labels around the phone mockup */}
-            <motion.div
-              initial={{ opacity: 0, x: -18 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
-              className="absolute left-[9rem] top-[18%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:left-[9.5rem]"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-green-100"><Salad className="h-4 w-4 text-green-600"/></span>
-              Salad
+            {/* Floating Food Icons */}
+            <motion.div className="absolute top-[22%] left-[calc(100%-30rem)] bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}>
+              <div className="bg-green-100 p-2 rounded-lg"><Salad className="w-5 h-5 text-green-600"/></div>
+              <span className="text-sm font-semibold text-gray-800 pr-2">Salad</span>
             </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 18 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1, duration: 0.5 }}
-              className="absolute right-[-0.5rem] top-[42%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:right-[-1.5rem]"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100"><Apple className="h-4 w-4 text-red-500"/></span>
-              Apple
+
+            <motion.div className="absolute bottom-1/4 -right-8 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}>
+              <div className="bg-orange-100 p-2 rounded-lg"><Carrot className="w-5 h-5 text-orange-600"/></div>
+              <span className="text-sm font-semibold text-gray-800 pr-2">Carrot</span>
             </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 18 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.2, duration: 0.5 }}
-              className="absolute right-[0.25rem] top-[61%] z-20 hidden items-center gap-2 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 text-sm font-semibold text-gray-800 shadow-lg shadow-gray-900/10 backdrop-blur-sm sm:flex lg:right-[-0.5rem]"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100"><Carrot className="h-4 w-4 text-orange-500"/></span>
-              Carrot
+
+            <motion.div className="absolute top-1/2 -right-16 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30 hidden md:flex" animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 0.5 }}>
+              <div className="bg-red-100 p-2 rounded-lg"><Apple className="w-5 h-5 text-red-600"/></div>
+              <span className="text-sm font-semibold text-gray-800 pr-2">Apple</span>
             </motion.div>
 
           </div>
