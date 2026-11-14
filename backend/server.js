@@ -14,6 +14,7 @@ const storeRoutes = require("./routes/user/storeRoutes");
 const nutritionRoutes = require("./routes/user/nutritionRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
 const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
+const { processMealReminders } = require("./services/mealReminderService");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
 const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
@@ -42,6 +43,17 @@ mongoose
     };
     await checkPantryExpiries();
     setInterval(checkPantryExpiries, 60 * 60 * 1000);
+
+    const checkMealReminders = async () => {
+      try {
+        const result = await processMealReminders();
+        if (result.created) console.log(`Created ${result.created} meal reminder(s).`);
+      } catch (error) {
+        console.error("Meal reminder check failed:", error);
+      }
+    };
+    await checkMealReminders();
+    setInterval(checkMealReminders, 60 * 1000);
 
     // Check due grocery deliveries in the background, even when the user is offline.
     setInterval(() => processDueOrders().catch((error) => console.error("Order processing failed:", error)), 15000);
