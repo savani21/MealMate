@@ -101,9 +101,11 @@ exports.logPlannedMeal = async (req, res) => {
       nutrition[field] = value;
     }
     const servingCount = Number(servings);
-    if (!Number.isFinite(servingCount) || servingCount <= 0 || servingCount > 20) {
+    if (!Number.isFinite(servingCount) || servingCount < 0.25 || servingCount > 20) {
       return res.status(400).json({ message: "Servings must be between 0.25 and 20." });
     }
+    // The form captures nutrition per serving; persist the consumed total.
+    for (const field of Object.keys(nutrition)) nutrition[field] = Math.round(nutrition[field] * servingCount * 10) / 10;
 
     const log = await NutritionLog.findOneAndUpdate(
       { user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType },
