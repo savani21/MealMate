@@ -228,6 +228,10 @@ export default function NutritionDashboard() {
         </form>}
 
         {loading ? <div className="rounded-2xl border border-gray-100 bg-white py-20 text-center text-sm text-gray-500">Loading your nutrition data...</div> : <>
+          <section className="mb-6 rounded-2xl border border-green-100 bg-green-50/70 p-4 sm:p-5">
+            <div className="flex items-start gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-primary"><Activity className="h-5 w-5"/></div><div><h2 className="font-bold text-gray-900">MealMate daily insight</h2><p className="mt-1 text-sm text-gray-700">{totals.calories === 0 ? "Start with your daily check-in to see nutrition insights based on meals you actually ate." : totals.protein < goals.protein * 0.5 ? "Your recorded protein is still below half of your daily target. Consider a protein-rich option in your next meal." : totals.calories > goals.calories ? "Your recorded calories are above today's tracking target. Review your portions and overall weekly pattern rather than judging one day." : "Your nutrition is being tracked from confirmed meals. Keep logging your intake to build a more useful weekly picture."}</p><p className="mt-1 text-[11px] text-gray-500">General wellness guidance only; targets are personal tracking references, not medical advice.</p></div></div>
+          </section>
+
           <section className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <ProgressCard title="Calories consumed" value={totals.calories} goal={goals.calories} unit="kcal" icon={Flame} color="bg-orange-50 text-orange-600" />
             <ProgressCard title="Protein" value={totals.protein} goal={goals.protein} unit="g" icon={Beef} color="bg-blue-50 text-blue-600" />
