@@ -94,24 +94,39 @@ exports.logPlannedMeal = async (req, res) => {
       return res.status(400).json({ message: "This meal no longer matches the selected meal plan." });
     }
 
-    const nutrition = {};
-    for (const field of ["calories", "protein", "carbohydrates", "fat"]) {
-      const value = Number(req.body[field]);
-      if (!Number.isFinite(value) || value < 0 || value > (field === "calories" ? 20000 : 2000)) {
-        return res.status(400).json({ message: `Enter a valid ${field} amount.` });
-      }
-      nutrition[field] = value;
-    }
     const servingCount = Number(servings);
     if (!Number.isFinite(servingCount) || servingCount < 0.25 || servingCount > 20) {
       return res.status(400).json({ message: "Servings must be between 0.25 and 20." });
     }
-    // The form captures nutrition per serving; persist the consumed total.
-    for (const field of Object.keys(nutrition)) nutrition[field] = Math.round(nutrition[field] * servingCount * 10) / 10;
+
+    // Prefer server-stored nutrition from the exact selected generated option.
+    // Client nutrient values are used only for an explicit manual correction or
+    // for legacy plans that predate embedded nutrition metadata.
+    const options = Array.isArray(day[mealType + "Options"]) ? day[mealType + "Options"] : [];
+    const plannedOption = options.find((option) => option?.name === mealName);
+    const storedNutrition = plannedOption?.nutrition;
+    const hasStoredNutrition = storedNutrition &&
+      storedNutrition.status !== "unavailable" &&
+      ["calories", "protein", "carbohydrates", "fat"].every((field) =>
+        Number.isFinite(Number(storedNutrition[field])) && storedNutrition[field] !== null && storedNutrition[field] !== undefined
+      );
+    const useManualValues = nutritionStatus === "manual" || !hasStoredNutrition;
+    const nutrition = {};
+    for (const field of ["calories", "protein", "carbohydrates", "fat"]) {
+      const value = Number(useManualValues ? req.body[field] : storedNutrition[field]);
+      if (!Number.isFinite(value) || value < 0 || value > (field === "calories" ? 20000 : 2000)) {
+        return res.status(400).json({ message: `Enter a valid ${field} amount.` });
+      }
+      nutrition[field] = Math.round(value * servingCount * 10) / 10;
+    }
+    const finalNutritionSource = useManualValues ? "manual" : storedNutrition.source || nutritionSource;
+    const finalNutritionStatus = useManualValues ? "manual" : storedNutrition.status || nutritionStatus;
+    const finalConfidence = useManualValues ? "unknown" : storedNutrition.confidence || confidence;
+    const finalMissingIngredients = useManualValues ? [] : (storedNutrition.missingIngredients || []);
 
     const log = await NutritionLog.findOneAndUpdate(
       { user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType },
-      { $set: { ...nutrition, nutritionSource, nutritionStatus, confidence, missingIngredients: Array.isArray(missingIngredients) ? missingIngredients : [], user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
+      { $set: { ...nutrition, nutritionSource: finalNutritionSource, nutritionStatus: finalNutritionStatus, confidence: finalConfidence, missingIngredients: finalMissingIngredients, user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.status(200).json({ success: true, message: "Meal nutrition saved.", log });
