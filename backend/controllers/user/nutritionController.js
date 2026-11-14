@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const NutritionLog = require("../../models/user/NutritionLog");
 const NutritionGoal = require("../../models/user/NutritionGoal");
 const MealPlan = require("../../models/MealPlan");
+const Recipe = require("../../models/user/Recipe");
+const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
 
 const DEFAULT_GOALS = { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"];
@@ -80,7 +82,7 @@ exports.saveGoals = async (req, res) => {
 
 exports.logPlannedMeal = async (req, res) => {
   try {
-    const { mealPlanId, dayNumber, mealType, dateKey, mealName, servings = 1 } = req.body;
+    const { mealPlanId, dayNumber, mealType, dateKey, mealName, servings = 1, nutritionSource = "unknown", nutritionStatus = "unavailable", confidence = "unknown", missingIngredients = [] } = req.body;
     if (!mongoose.isValidObjectId(mealPlanId)) return res.status(400).json({ message: "Invalid meal plan." });
     if (!MEAL_TYPES.includes(mealType)) return res.status(400).json({ message: "Choose a valid meal type." });
     if (!validDateKey(dateKey)) return res.status(400).json({ message: "Choose a valid eaten date." });
@@ -109,13 +111,35 @@ exports.logPlannedMeal = async (req, res) => {
 
     const log = await NutritionLog.findOneAndUpdate(
       { user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType },
-      { $set: { ...nutrition, user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
+      { $set: { ...nutrition, nutritionSource, nutritionStatus, confidence, missingIngredients: Array.isArray(missingIngredients) ? missingIngredients : [], user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.status(200).json({ success: true, message: "Meal nutrition saved.", log });
   } catch (error) {
     console.error("Nutrition log error:", error);
     res.status(500).json({ message: "Could not save this meal. Please try again." });
+  }
+};
+
+exports.getRecipeNutrition = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.recipeId)) return res.status(400).json({ message: "Invalid recipe." });
+    const recipe = await Recipe.findById(req.params.recipeId);
+    if (!recipe) return res.status(404).json({ message: "Recipe not found." });
+    const current = recipe.nutrition || {};
+    const hasCompleteValues = ["calories", "protein", "carbohydrates", "fat"].every((key) =>
+      Number.isFinite(Number(current[key])) && current[key] !== null && current[key] !== undefined
+    );
+    if (hasCompleteValues && ["verified_label", "manual"].includes(current.source)) {
+      return res.json({ success: true, nutrition: current, servings: recipe.servings || 1, recipeName: recipe.name });
+    }
+    const estimate = estimateRecipeNutrition(recipe.ingredients || [], recipe.servings || 1);
+    recipe.nutrition = estimate;
+    await recipe.save();
+    res.json({ success: true, nutrition: estimate, servings: recipe.servings || 1, recipeName: recipe.name });
+  } catch (error) {
+    console.error("Recipe nutrition estimate error:", error);
+    res.status(500).json({ message: "Could not calculate recipe nutrition." });
   }
 };
 

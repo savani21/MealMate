@@ -6,9 +6,11 @@ const {
   logPlannedMeal,
   getPlanLogs,
   removeLog,
+  getRecipeNutrition,
 } = require("../../controllers/user/nutritionController");
 
 router.get("/dashboard", auth, getDashboard);
+router.get("/recipe/:recipeId", auth, getRecipeNutrition);
 router.put("/goals", auth, saveGoals);
 router.post("/logs", auth, logPlannedMeal);
 router.get("/plan/:planId", auth, getPlanLogs);

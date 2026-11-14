@@ -1,6 +1,7 @@
 const Recipe = require("../../models/user/Recipe");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 const { buildCuratedFallback, curatedRecipeCount } = require("../../utils/curatedFallbackRecipes");
+const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
 
 async function generateWithOpenRouter(messages, responseFormat) {
   const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
@@ -156,7 +157,8 @@ Return ONLY valid JSON with this exact structure:
   "diet": "Diet",
   "ingredients": ["ingredient with quantity"],
   "instructions": ["step 1", "step 2"],
-  "prepTime": "30 minutes"
+  "prepTime": "30 minutes",
+  "servings": 2
 }
 The slogan must be original, specific to this recipe, friendly and no more than 12 words.
 Do not invent medical claims. Keep the recipe realistic and easy to prepare.
@@ -204,6 +206,8 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       ingredients: recipeData.ingredients || [],
       instructions: recipeData.instructions || [],
       prepTime: recipeData.prepTime || "",
+      servings: Number(recipeData.servings) || 2,
+      nutrition: estimateRecipeNutrition(recipeData.ingredients || [], Number(recipeData.servings) || 2),
       source: "ai",
       generationMealName: normalizedGeneratedName,
       generationInputIngredients,
