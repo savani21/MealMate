@@ -71,10 +71,10 @@ export default function MealPlanDetails() {
     const existing = nutritionLogs.find((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === mealType && log.mealName === mealName);
     setNutritionForm({
       servings: String(existing?.servings || 1),
-      calories: String(existing?.calories ?? nutrition.calories ?? ""),
-      protein: String(existing?.protein ?? nutrition.protein ?? ""),
-      carbohydrates: String(existing?.carbohydrates ?? nutrition.carbohydrates ?? ""),
-      fat: String(existing?.fat ?? nutrition.fat ?? ""),
+      calories: String(existing ? existing.calories / existing.servings : nutrition.calories ?? ""),
+      protein: String(existing ? existing.protein / existing.servings : nutrition.protein ?? ""),
+      carbohydrates: String(existing ? existing.carbohydrates / existing.servings : nutrition.carbohydrates ?? ""),
+      fat: String(existing ? existing.fat / existing.servings : nutrition.fat ?? ""),
     });
     setNutritionMeal({ dayNumber: day.day, mealType, mealName });
   };
@@ -264,7 +264,7 @@ export default function MealPlanDetails() {
                   <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
                   {nutritionLogs.some((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === type && log.mealName === day[type]) && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-700"><Check className="h-3 w-3" /> Eaten · nutrition logged</p>}
                   <div className="flex flex-wrap gap-2 mt-4">
-                    <button type="button" onClick={() => openNutritionEntry(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-primary hover:bg-green-100"><Check className="w-3.5 h-3.5"/>{nutritionLogs.some((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === type) ? "Update nutrition" : "Mark as eaten"}</button>
+                    <button type="button" onClick={() => openNutritionEntry(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-primary hover:bg-green-100"><Check className="w-3.5 h-3.5"/>{nutritionLogs.some((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === type && log.mealName === day[type]) ? "Update nutrition" : "Mark as eaten"}</button>
                     {getIsFutureOrTodayPlanDay(day.day) && <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>}
                     <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
                   </div>
