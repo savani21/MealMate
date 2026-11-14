@@ -3,7 +3,7 @@ const NutritionLog = require("../../models/user/NutritionLog");
 const NutritionGoal = require("../../models/user/NutritionGoal");
 const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
-const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
+const { estimateRecipeNutritionWithUSDA } = require("../../services/nutritionEstimator");
 
 const DEFAULT_GOALS = { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"];
@@ -133,7 +133,7 @@ exports.getRecipeNutrition = async (req, res) => {
     if (hasCompleteValues && ["verified_label", "manual"].includes(current.source)) {
       return res.json({ success: true, nutrition: current, servings: recipe.servings || 1, recipeName: recipe.name });
     }
-    const estimate = estimateRecipeNutrition(recipe.ingredients || [], recipe.servings || 1);
+    const estimate = await estimateRecipeNutritionWithUSDA(recipe.ingredients || [], recipe.servings || 1);
     recipe.nutrition = estimate;
     await recipe.save();
     res.json({ success: true, nutrition: estimate, servings: recipe.servings || 1, recipeName: recipe.name });
