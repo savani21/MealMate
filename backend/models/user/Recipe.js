@@ -18,7 +18,7 @@ const recipeSchema = new mongoose.Schema(
       fat: { type: Number, min: 0 },
       servingSize: { type: String, default: "1 serving" },
       source: { type: String, enum: ["verified_label", "local_ingredient_estimate", "manual", "unknown"], default: "unknown" },
-      status: { type: String, enum: ["verified", "estimated", "partial_estimate", "unavailable"], default: "unavailable" },
+      status: { type: String, enum: ["verified", "estimated", "partial_estimate", "unavailable", "manual"], default: "unavailable" },
       confidence: { type: String, enum: ["high", "moderate", "low", "unknown"], default: "unknown" },
       missingIngredients: { type: [mongoose.Schema.Types.Mixed], default: [] },
       ingredientBreakdown: { type: [mongoose.Schema.Types.Mixed], default: [] },
