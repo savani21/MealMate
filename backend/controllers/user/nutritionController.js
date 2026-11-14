@@ -130,7 +130,7 @@ exports.getRecipeNutrition = async (req, res) => {
     const hasCompleteValues = ["calories", "protein", "carbohydrates", "fat"].every((key) =>
       Number.isFinite(Number(current[key])) && current[key] !== null && current[key] !== undefined
     );
-    if (hasCompleteValues && ["verified_label", "manual"].includes(current.source)) {
+    if (hasCompleteValues && ["verified_label", "manual", "usda_fdc", "mixed_estimate"].includes(current.source)) {
       return res.json({ success: true, nutrition: current, servings: recipe.servings || 1, recipeName: recipe.name });
     }
     const estimate = await estimateRecipeNutritionWithUSDA(recipe.ingredients || [], recipe.servings || 1);
