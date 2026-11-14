@@ -25,6 +25,8 @@ const FOODS = {
   "toor dal": [343, 22, 62, 1.5, 190],
   lentils: [352, 24.6, 63.1, 1.1, 190],
   oats: [389, 16.9, 66.3, 6.9, 80],
+  "baking powder": [53, 0, 28, 0, 4],
+  "cardamom powder": [311, 11, 68, 7, 2],
   paneer: [265, 18.3, 1.2, 20.8, 100],
   yogurt: [61, 3.5, 4.7, 3.3, 245],
   curd: [61, 3.5, 4.7, 3.3, 245],
@@ -70,7 +72,7 @@ const FOODS = {
 };
 
 const ALIASES = {
-  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma", "pea": "peas", "lentil": "lentils", "almond": "almonds", "peanut": "peanuts", "apple": "apple", "date": "dates", "raisin": "raisins", "soy chunk": "soy chunks",
+  "flattened rice": "poha", oat: "oats", "baking soda": "baking powder", cardamom: "cardamom powder", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma", "pea": "peas", "lentil": "lentils", "almond": "almonds", "peanut": "peanuts", "apple": "apple", "date": "dates", "raisin": "raisins", "soy chunk": "soy chunks",
   "chickpea": "chickpeas", chana: "chickpeas", "gram flour": "besan", besan: "besan",
   atta: "wheat flour", "whole wheat flour": "wheat flour", "rice flour": "rice",
   "green peas": "peas", "bell pepper": "capsicum", "sweet pepper": "capsicum",
@@ -91,7 +93,8 @@ function resolveFood(name) {
 
 function parseAmount(text) {
   const value = String(text || "").trim().toLowerCase();
-  const match = value.match(/^\s*(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i);
+  const pattern = /(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i;
+  const match = value.match(pattern);
   if (!match) return null;
   let quantity = match[1];
   if (quantity.includes("/")) { const [a, b] = quantity.split("/").map(Number); quantity = a / b; }
@@ -99,7 +102,7 @@ function parseAmount(text) {
   else if (quantity === "¼") quantity = 0.25;
   else if (quantity === "¾") quantity = 0.75;
   else quantity = Number(quantity);
-  return { quantity, unit: String(match[2] || "piece").toLowerCase() };
+  return { quantity, unit: String(match[2] || "piece").toLowerCase(), matchedText: match[0] };
 }
 
 function gramsFor(food, amount) {
@@ -111,6 +114,7 @@ function gramsFor(food, amount) {
   if (/^(ml|milliliter)/.test(unit)) return amount.quantity; // approximate water-like density
   if (/^(l|liter|litre)/.test(unit)) return amount.quantity * 1000;
   if (/^cup/.test(unit)) return amount.quantity * (cupWeights[food] || pieceGrams * 1.4);
+  if (/^(small|medium|large)$/.test(unit)) return amount.quantity * pieceGrams * (unit === "small" ? 0.75 : unit === "large" ? 1.3 : 1);
   if (/^tbsp|^tablespoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" || food === "butter" ? 14 : food === "sugar" ? 12 : 15);
   if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : ["cumin", "turmeric", "chili powder", "salt"].includes(food) ? 2.5 : 5);
   return amount.quantity * pieceGrams;
@@ -127,9 +131,14 @@ function parseIngredient(line) {
     }
     return { name: original, error: "Quantity not recognized" };
   }
-  const remainder = original.replace(/^\s*(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i, "").replace(/^[\s,.-]+/, "");
+  // Accept both "1 cup wheat flour" and "wheat flour 1 cup (have)" formats.
+  const remainder = original
+    .replace(amount.matchedText, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(have|available|optional|to taste)\b/gi, " ")
+    .replace(/^[\s,.-]+|[\s,.-]+$/g, "");
   const food = resolveFood(remainder);
-  if (!food) return { name: remainder || original, error: "Ingredient not in local nutrition catalogue" };
+  if (!food) return { name: remainder || original, error: "Ingredient not in nutrition catalogue" };
   return { name: food, grams: gramsFor(food, amount), original };
 }
 
@@ -165,4 +174,4 @@ function estimateRecipeNutrition(ingredients, servings = 1) {
   };
 }
 
-module.exports = { estimateRecipeNutrition };
+module.exports = { estimateRecipeNutrition, parseIngredient };
