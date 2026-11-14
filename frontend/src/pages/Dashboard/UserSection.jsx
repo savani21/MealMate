@@ -224,6 +224,12 @@ export default function UserSection() {
               <RoutineStat icon={<Clock className="w-5 h-5" />} value={currentMeal ? MEAL_TIMES[currentMeal].label : nextMeal ? MEAL_TIMES[nextMeal].label : "Complete"} label={currentMeal ? "Meal happening now" : nextMeal ? "Next meal" : "Today's routine"} />
               <RoutineStat icon={<Utensils className="w-5 h-5" />} value={`${todayPlan.duration} day`} label="Current plan" />
             </div>
+            <div className="px-6 pb-6 md:px-7 md:pb-7">
+              <button onClick={() => setLocation("/nutrition")} className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-green-100 bg-green-50 px-5 py-4 text-left hover:border-primary transition">
+                <div><p className="font-bold text-gray-900">Today's Nutrition Check-in</p><p className="mt-1 text-sm text-gray-600">Confirm breakfast, lunch and dinner together and adjust servings in one place.</p></div>
+                <span className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white">Update today's intake <ArrowRight className="h-4 w-4"/></span>
+              </button>
+            </div>
           </>
         )}
       </section>

@@ -4,6 +4,7 @@ const NutritionGoal = require("../../models/user/NutritionGoal");
 const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
 const { estimateRecipeNutritionWithUSDA } = require("../../services/nutritionEstimator");
+const MealReminderPreference = require("../../models/user/MealReminderPreference");
 
 const DEFAULT_GOALS = { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"];
@@ -30,6 +31,133 @@ function totals(logs) {
     return sum;
   }, { calories: 0, protein: 0, carbohydrates: 0, fat: 0 });
 }
+
+exports.getReminderPreferences = async (req, res) => {
+  try {
+    const preferences = await MealReminderPreference.findOne({ user: req.user.id }).lean();
+    res.json({ success: true, preferences: preferences || { enabled: false, timezone: "Asia/Kolkata", breakfast: "08:00", lunch: "13:00", dinner: "19:00" } });
+  } catch (error) {
+    res.status(500).json({ message: "Could not load reminder preferences." });
+  }
+};
+
+exports.saveReminderPreferences = async (req, res) => {
+  try {
+    const { enabled = false, timezone = "Asia/Kolkata", breakfast = "08:00", lunch = "13:00", dinner = "19:00" } = req.body;
+    if (typeof enabled !== "boolean" || !["breakfast", "lunch", "dinner"].every((key) => /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(String({ breakfast, lunch, dinner }[key]))) ) {
+      return res.status(400).json({ message: "Choose valid reminder times." });
+    }
+    try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date()); }
+    catch { return res.status(400).json({ message: "Choose a valid timezone." }); }
+    const preferences = await MealReminderPreference.findOneAndUpdate(
+      { user: req.user.id },
+      { $set: { enabled, timezone, breakfast, lunch, dinner } },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    res.json({ success: true, preferences });
+  } catch (error) {
+    res.status(500).json({ message: "Could not save reminder preferences." });
+  }
+};
+
+exports.getTodayPlan = async (req, res) => {
+  try {
+    const dateKey = req.query.dateKey || new Date().toISOString().slice(0, 10);
+    if (!validDateKey(dateKey)) return res.status(400).json({ message: "A valid date is required." });
+    const plans = await MealPlan.find({ user: req.user.id, isArchived: { $ne: true } })
+      .sort({ createdAt: -1 }).limit(20).lean();
+    if (!plans.length) return res.json({ success: true, plan: null, day: null });
+    const requestedDate = new Date(`${dateKey}T00:00:00.000Z`);
+    let plan = null;
+    let day = null;
+    for (const candidate of plans) {
+      const planStartKey = new Date(candidate.createdAt).toISOString().slice(0, 10);
+      const startDate = new Date(`${planStartKey}T00:00:00.000Z`);
+      const dayNumber = Math.floor((requestedDate - startDate) / 86400000) + 1;
+      if (dayNumber >= 1 && dayNumber <= Number(candidate.duration)) {
+        const matchingDay = (candidate.meals || []).find((item) => Number(item.day) === dayNumber);
+        if (matchingDay) { plan = candidate; day = matchingDay; break; }
+      }
+    }
+    if (!plan || !day) return res.json({ success: true, plan: null, day: null });
+    const mealTypes = ["breakfast", "lunch", "dinner"];
+    const meals = mealTypes.map((mealType) => {
+      const name = day[mealType] || "";
+      const options = Array.isArray(day[mealType + "Options"]) ? day[mealType + "Options"] : [];
+      const selected = options.find((option) => option?.name === name) || null;
+      return {
+        mealType, name, servings: Number(selected?.servings) || 1,
+        ingredients: selected?.ingredients || day[mealType + "Ingredients"] || [],
+        nutrition: selected?.nutrition || null,
+      };
+    }).filter((meal) => meal.name);
+    const logs = await NutritionLog.find({ user: req.user.id, mealPlan: plan._id, dayNumber: Number(day.day), dateKey }).lean();
+    res.json({ success: true, plan: { _id: plan._id, goal: plan.goal, diet: plan.diet, createdAt: plan.createdAt }, day: { dayNumber: day.day, meals, logs } });
+  } catch (error) {
+    console.error("Today's meal plan lookup error:", error);
+    res.status(500).json({ message: "Could not load today's meal plan." });
+  }
+};
+
+exports.saveDailyCheckin = async (req, res) => {
+  try {
+    const { mealPlanId, dayNumber = 1, dateKey, entries = [] } = req.body;
+    if (!mongoose.isValidObjectId(mealPlanId)) return res.status(400).json({ message: "Invalid meal plan." });
+    if (!validDateKey(dateKey)) return res.status(400).json({ message: "Choose a valid check-in date." });
+    if (!Array.isArray(entries) || entries.length > 3) return res.status(400).json({ message: "Invalid meal check-in." });
+    const plan = await MealPlan.findOne({ _id: mealPlanId, user: req.user.id }).lean();
+    if (!plan) return res.status(404).json({ message: "Meal plan not found." });
+    const day = (plan.meals || []).find((item) => Number(item.day) === Number(dayNumber));
+    if (!day) return res.status(404).json({ message: "Meal-plan day not found." });
+    const saved = [];
+    const selectedTypes = new Set();
+    for (const entry of entries) {
+      const { mealType, mealName, servings = 1 } = entry;
+      if (!MEAL_TYPES.includes(mealType) || selectedTypes.has(mealType)) {
+        return res.status(400).json({ message: "Each meal category can be selected only once." });
+      }
+      selectedTypes.add(mealType);
+      if (day[mealType] !== mealName) return res.status(400).json({ message: "A selected meal no longer matches today's plan." });
+      const servingCount = Number(servings);
+      if (!Number.isFinite(servingCount) || servingCount < 0.25 || servingCount > 20) {
+        return res.status(400).json({ message: "Servings must be between 0.25 and 20." });
+      }
+      const options = Array.isArray(day[mealType + "Options"]) ? day[mealType + "Options"] : [];
+      const option = options.find((item) => item?.name === mealName);
+      const nutrition = option?.nutrition;
+      const fields = ["calories", "protein", "carbohydrates", "fat"];
+      const complete = nutrition && nutrition.status !== "unavailable" &&
+        fields.every((field) => Number.isFinite(Number(nutrition[field])) && nutrition[field] !== null && nutrition[field] !== undefined);
+      if (!complete) {
+        return res.status(422).json({ message: `Nutrition is not ready for ${mealName}. Open this meal to review its ingredients and add missing nutrition data.`, needsNutrition: [mealName] });
+      }
+      const values = {};
+      for (const field of fields) values[field] = Math.round(Number(nutrition[field]) * servingCount * 10) / 10;
+      const log = await NutritionLog.findOneAndUpdate(
+        { user: req.user.id, mealPlan: plan._id, dayNumber: Number(dayNumber), mealType },
+        { $set: {
+          ...values, user: req.user.id, mealPlan: plan._id, dayNumber: Number(dayNumber),
+          mealType, dateKey, mealName, servings: servingCount,
+          nutritionSource: nutrition.source || "unknown", nutritionStatus: nutrition.status || "unavailable",
+          confidence: nutrition.confidence || "unknown", missingIngredients: nutrition.missingIngredients || [],
+        } },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+      saved.push(log);
+    }
+    // Unchecked planned meals are not counted as consumed; remove an earlier
+    // check-in for this same plan/day/date if the user changes their answer.
+    const unchecked = MEAL_TYPES.filter((type) => !selectedTypes.has(type));
+    if (unchecked.length) await NutritionLog.deleteMany({
+      user: req.user.id, mealPlan: plan._id, dayNumber: Number(dayNumber),
+      dateKey, mealType: { $in: unchecked },
+    });
+    res.json({ success: true, message: "Today's food check-in saved.", logs: saved, totals: totals(saved) });
+  } catch (error) {
+    console.error("Daily nutrition check-in error:", error);
+    res.status(500).json({ message: "Could not save today's check-in." });
+  }
+};
 
 exports.getDashboard = async (req, res) => {
   try {

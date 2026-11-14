@@ -4,6 +4,7 @@ const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 // not brand-specific label values. Unknown ingredients are never silently ignored.
 const FOODS = {
   rice: [365, 7.1, 80, 0.7, 185],
+  "cooked rice": [130, 2.7, 28.2, 0.3, 160],
   "wheat flour": [340, 13.2, 72, 2.5, 120],
   banana: [89, 1.1, 22.8, 0.3, 118],
   milk: [61, 3.2, 4.8, 3.3, 240],
@@ -123,8 +124,11 @@ function gramsFor(food, amount) {
 function parseIngredient(line) {
   // AI meal plans store ingredients as { name, quantity }; accept that shape
   // directly instead of converting the object to "[object Object]".
-  const original = line && typeof line === "object"
-    ? `${String(line.quantity || "").trim()} ${String(line.name || "").trim()}`.trim()
+  const structured = line && typeof line === "object" ? line : null;
+  const ingredientName = String(structured?.name || "").trim();
+  const state = String(structured?.state || "").toLowerCase();
+  const original = structured
+    ? `${String(structured.quantity || "").trim()} ${ingredientName}`.trim()
     : String(line || "").trim();
   if (!original) return null;
   const amount = parseAmount(original);
@@ -142,7 +146,10 @@ function parseIngredient(line) {
     .replace(/\([^)]*\)/g, " ")
     .replace(/\b(have|available|optional|to taste)\b/gi, " ")
     .replace(/^[\s,.-]+|[\s,.-]+$/g, "");
-  const food = resolveFood(remainder);
+  const normalizedName = normalizeIngredientName(ingredientName || remainder);
+  const food = state === "cooked" && normalizedName === "rice"
+    ? "cooked rice"
+    : resolveFood(remainder);
   if (!food) return { name: remainder || original, error: "Ingredient not in nutrition catalogue" };
   return { name: food, grams: gramsFor(food, amount), original };
 }

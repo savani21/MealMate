@@ -23,7 +23,7 @@ function normalizeMealIngredientLines(ingredients) {
   return (Array.isArray(ingredients) ? ingredients : []).map((item) => {
     if (typeof item === "string") return item;
     if (!item || typeof item !== "object") return String(item || "");
-    return `${String(item.quantity || "").trim()} ${String(item.name || "").trim()}`.trim();
+    return { name: String(item.name || "").trim(), quantity: String(item.quantity || "").trim(), state: String(item.state || "raw").toLowerCase() };
   }).filter(Boolean);
 }
 
@@ -599,10 +599,10 @@ Rules:
 - Use ONLY ingredients from the permitted list. Do not add oil, salt, spices, garnish, water or any other unlisted ingredient.
 - Prefer practical, familiar Indian home-style recipes that can genuinely be made from the permitted ingredients.
 - Follow the diet restriction exactly.
-- Return exactly 3 meaningfully different recipes, each with a short description, prepTime, a servings integer (usually 1 or 2), and a complete ingredient list with explicit measurable quantities. Do not use "as needed" or "to taste" for ingredients that contribute meaningful calories or macros. Use grams/ml where practical and cups/tbsp/tsp/pieces only when appropriate.
+- Return exactly 3 meaningfully different recipes, each with a short description, prepTime, a servings integer (usually 1 or 2), and a complete ingredient list with explicit measurable quantities and a state field ("raw", "cooked", or "as_purchased"). Always distinguish dry/raw rice and dal from cooked rice and cooked dal. Do not use "as needed" or "to taste" for ingredients that contribute meaningful calories or macros. Use grams/ml where practical and cups/tbsp/tsp/pieces only when appropriate.
 - Do not include a recipe name in its own ingredient list.
 - Return valid JSON only, with this exact shape:
-{"options":[{"name":"recipe name","description":"short description","prepTime":"20 minutes","servings":2,"ingredients":[{"name":"ingredient from permitted list","quantity":"120 g"}]}]}
+{"options":[{"name":"recipe name","description":"short description","prepTime":"20 minutes","servings":2,"ingredients":[{"name":"ingredient from permitted list","quantity":"120 g","state":"raw"}]}]}
 `;
             let result;
             let lastError;
