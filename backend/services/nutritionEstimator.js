@@ -14,6 +14,14 @@ const FOODS = {
   potato: [77, 2, 17.5, 0.1, 170],
   chickpeas: [364, 19.3, 60.7, 6, 200],
   "cooked chickpeas": [164, 8.9, 27.4, 2.6, 165],
+  "chana dal": [360, 22, 60, 5, 190],
+  "moong dal": [347, 24, 63, 1.2, 190],
+  "urad dal": [341, 25, 59, 1.6, 190],
+  rajma: [333, 23.6, 60, 0.8, 190],
+  "kidney beans": [333, 23.6, 60, 0.8, 190],
+  besan: [387, 22, 58, 6.7, 92],
+  "soy chunks": [345, 52, 33, 0.5, 90],
+  tofu: [76, 8, 1.9, 4.8, 100],
   "toor dal": [343, 22, 62, 1.5, 190],
   lentils: [352, 24.6, 63.1, 1.1, 190],
   oats: [389, 16.9, 66.3, 6.9, 80],
@@ -35,6 +43,17 @@ const FOODS = {
   coconut: [354, 3.3, 15.2, 33.5, 45],
   almonds: [579, 21.2, 21.6, 49.9, 1.2],
   cucumber: [15, 0.7, 3.6, 0.1, 300],
+  apple: [52, 0.3, 13.8, 0.2, 180],
+  mango: [60, 0.8, 15, 0.4, 200],
+  orange: [47, 0.9, 11.8, 0.1, 130],
+  cauliflower: [25, 1.9, 5, 0.3, 265],
+  cabbage: [25, 1.3, 5.8, 0.1, 500],
+  broccoli: [34, 2.8, 6.6, 0.4, 90],
+  mushroom: [22, 3.1, 3.3, 0.3, 18],
+  corn: [86, 3.3, 19, 1.4, 90],
+  "sweet potato": [86, 1.6, 20.1, 0.1, 130],
+  dates: [282, 2.5, 75, 0.4, 7],
+  raisins: [299, 3.1, 79, 0.5, 1],
   lemon: [29, 1.1, 9.3, 0.3, 58],
   "green chili": [40, 2, 9, 0.2, 15],
   coriander: [23, 2.1, 3.7, 0.5, 4],
@@ -51,8 +70,8 @@ const FOODS = {
 };
 
 const ALIASES = {
-  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils",
-  "chickpea": "chickpeas", chana: "chickpeas", "gram flour": "wheat flour",
+  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma",
+  "chickpea": "chickpeas", chana: "chickpeas", "gram flour": "besan", besan: "besan",
   atta: "wheat flour", "whole wheat flour": "wheat flour", "rice flour": "rice",
   "green peas": "peas", "bell pepper": "capsicum", "sweet pepper": "capsicum",
   "plain curd": "curd", "plain yogurt": "yogurt", "vegetable oil": "oil",
@@ -85,14 +104,15 @@ function parseAmount(text) {
 
 function gramsFor(food, amount) {
   const pieceGrams = FOODS[food][4];
+  const cupWeights = { rice: 185, "wheat flour": 120, oats: 80, milk: 240, water: 240, "toor dal": 190, "chana dal": 190, "moong dal": 190, "urad dal": 190, lentils: 190, chickpeas: 200, rajma: 190, besan: 92, semolina: 167, poha: 40, sugar: 200, peanuts: 145, peas: 145, "soy chunks": 90 };
   const unit = amount.unit;
   if (/^kg/.test(unit)) return amount.quantity * 1000;
   if (/^(g|gm|gram)/.test(unit)) return amount.quantity;
   if (/^(ml|milliliter)/.test(unit)) return amount.quantity; // approximate water-like density
   if (/^(l|liter|litre)/.test(unit)) return amount.quantity * 1000;
-  if (/^cup/.test(unit)) return amount.quantity * (food === "rice" ? 185 : food === "wheat flour" ? 120 : food === "oats" ? 80 : food === "milk" || food === "water" ? 240 : pieceGrams * 1.4);
+  if (/^cup/.test(unit)) return amount.quantity * (cupWeights[food] || pieceGrams * 1.4);
   if (/^tbsp|^tablespoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" || food === "butter" ? 14 : food === "sugar" ? 12 : 15);
-  if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : 5);
+  if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : ["cumin", "turmeric", "chili powder", "salt"].includes(food) ? 2.5 : 5);
   return amount.quantity * pieceGrams;
 }
 
