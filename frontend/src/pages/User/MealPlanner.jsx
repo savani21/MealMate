@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, ChevronDown, Star, ArrowDown, Plus } from "lucide-react";
 
-const API = "http://localhost:5000/api/meal-plans";
+const API = "/api/meal-plans";
 
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
@@ -34,7 +34,7 @@ export default function MealPlanner() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { setPantryLoading(false); return; }
-    fetch("http://localhost:5000/api/user/pantry", {
+    fetch("/api/user/pantry", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (response) => {
@@ -51,7 +51,7 @@ export default function MealPlanner() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch("http://localhost:5000/api/auth/profile", {
+    fetch("/api/auth/profile", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((response) => response.json())
@@ -68,7 +68,7 @@ export default function MealPlanner() {
     setRecommendedIngredients([]);
     const token = localStorage.getItem("token");
     if (!token) return;
-    fetch("http://localhost:5000/api/auth/profile", {
+    fetch("/api/auth/profile", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -84,7 +84,7 @@ export default function MealPlanner() {
       setRecommendationLoading(true);
       const token = localStorage.getItem("token");
       const query = new URLSearchParams({ diet });
-      const response = await fetch("http://localhost:5000/api/recipes/recommended?" + query.toString(), { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const response = await fetch("/api/recipes/recommended?" + query.toString(), { headers: token ? { Authorization: `Bearer ${token}` } : {} });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to get recommendations");
       setRecommendedIngredients(data.ingredients || []);
@@ -221,7 +221,7 @@ export default function MealPlanner() {
         diet,
       });
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/recipes/recommended?" + query.toString(), {
+      const response = await fetch("/api/recipes/recommended?" + query.toString(), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await response.json();
