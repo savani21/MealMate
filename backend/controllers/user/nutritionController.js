@@ -38,7 +38,13 @@ exports.getTodayPlan = async (req, res) => {
     const plan = await MealPlan.findOne({ user: req.user.id, isArchived: { $ne: true } })
       .sort({ createdAt: -1 }).lean();
     if (!plan) return res.json({ success: true, plan: null, day: null });
-    const day = (plan.meals || []).find((item) => Number(item.day) === 1) || null;
+    const planStartKey = new Date(plan.createdAt).toISOString().slice(0, 10);
+    const startDate = new Date(`${planStartKey}T00:00:00.000Z`);
+    const requestedDate = new Date(`${dateKey}T00:00:00.000Z`);
+    const dayNumber = Math.floor((requestedDate - startDate) / 86400000) + 1;
+    const day = dayNumber >= 1 && dayNumber <= Number(plan.duration)
+      ? (plan.meals || []).find((item) => Number(item.day) === dayNumber) || null
+      : null;
     if (!day) return res.json({ success: true, plan: { _id: plan._id, goal: plan.goal, diet: plan.diet }, day: null });
     const mealTypes = ["breakfast", "lunch", "dinner"];
     const meals = mealTypes.map((mealType) => {
