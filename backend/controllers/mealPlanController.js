@@ -970,7 +970,10 @@ exports.updateMealSelection = async (req, res) => {
         description: recipe.description || "Selected from MealMate recipes",
         prepTime: recipe.prepTime || "",
         ingredients: (recipe.ingredients || []).map((name) => ({ name, quantity: "as needed" })),
+        servings: Number(recipe.servings) || 1,
+        nutrition: recipe.nutrition || null,
       };
+      if (!selected.nutrition) await attachMealNutrition(selected, true);
       const options = Array.isArray(dayPlan[mealType + "Options"]) ? dayPlan[mealType + "Options"] : [];
       dayPlan[mealType + "Options"] = [selected, ...options.filter((item) => item.name !== selected.name)].slice(0, 3);
     } else {
@@ -979,6 +982,7 @@ exports.updateMealSelection = async (req, res) => {
       selected = options.find((item) => item.name === option.name);
       if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
     }
+    if (!selected.nutrition) await attachMealNutrition(selected, true);
     dayPlan[mealType] = selected.name;
     dayPlan[mealType + "Ingredients"] = selected.ingredients || [];
     mealPlan.markModified("meals");
