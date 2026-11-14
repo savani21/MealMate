@@ -82,7 +82,7 @@ exports.saveGoals = async (req, res) => {
 
 exports.logPlannedMeal = async (req, res) => {
   try {
-    const { mealPlanId, dayNumber, mealType, dateKey, mealName, servings = 1 } = req.body;
+    const { mealPlanId, dayNumber, mealType, dateKey, mealName, servings = 1, nutritionSource = "unknown", nutritionStatus = "unavailable", confidence = "unknown", missingIngredients = [] } = req.body;
     if (!mongoose.isValidObjectId(mealPlanId)) return res.status(400).json({ message: "Invalid meal plan." });
     if (!MEAL_TYPES.includes(mealType)) return res.status(400).json({ message: "Choose a valid meal type." });
     if (!validDateKey(dateKey)) return res.status(400).json({ message: "Choose a valid eaten date." });
@@ -111,7 +111,7 @@ exports.logPlannedMeal = async (req, res) => {
 
     const log = await NutritionLog.findOneAndUpdate(
       { user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType },
-      { $set: { ...nutrition, user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
+      { $set: { ...nutrition, nutritionSource, nutritionStatus, confidence, missingIngredients: Array.isArray(missingIngredients) ? missingIngredients : [], user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.status(200).json({ success: true, message: "Meal nutrition saved.", log });
