@@ -70,7 +70,7 @@ const FOODS = {
 };
 
 const ALIASES = {
-  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma",
+  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma", "pea": "peas", "lentil": "lentils", "almond": "almonds", "peanut": "peanuts", "apple": "apple", "date": "dates", "raisin": "raisins", "soy chunk": "soy chunks",
   "chickpea": "chickpeas", chana: "chickpeas", "gram flour": "besan", besan: "besan",
   atta: "wheat flour", "whole wheat flour": "wheat flour", "rice flour": "rice",
   "green peas": "peas", "bell pepper": "capsicum", "sweet pepper": "capsicum",
