@@ -11,6 +11,20 @@ test("calculates per-serving nutrition from recognized ingredient quantities", (
   assert.equal(result.missingIngredients.length, 0);
 });
 
+test("calculates nutrition from structured AI ingredient objects", () => {
+  const result = estimateRecipeNutrition([
+    { name: "wheat flour", quantity: "1 cup" },
+    { name: "banana", quantity: "1 medium" },
+    { name: "milk", quantity: "1 cup" },
+    { name: "cooking oil", quantity: "1 tsp" },
+  ], 2);
+  assert.equal(result.status, "estimated");
+  assert.ok(result.calories > 0);
+  assert.ok(result.protein > 0);
+  assert.equal(result.servings, 2);
+  assert.equal(result.missingIngredients.length, 0);
+});
+
 test("parses fractional ingredient quantities", () => {
   const result = estimateRecipeNutrition(["1/2 cup oats"], 1);
   assert.equal(result.status, "estimated");

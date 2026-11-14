@@ -1,6 +1,7 @@
 const MealPlan = require("../models/MealPlan");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
+const { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA } = require("../services/nutritionEstimator");
 const {
   upsertGroceryListForMealPlan,
 } = require("./user/groceryController");
@@ -17,6 +18,30 @@ const DIET_FORBIDDEN = {
   vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
   eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
 };
+
+function normalizeMealIngredientLines(ingredients) {
+  return (Array.isArray(ingredients) ? ingredients : []).map((item) => {
+    if (typeof item === "string") return item;
+    if (!item || typeof item !== "object") return String(item || "");
+    return `${String(item.quantity || "").trim()} ${String(item.name || "").trim()}`.trim();
+  }).filter(Boolean);
+}
+
+async function attachMealNutrition(option, useUSDA = false) {
+  if (!option || typeof option !== "object") return option;
+  const ingredients = normalizeMealIngredientLines(option.ingredients);
+  const servings = Math.max(1, Math.min(20, Number(option.servings) || 1));
+  const nutrition = useUSDA
+    ? await estimateRecipeNutritionWithUSDA(ingredients, servings)
+    : estimateRecipeNutrition(ingredients, servings);
+  option.servings = servings;
+  option.nutrition = {
+    ...nutrition,
+    ingredientCount: ingredients.length,
+    calculatedAt: nutrition.calculatedAt || new Date(),
+  };
+  return option;
+}
 
 function cleanList(value) {
   return String(value || "")
@@ -559,10 +584,10 @@ Rules:
 - Use ONLY ingredients from the permitted list. Do not add oil, salt, spices, garnish, water or any other unlisted ingredient.
 - Prefer practical, familiar Indian home-style recipes that can genuinely be made from the permitted ingredients.
 - Follow the diet restriction exactly.
-- Return exactly 3 meaningfully different recipes, each with a short description, prepTime, and complete ingredient list with practical quantities.
+- Return exactly 3 meaningfully different recipes, each with a short description, prepTime, a servings integer (usually 1 or 2), and a complete ingredient list with explicit measurable quantities. Do not use "as needed" or "to taste" for ingredients that contribute meaningful calories or macros. Use grams/ml where practical and cups/tbsp/tsp/pieces only when appropriate.
 - Do not include a recipe name in its own ingredient list.
 - Return valid JSON only, with this exact shape:
-{"options":[{"name":"recipe name","description":"short description","prepTime":"20 minutes","ingredients":[{"name":"ingredient from permitted list","quantity":"quantity"}]}]}
+{"options":[{"name":"recipe name","description":"short description","prepTime":"20 minutes","servings":2,"ingredients":[{"name":"ingredient from permitted list","quantity":"120 g"}]}]}
 `;
             let result;
             let lastError;
@@ -743,6 +768,31 @@ Rules:
         success: false,
         message: `The generated meal plan does not match the selected ${diet} diet. Please generate the plan again.`,
       });
+    }
+
+    // Calculate nutrition as part of generation, before preview or persistence.
+    // Every alternative gets an immediate local estimate; the default selected
+    // meal also receives USDA enrichment when a configured API key is available.
+    const selectedNutritionJobs = [];
+    for (const day of days) {
+      for (const type of ["breakfast", "lunch", "dinner"]) {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+        for (const option of options) {
+          await attachMealNutrition(option, false);
+        }
+        const selected = options.find((option) => option.name === day[type]) || options[0];
+        if (selected) {
+          selectedNutritionJobs.push({ day, type, selected });
+          day[type] = selected.name;
+          day[type + "Ingredients"] = selected.ingredients || [];
+        }
+      }
+    }
+    // USDA lookups run in small batches to avoid flooding the external API on
+    // 3- or 7-day plans. Local estimates are already attached to every option.
+    for (let index = 0; index < selectedNutritionJobs.length; index += 4) {
+      const batch = selectedNutritionJobs.slice(index, index + 4);
+      await Promise.all(batch.map(({ selected }) => attachMealNutrition(selected, true)));
     }
 
     if (req.body.previewOnly === true) {
@@ -927,7 +977,10 @@ exports.updateMealSelection = async (req, res) => {
         description: recipe.description || "Selected from MealMate recipes",
         prepTime: recipe.prepTime || "",
         ingredients: (recipe.ingredients || []).map((name) => ({ name, quantity: "as needed" })),
+        servings: Number(recipe.servings) || 1,
+        nutrition: recipe.nutrition || null,
       };
+      if (!selected.nutrition) await attachMealNutrition(selected, true);
       const options = Array.isArray(dayPlan[mealType + "Options"]) ? dayPlan[mealType + "Options"] : [];
       dayPlan[mealType + "Options"] = [selected, ...options.filter((item) => item.name !== selected.name)].slice(0, 3);
     } else {
@@ -936,6 +989,8 @@ exports.updateMealSelection = async (req, res) => {
       selected = options.find((item) => item.name === option.name);
       if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
     }
+    if (!recipeId) await attachMealNutrition(selected, true);
+    else if (!selected.nutrition) await attachMealNutrition(selected, true);
     dayPlan[mealType] = selected.name;
     dayPlan[mealType + "Ingredients"] = selected.ingredients || [];
     mealPlan.markModified("meals");
