@@ -11,6 +11,7 @@ import { Leaf, Carrot, Apple, Sprout } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import MealPlanner from "@/pages/User/MealPlanner";
+import NutritionDashboard from "@/pages/User/NutritionDashboard";
 import MyMealPlans from "@/pages/User/MyMealPlans";
 import MealPlanDetails from "@/pages/User/MealPlanDetails";
 import GroceryList from "@/pages/User/GroceryList";
