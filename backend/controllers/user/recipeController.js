@@ -2,6 +2,7 @@ const Recipe = require("../../models/user/Recipe");
 const User = require("../../models/User");
 const RecipeReview = require("../../models/user/RecipeReview");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
+const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
 
 const HIGHLY_LIKED_MIN_LIKES = Math.max(1, Number(process.env.HIGHLY_LIKED_MIN_LIKES) || 5);
 
@@ -176,6 +177,8 @@ const createRecipe = async (req, res) => {
       ingredients: req.body.ingredients,
       instructions: req.body.instructions,
       prepTime: req.body.prepTime,
+      servings: Number(req.body.servings) || 1,
+      nutrition: estimateRecipeNutrition(req.body.ingredients, Number(req.body.servings) || 1),
       image: req.body.image,
       createdBy: req.user.id,
     });
