@@ -179,6 +179,20 @@ function estimateRecipeNutrition(ingredients, servings = 1) {
   };
 }
 
+async function mapWithConcurrency(items, limit, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) break;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 async function estimateRecipeNutritionWithUSDA(ingredients, servings = 1) {
   const { searchFoodDataCentral } = require("./usdaFoodData");
   const local = estimateRecipeNutrition(ingredients, servings);
@@ -190,10 +204,10 @@ async function estimateRecipeNutritionWithUSDA(ingredients, servings = 1) {
   let localCount = 0;
 
   const parsedLines = (Array.isArray(ingredients) ? ingredients : []).map((line) => ({ line, parsed: parseIngredient(line) })).filter((item) => item.parsed);
-  const enrichedLines = await Promise.all(parsedLines.map(async ({ line, parsed }) => {
+  const enrichedLines = await mapWithConcurrency(parsedLines, 4, async ({ line, parsed }) => {
     if (parsed.error) return { parsed, line, usda: null };
     return { parsed, line, usda: await searchFoodDataCentral(parsed.name) };
-  }));
+  });
 
   for (const { parsed } of enrichedLines) {
     if (parsed.error) {
