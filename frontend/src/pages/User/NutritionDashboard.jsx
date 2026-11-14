@@ -7,7 +7,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from "recharts";
 
-const API = "http://localhost:5000/api/nutrition";
+const API = "/api/nutrition";
 const COLORS = ["#16a34a", "#e5a33b", "#3b82f6", "#ec6b78"];
 const EMPTY_TOTALS = { calories: 0, protein: 0, carbohydrates: 0, fat: 0 };
 const DEFAULT_GOALS = { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
