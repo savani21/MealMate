@@ -184,15 +184,18 @@ async function estimateRecipeNutritionWithUSDA(ingredients, servings = 1) {
   let usdaCount = 0;
   let localCount = 0;
 
-  for (const line of Array.isArray(ingredients) ? ingredients : []) {
-    const parsed = parseIngredient(line);
-    if (!parsed) continue;
+  const parsedLines = (Array.isArray(ingredients) ? ingredients : []).map((line) => ({ line, parsed: parseIngredient(line) })).filter((item) => item.parsed);
+  const enrichedLines = await Promise.all(parsedLines.map(async ({ line, parsed }) => {
+    if (parsed.error) return { parsed, line, usda: null };
+    return { parsed, line, usda: await searchFoodDataCentral(parsed.name) };
+  }));
+
+  for (const { parsed } of enrichedLines) {
     if (parsed.error) {
       missingIngredients.push({ ingredient: parsed.name, reason: parsed.error });
       continue;
     }
-
-    const usda = await searchFoodDataCentral(parsed.name);
+    const usda = enrichedLines.find((item) => item.parsed.original === parsed.original)?.usda;
     let values;
     let source;
     if (usda) {
