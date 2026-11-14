@@ -70,19 +70,23 @@ export default function MealPlanDetails() {
   const openNutritionEntry = async (day, mealType) => {
     const mealName = day?.[mealType] || "";
     const recipe = findRecipe(mealName);
+    const plannedOptions = Array.isArray(day?.[mealType + "Options"]) ? day[mealType + "Options"] : [];
+    const plannedMeal = plannedOptions.find((option) => option?.name === mealName) || null;
     const existing = nutritionLogs.find((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === mealType && log.mealName === mealName);
     setNutritionMeal({ dayNumber: day.day, mealType, mealName, recipeId: recipe?._id || null });
     setNutritionLoading(true);
     setEditNutritionValues(false);
     try {
-      let nutrition = recipe?.nutrition || {};
+      // Prefer nutrition calculated and persisted with the generated plan.
+      // Recipe collection lookup is only a backward-compatible fallback.
+      let nutrition = plannedMeal?.nutrition || recipe?.nutrition || {};
       let meta = {
         source: nutrition.source || "unknown",
         status: nutrition.status || "unavailable",
         confidence: nutrition.confidence || "unknown",
         missingIngredients: nutrition.missingIngredients || [],
       };
-      if (recipe?._id) {
+      if (!plannedMeal?.nutrition && recipe?._id) {
         const token = localStorage.getItem("token");
         const response = await fetch(`http://localhost:5000/api/nutrition/recipe/${recipe._id}`, {
           headers: { Authorization: `Bearer ${token}` },
