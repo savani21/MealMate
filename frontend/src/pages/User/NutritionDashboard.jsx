@@ -59,6 +59,11 @@ export default function NutritionDashboard() {
   const [goals, setGoals] = useState(DEFAULT_GOALS);
   const [savingGoals, setSavingGoals] = useState(false);
   const [deletingId, setDeletingId] = useState("");
+  const [todayPlan, setTodayPlan] = useState(null);
+  const [checkinMeals, setCheckinMeals] = useState([]);
+  const [checkinLoading, setCheckinLoading] = useState(false);
+  const [checkinSaving, setCheckinSaving] = useState(false);
+  const [checkinMessage, setCheckinMessage] = useState("");
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -73,6 +78,19 @@ export default function NutritionDashboard() {
       if (!response.ok) throw new Error(data.message || "Could not load nutrition data.");
       setDashboard(data);
       setGoals(data.goals || DEFAULT_GOALS);
+      const planResponse = await fetch(`${API}/today-plan?dateKey=${dateKey}`, { headers: { Authorization: `Bearer ${token}` } });
+      const planData = await planResponse.json();
+      if (planResponse.ok && planData.plan && planData.day) {
+        setTodayPlan({ ...planData.plan, dayNumber: planData.day.dayNumber, meals: planData.day.meals || [] });
+        const existing = planData.day.logs || [];
+        setCheckinMeals((planData.day.meals || []).map((meal) => {
+          const log = existing.find((item) => item.mealType === meal.mealType && item.mealName === meal.name);
+          return { ...meal, eaten: Boolean(log), servings: String(log?.servings || 1) };
+        }));
+      } else {
+        setTodayPlan(null);
+        setCheckinMeals([]);
+      }
     } catch (err) {
       setError(err.message || "Unable to connect to MealMate.");
     } finally {
@@ -118,6 +136,35 @@ export default function NutritionDashboard() {
     }
   };
 
+  const updateCheckinMeal = (mealType, patch) => {
+    setCheckinMeals((current) => current.map((meal) => meal.mealType === mealType ? { ...meal, ...patch } : meal));
+  };
+
+  const saveDailyCheckin = async () => {
+    if (!todayPlan?._id) return;
+    setCheckinSaving(true);
+    setCheckinMessage("");
+    try {
+      const token = localStorage.getItem("token");
+      const entries = checkinMeals.filter((meal) => meal.eaten).map((meal) => ({
+        mealType: meal.mealType, mealName: meal.name, servings: Number(meal.servings),
+      }));
+      const response = await fetch(`${API}/daily-checkin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ mealPlanId: todayPlan._id, dayNumber: todayPlan.dayNumber, dateKey, entries }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save your daily check-in.");
+      setCheckinMessage("Today's food intake has been updated.");
+      await loadDashboard();
+    } catch (err) {
+      setCheckinMessage(err.message || "Could not save your check-in.");
+    } finally {
+      setCheckinSaving(false);
+    }
+  };
+
   const removeMeal = async (id) => {
     if (!window.confirm("Remove this meal from your nutrition log?")) return;
     setDeletingId(id);
@@ -146,6 +193,28 @@ export default function NutritionDashboard() {
         </div>
 
         {error && <div role="alert" className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+
+        {dateKey === localDateKey() && <section className="mb-6 rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div><p className="text-xs font-bold uppercase tracking-wider text-primary">Daily check-in</p><h2 className="mt-1 text-xl font-black text-gray-900">How did you eat today?</h2><p className="mt-1 text-sm text-gray-500">Confirm your meals together. Planned meals are not counted until you say you ate them.</p></div>
+            {todayPlan && <span className="rounded-lg bg-green-50 px-3 py-1.5 text-xs font-bold text-primary">Latest active AI plan</span>}
+          </div>
+          {!todayPlan ? <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-600">No active meal plan found. Generate a meal plan to start a daily check-in.</div> : <>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              {checkinMeals.map((meal) => <article key={meal.mealType} className="rounded-xl border border-gray-100 p-4">
+                <div className="flex items-center justify-between gap-2"><span className="text-xs font-bold uppercase tracking-wide text-primary">{meal.mealType}</span><label className="flex items-center gap-2 text-xs font-semibold text-gray-600"><input type="checkbox" checked={meal.eaten} onChange={(event) => updateCheckinMeal(meal.mealType, { eaten: event.target.checked })} className="h-4 w-4 accent-green-600"/> Ate this</label></div>
+                <h3 className="mt-2 text-sm font-bold text-gray-900">{meal.name}</h3>
+                {meal.eaten && <label className="mt-3 block text-xs font-semibold text-gray-600">Servings eaten<input type="number" min="0.25" max="20" step="0.25" value={meal.servings} onChange={(event) => updateCheckinMeal(meal.mealType, { servings: event.target.value })} className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-primary"/></label>}
+                {meal.eaten && meal.nutrition && <p className="mt-2 text-[11px] text-gray-500">{Math.round(Number(meal.nutrition.calories) * Number(meal.servings || 1))} kcal estimated for this serving amount</p>}
+                {meal.eaten && (!meal.nutrition || meal.nutrition.status === "unavailable") && <p className="mt-2 text-[11px] text-amber-700">Nutrition needs review before this meal can be added.</p>}
+              </article>)}
+            </div>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className={`text-xs ${checkinMessage.toLowerCase().includes("could not") || checkinMessage.toLowerCase().includes("not ready") ? "text-amber-700" : "text-gray-500"}`}>{checkinMessage || "You can change these answers later. Only confirmed meals count toward your totals."}</p>
+              <button type="button" onClick={saveDailyCheckin} disabled={checkinSaving || !checkinMeals.length} className="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{checkinSaving ? "Saving..." : "Save today's check-in"}</button>
+            </div>
+          </>}
+        </section>}
 
         {editingGoals && <form onSubmit={saveGoals} className="mb-6 rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
           <div className="mb-4"><h2 className="font-bold text-gray-900">Personal daily targets</h2><p className="mt-1 text-xs text-gray-500">These are tracking targets, not medical advice. Adjust them to goals set with a qualified professional.</p></div>
