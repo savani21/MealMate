@@ -10,6 +10,13 @@ const recipeSchema = new mongoose.Schema(
     ingredients: { type: [String], default: [] },
     instructions: { type: [String], default: [] },
     prepTime: { type: String, default: "" },
+    nutrition: {
+      calories: { type: Number, min: 0 },
+      protein: { type: Number, min: 0 },
+      carbohydrates: { type: Number, min: 0 },
+      fat: { type: Number, min: 0 },
+      servingSize: { type: String, default: "1 serving" },
+    },
     image: { type: String, default: "" },
     imageGeneratedAt: { type: Date, default: null },
     source: { type: String, enum: ["manual", "ai"], default: "manual" },

@@ -19,6 +19,7 @@ const USER_GROUPS = [
     label: "My Kitchen",
     items: [
       { label: "Meal Planner", path: "/meal-planner", icon: CalendarDays },
+      { label: "Nutrition Dashboard", path: "/nutrition", icon: BarChart3 },
       { label: "My Meal Plans", path: "/my-meal-plans", icon: BookOpen },
       { label: "Pantry", path: "/pantry", icon: Package },
       { label: "Grocery List", path: "/user/grocery", icon: ShoppingCart },

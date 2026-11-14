@@ -16,6 +16,10 @@ export default function MealPlanDetails() {
   const [selectedMealType, setSelectedMealType] = useState("");
   const [activeMealEditor, setActiveMealEditor] = useState("");
   const [savingMealKey, setSavingMealKey] = useState("");
+  const [nutritionLogs, setNutritionLogs] = useState([]);
+  const [nutritionMeal, setNutritionMeal] = useState(null);
+  const [nutritionSaving, setNutritionSaving] = useState(false);
+  const [nutritionForm, setNutritionForm] = useState({ servings: "1", calories: "", protein: "", carbohydrates: "", fat: "" });
 
   useEffect(() => {
     fetchMealPlan();
@@ -36,6 +40,7 @@ export default function MealPlanDetails() {
         return;
       }
       setPlan(data.mealPlan);
+      fetchNutritionLogs(data.mealPlan._id);
       if (data.mealPlan?.meals?.length) {
         setSelectedDay(String(data.mealPlan.meals[0].day));
         setSelectedMealType("breakfast");
@@ -44,6 +49,64 @@ export default function MealPlanDetails() {
       console.error(error);
       alert("Unable to connect to server.");
     } finally { setLoading(false); }
+  };
+
+  const fetchNutritionLogs = async (planId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`http://localhost:5000/api/nutrition/plan/${planId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (response.ok) setNutritionLogs(data.logs || []);
+    } catch (error) {
+      console.error("Nutrition completion status error:", error);
+    }
+  };
+
+  const openNutritionEntry = (day, mealType) => {
+    const mealName = day?.[mealType] || "";
+    const recipe = findRecipe(mealName);
+    const nutrition = recipe?.nutrition || {};
+    const existing = nutritionLogs.find((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === mealType && log.mealName === mealName);
+    setNutritionForm({
+      servings: String(existing?.servings || 1),
+      calories: String(existing ? existing.calories / existing.servings : nutrition.calories ?? ""),
+      protein: String(existing ? existing.protein / existing.servings : nutrition.protein ?? ""),
+      carbohydrates: String(existing ? existing.carbohydrates / existing.servings : nutrition.carbohydrates ?? ""),
+      fat: String(existing ? existing.fat / existing.servings : nutrition.fat ?? ""),
+    });
+    setNutritionMeal({ dayNumber: day.day, mealType, mealName });
+  };
+
+  const saveNutritionEntry = async (event) => {
+    event.preventDefault();
+    if (!nutritionMeal) return;
+    setNutritionSaving(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("http://localhost:5000/api/nutrition/logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          mealPlanId: plan._id,
+          dayNumber: nutritionMeal.dayNumber,
+          mealType: nutritionMeal.mealType,
+          mealName: nutritionMeal.mealName,
+          dateKey: (() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; })(),
+          ...Object.fromEntries(Object.entries(nutritionForm).map(([key, value]) => [key, Number(value)])),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save nutrition entry.");
+      await fetchNutritionLogs(plan._id);
+      setNutritionMeal(null);
+      alert("Meal added to your Nutrition Dashboard.");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setNutritionSaving(false);
+    }
   };
 
   const fetchRecipes = async () => {
@@ -199,7 +262,9 @@ export default function MealPlanDetails() {
                 return <div key={type} className="border border-gray-100 rounded-2xl p-5">
                   <p className="text-xs uppercase tracking-wide font-bold text-primary">{type}</p>
                   <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
+                  {nutritionLogs.some((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === type && log.mealName === day[type]) && <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[11px] font-bold text-green-700"><Check className="h-3 w-3" /> Eaten · nutrition logged</p>}
                   <div className="flex flex-wrap gap-2 mt-4">
+                    <button type="button" onClick={() => openNutritionEntry(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs font-bold text-primary hover:bg-green-100"><Check className="w-3.5 h-3.5"/>{nutritionLogs.some((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === type && log.mealName === day[type]) ? "Update nutrition" : "Mark as eaten"}</button>
                     {getIsFutureOrTodayPlanDay(day.day) && <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>}
                     <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
                   </div>
@@ -238,6 +303,17 @@ export default function MealPlanDetails() {
           <button onClick={() => setShowRecipeSelector(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
           <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Preparing Cart..." : "Open Grocery Cart"}</button>
         </div>
+
+        {nutritionMeal && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !nutritionSaving) setNutritionMeal(null); }}>
+          <form onSubmit={saveNutritionEntry} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-primary">Nutrition tracking</p><h2 className="mt-1 text-xl font-black text-gray-900">Did you eat {nutritionMeal.mealName}?</h2><p className="mt-1 text-xs text-gray-500">Enter nutrition per serving. Values from a saved recipe are prefilled when available.</p></div><button type="button" onClick={() => setNutritionMeal(null)} disabled={nutritionSaving} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100" aria-label="Close"><X className="h-5 w-5"/></button></div>
+            <div className="mb-4 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">MealMate does not estimate missing nutrition values. Use a trusted nutrition source or the food label for accurate tracking.</div>
+            <div className="grid grid-cols-2 gap-3">
+              {[["servings","Servings","0.25"],["calories","Calories (kcal)","0"],["protein","Protein (g)","0"],["carbohydrates","Carbohydrates (g)","0"],["fat","Fat (g)","0"]].map(([key,label,min]) => <label key={key} className={`text-xs font-semibold text-gray-600 ${key === "servings" ? "col-span-2" : ""}`}>{label}<input type="number" min={min} max={key === "calories" ? "20000" : key === "servings" ? "20" : "2000"} step="0.1" required value={nutritionForm[key]} onChange={(event) => setNutritionForm((current) => ({ ...current, [key]: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-primary"/></label>)}
+            </div>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setNutritionMeal(null)} disabled={nutritionSaving} className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-600">Cancel</button><button disabled={nutritionSaving} className="rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{nutritionSaving ? "Saving..." : "Save to Nutrition Dashboard"}</button></div>
+          </form>
+        </div>}
 
         {showRecipeSelector && <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowRecipeSelector(false); }}>
           <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5">

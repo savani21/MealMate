@@ -11,6 +11,7 @@ const recipeReviewRoutes = require("./routes/user/recipeReviewRoutes");
 const favoriteRoutes = require("./routes/user/favoriteRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
+const nutritionRoutes = require("./routes/user/nutritionRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
 const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
 
@@ -49,6 +50,7 @@ mongoose
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
+app.use("/api/nutrition", nutritionRoutes);
 app.use("/api/user/grocery", require("./routes/user/groceryRoutes"));
 app.use("/api/user/pantry", require("./routes/user/pantryRoutes"));
 app.use("/api/store", storeRoutes);
