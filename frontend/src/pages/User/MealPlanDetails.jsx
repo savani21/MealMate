@@ -105,7 +105,7 @@ export default function MealPlanDetails() {
         missingIngredients: existing?.missingIngredients?.length ? existing.missingIngredients : meta.missingIngredients,
       });
       setNutritionForm({
-        servings: String(existing?.servings || recipe?.servings || 1),
+        servings: String(existing?.servings || 1),
         calories: String(existing ? existing.calories / existing.servings : nutrition.calories ?? ""),
         protein: String(existing ? existing.protein / existing.servings : nutrition.protein ?? ""),
         carbohydrates: String(existing ? existing.carbohydrates / existing.servings : nutrition.carbohydrates ?? ""),
