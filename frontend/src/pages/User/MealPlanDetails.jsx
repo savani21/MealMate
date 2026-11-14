@@ -68,7 +68,7 @@ export default function MealPlanDetails() {
     const mealName = day?.[mealType] || "";
     const recipe = findRecipe(mealName);
     const nutrition = recipe?.nutrition || {};
-    const existing = nutritionLogs.find((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === mealType);
+    const existing = nutritionLogs.find((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === mealType && log.mealName === mealName);
     setNutritionForm({
       servings: String(existing?.servings || 1),
       calories: String(existing?.calories ?? nutrition.calories ?? ""),
