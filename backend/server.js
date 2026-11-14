@@ -11,6 +11,7 @@ const recipeReviewRoutes = require("./routes/user/recipeReviewRoutes");
 const favoriteRoutes = require("./routes/user/favoriteRoutes");
 const aiRoutes = require("./routes/user/aiRoutes");
 const storeRoutes = require("./routes/user/storeRoutes");
+const nutritionRoutes = require("./routes/user/nutritionRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
 const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
 
