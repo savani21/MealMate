@@ -1,6 +1,7 @@
 const MealPlan = require("../models/MealPlan");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
+const { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA } = require("../services/nutritionEstimator");
 const {
   upsertGroceryListForMealPlan,
 } = require("./user/groceryController");
@@ -17,6 +18,30 @@ const DIET_FORBIDDEN = {
   vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
   eggetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|sausage|gelatin)\b/i,
 };
+
+function normalizeMealIngredientLines(ingredients) {
+  return (Array.isArray(ingredients) ? ingredients : []).map((item) => {
+    if (typeof item === "string") return item;
+    if (!item || typeof item !== "object") return String(item || "");
+    return `${String(item.quantity || "").trim()} ${String(item.name || "").trim()}`.trim();
+  }).filter(Boolean);
+}
+
+async function attachMealNutrition(option, useUSDA = false) {
+  if (!option || typeof option !== "object") return option;
+  const ingredients = normalizeMealIngredientLines(option.ingredients);
+  const servings = Math.max(1, Math.min(20, Number(option.servings) || 1));
+  const nutrition = useUSDA
+    ? await estimateRecipeNutritionWithUSDA(ingredients, servings)
+    : estimateRecipeNutrition(ingredients, servings);
+  option.servings = servings;
+  option.nutrition = {
+    ...nutrition,
+    ingredientCount: ingredients.length,
+    calculatedAt: nutrition.calculatedAt || new Date(),
+  };
+  return option;
+}
 
 function cleanList(value) {
   return String(value || "")
@@ -743,6 +768,24 @@ Rules:
         success: false,
         message: `The generated meal plan does not match the selected ${diet} diet. Please generate the plan again.`,
       });
+    }
+
+    // Calculate nutrition as part of generation, before preview or persistence.
+    // Every alternative gets an immediate local estimate; the default selected
+    // meal also receives USDA enrichment when a configured API key is available.
+    for (const day of days) {
+      for (const type of ["breakfast", "lunch", "dinner"]) {
+        const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
+        for (const option of options) {
+          await attachMealNutrition(option, false);
+        }
+        const selected = options.find((option) => option.name === day[type]) || options[0];
+        if (selected) {
+          await attachMealNutrition(selected, true);
+          day[type] = selected.name;
+          day[type + "Ingredients"] = selected.ingredients || [];
+        }
+      }
     }
 
     if (req.body.previewOnly === true) {
