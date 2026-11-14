@@ -44,7 +44,7 @@ exports.getReminderPreferences = async (req, res) => {
 exports.saveReminderPreferences = async (req, res) => {
   try {
     const { enabled = false, timezone = "Asia/Kolkata", breakfast = "08:00", lunch = "13:00", dinner = "19:00" } = req.body;
-    if (typeof enabled !== "boolean" || !["breakfast", "lunch", "dinner"].every((key) => /^([01]\\d|2[0-3]):[0-5]\\d$/.test(String({ breakfast, lunch, dinner }[key]))) ) {
+    if (typeof enabled !== "boolean" || !["breakfast", "lunch", "dinner"].every((key) => /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(String({ breakfast, lunch, dinner }[key]))) ) {
       return res.status(400).json({ message: "Choose valid reminder times." });
     }
     try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date()); }
