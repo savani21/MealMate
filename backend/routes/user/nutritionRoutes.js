@@ -2,6 +2,8 @@ const router = require("express").Router();
 const auth = require("../../middleware/auth");
 const {
   getDashboard,
+  getTodayPlan,
+  saveDailyCheckin,
   saveGoals,
   logPlannedMeal,
   getPlanLogs,
@@ -10,6 +12,8 @@ const {
 } = require("../../controllers/user/nutritionController");
 
 router.get("/dashboard", auth, getDashboard);
+router.get("/today-plan", auth, getTodayPlan);
+router.post("/daily-checkin", auth, saveDailyCheckin);
 router.get("/recipe/:recipeId", auth, getRecipeNutrition);
 router.put("/goals", auth, saveGoals);
 router.post("/logs", auth, logPlannedMeal);
