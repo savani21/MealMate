@@ -109,7 +109,7 @@ export default function Recipes() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/recipes");
+      const response = await fetch("/api/recipes");
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to load recipes"); return; }
       setRecipes(data.recipes || []);
@@ -123,7 +123,7 @@ export default function Recipes() {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      const response = await fetch("http://localhost:5000/api/favorites", {
+      const response = await fetch("/api/favorites", {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -143,7 +143,7 @@ export default function Recipes() {
     setGenerationSlow(false);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/ai/generate-recipe", {
+      const response = await fetch("/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ ingredients: generatorIngredients.trim(), mealName, diet: params.get("diet") || "Any", category: mealType || category !== "All" ? (mealType || category) : "Other" }),
@@ -155,7 +155,7 @@ export default function Recipes() {
         try {
           if (!validMealTypes.includes(mealType)) throw new Error("The meal type is missing from this meal-plan link. Return to your meal plan and try again.");
           if (!token) throw new Error("Your login session is missing. Please sign in again.");
-          const saveResponse = await fetch(`http://localhost:5000/api/meal-plans/${planId}/selection`, {
+          const saveResponse = await fetch(`/api/meal-plans/${planId}/selection`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
             body: JSON.stringify({ day: mealDay, mealType, recipeId: data.recipe._id }),
@@ -208,7 +208,7 @@ export default function Recipes() {
       const token = localStorage.getItem("token");
       if (!token) { alert("Please log in to manage favorites."); return; }
       const isFavorite = favorites.includes(recipeId);
-      const response = await fetch(`http://localhost:5000/api/favorites/${recipeId}`, {
+      const response = await fetch(`/api/favorites/${recipeId}`, {
         method: isFavorite ? "DELETE" : "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
