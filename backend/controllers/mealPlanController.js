@@ -1,7 +1,7 @@
 const MealPlan = require("../models/MealPlan");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
-const { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA } = require("../services/nutritionEstimator");
+const { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA, parseIngredient } = require("../services/nutritionEstimator");
 const {
   upsertGroceryListForMealPlan,
 } = require("./user/groceryController");
@@ -399,9 +399,11 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       name: recipe.name,
       description: `${recipe.name} prepared with your selected pantry ingredients.`,
       prepTime: index === 0 ? "20 minutes" : "25 minutes",
-      ingredients: measuredIngredients,
+      ingredients: measuredIngredients.length
+        ? measuredIngredients
+        : recipe.ingredients.map((name) => ({ name, quantity: "quantity not specified" })),
     };
-  }).filter((recipe) => recipe.ingredients.length > 0);
+  });
 }
 
 function generateLocalMealPlan({ duration, diet, allowedPool }) {
@@ -700,6 +702,16 @@ Rules:
           const allIngredientsAvailable = optionIngredients.every(
             (name) => name && allowedIngredientNames.has(name)
           );
+          // Reject AI candidates with missing quantities for calorie-bearing
+          // ingredients; otherwise nutrition can collapse to tiny, misleading totals.
+          const quantitiesUsable = option.ingredients.every((item) => {
+            const parsed = parseIngredient(item);
+            if (!parsed || !parsed.error) return true;
+            const ingredientName = normalizeIngredientName(
+              typeof item === "string" ? item : item?.name
+            );
+            return ingredientName === "water";
+          });
           const optionText = `${option.name} ${option.ingredients
             .map((item) => typeof item === "string" ? item : item?.name || "")
             .join(" ")} `;
@@ -709,6 +721,7 @@ Rules:
 
           if (
             !allIngredientsAvailable ||
+            !quantitiesUsable ||
             violatesDiet ||
             usedNames.has(nameKey) ||
             validOptions.length >= 3
