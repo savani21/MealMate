@@ -86,7 +86,7 @@ export default function Notifications() {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const response = await fetch("http://localhost:5000/api/notifications", {
+        const response = await fetch("/api/notifications", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) return;
@@ -115,7 +115,7 @@ export default function Notifications() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("http://localhost:5000/api/meal-plans", {
+        const response = await fetch("/api/meal-plans", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -224,7 +224,7 @@ export default function Notifications() {
     if (notification?.backend) {
       const token = localStorage.getItem("token");
       try {
-        await fetch(`http://localhost:5000/api/notifications/${id}/read`, {
+        await fetch(`/api/notifications/${id}/read`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -238,7 +238,7 @@ export default function Notifications() {
     setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
     const token = localStorage.getItem("token");
     try {
-      await fetch("http://localhost:5000/api/notifications/read-all", {
+      await fetch("/api/notifications/read-all", {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -258,7 +258,7 @@ export default function Notifications() {
     setNotifications((prev) => prev.filter((item) => item.id !== id));
     if (notification?.backend) {
       const token = localStorage.getItem("token");
-      fetch(`http://localhost:5000/api/notifications/${id}`, {
+      fetch(`/api/notifications/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       }).catch((error) => console.error("Could not delete notification:", error));
@@ -272,7 +272,7 @@ export default function Notifications() {
     localStorage.setItem(deletedDynamicKey, JSON.stringify(merged));
     setNotifications([]);
     const token = localStorage.getItem("token");
-    fetch("http://localhost:5000/api/notifications", {
+    fetch("/api/notifications", {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     }).catch((error) => console.error("Could not clear notifications:", error));
