@@ -51,7 +51,7 @@ const FOODS = {
 };
 
 const ALIASES = {
-  "flattened rice": "poha", "red lentil": "lentils", "masoor dal": "lentils",
+  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils",
   "chickpea": "chickpeas", chana: "chickpeas", "gram flour": "wheat flour",
   atta: "wheat flour", "whole wheat flour": "wheat flour", "rice flour": "rice",
   "green peas": "peas", "bell pepper": "capsicum", "sweet pepper": "capsicum",
