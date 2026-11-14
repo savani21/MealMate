@@ -253,7 +253,7 @@ export default function UserSection() {
               <RoutineStat icon={<Utensils className="w-5 h-5" />} value={`${todayPlan.duration} day`} label="Current plan" />
             </div>
             <div className="px-6 pb-6 md:px-7 md:pb-7">
-              <button onClick={() => setLocation("/nutrition")} className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-green-100 bg-green-50 px-5 py-4 text-left hover:border-primary transition">
+              <button onClick={() => setLocation("/nutrition#daily-checkin")} className="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-green-100 bg-green-50 px-5 py-4 text-left hover:border-primary transition">
                 <div><p className="font-bold text-gray-900">Today's Nutrition Check-in</p><p className="mt-1 text-sm text-gray-600">Confirm breakfast, lunch and dinner together and adjust servings in one place.</p></div>
                 <span className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white">Update today's intake <ArrowRight className="h-4 w-4"/></span>
               </button>
@@ -269,7 +269,7 @@ export default function UserSection() {
             <h2 className="mt-1 text-xl font-black text-gray-900">Today's nutrition</h2>
             <p className="mt-1 text-sm text-gray-500">Your progress from meals you have confirmed eating</p>
           </div>
-          <button onClick={() => setLocation("/nutrition")} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-bold text-primary hover:bg-green-100 transition">
+          <button onClick={() => setLocation("/nutrition#nutrition-overview")} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-bold text-primary hover:bg-green-100 transition">
             Full nutrition dashboard <ArrowRight className="h-4 w-4"/>
           </button>
         </div>
@@ -317,7 +317,7 @@ export default function UserSection() {
                 </div>
                 <div className="mt-4 flex flex-col gap-2 rounded-xl border border-dashed border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-xs text-gray-500">{hasEntries ? `${nutritionData.today.meals.length} confirmed meal entries counted today.` : "No confirmed meals logged yet. Planned meals are not included in these totals."}</p>
-                  <button onClick={() => setLocation("/nutrition")} className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">Log or update food <ArrowRight className="h-3.5 w-3.5"/></button>
+                  <button onClick={() => setLocation("/nutrition#daily-checkin")} className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">Log or update food <ArrowRight className="h-3.5 w-3.5"/></button>
                 </div>
               </>;
             })()}
