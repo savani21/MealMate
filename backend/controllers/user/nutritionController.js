@@ -2,6 +2,8 @@ const mongoose = require("mongoose");
 const NutritionLog = require("../../models/user/NutritionLog");
 const NutritionGoal = require("../../models/user/NutritionGoal");
 const MealPlan = require("../../models/MealPlan");
+const Recipe = require("../../models/user/Recipe");
+const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
 
 const DEFAULT_GOALS = { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"];
@@ -116,6 +118,28 @@ exports.logPlannedMeal = async (req, res) => {
   } catch (error) {
     console.error("Nutrition log error:", error);
     res.status(500).json({ message: "Could not save this meal. Please try again." });
+  }
+};
+
+exports.getRecipeNutrition = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.recipeId)) return res.status(400).json({ message: "Invalid recipe." });
+    const recipe = await Recipe.findById(req.params.recipeId);
+    if (!recipe) return res.status(404).json({ message: "Recipe not found." });
+    const current = recipe.nutrition || {};
+    const hasCompleteValues = ["calories", "protein", "carbohydrates", "fat"].every((key) =>
+      Number.isFinite(Number(current[key])) && current[key] !== null && current[key] !== undefined
+    );
+    if (hasCompleteValues && ["verified_label", "manual"].includes(current.source)) {
+      return res.json({ success: true, nutrition: current, servings: recipe.servings || 1, recipeName: recipe.name });
+    }
+    const estimate = estimateRecipeNutrition(recipe.ingredients || [], recipe.servings || 1);
+    recipe.nutrition = estimate;
+    await recipe.save();
+    res.json({ success: true, nutrition: estimate, servings: recipe.servings || 1, recipeName: recipe.name });
+  } catch (error) {
+    console.error("Recipe nutrition estimate error:", error);
+    res.status(500).json({ message: "Could not calculate recipe nutrition." });
   }
 };
 
