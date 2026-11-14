@@ -773,6 +773,7 @@ Rules:
     // Calculate nutrition as part of generation, before preview or persistence.
     // Every alternative gets an immediate local estimate; the default selected
     // meal also receives USDA enrichment when a configured API key is available.
+    const selectedNutritionJobs = [];
     for (const day of days) {
       for (const type of ["breakfast", "lunch", "dinner"]) {
         const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
@@ -781,11 +782,17 @@ Rules:
         }
         const selected = options.find((option) => option.name === day[type]) || options[0];
         if (selected) {
-          await attachMealNutrition(selected, true);
+          selectedNutritionJobs.push({ day, type, selected });
           day[type] = selected.name;
           day[type + "Ingredients"] = selected.ingredients || [];
         }
       }
+    }
+    // USDA lookups run in small batches to avoid flooding the external API on
+    // 3- or 7-day plans. Local estimates are already attached to every option.
+    for (let index = 0; index < selectedNutritionJobs.length; index += 4) {
+      const batch = selectedNutritionJobs.slice(index, index + 4);
+      await Promise.all(batch.map(({ selected }) => attachMealNutrition(selected, true)));
     }
 
     if (req.body.previewOnly === true) {
