@@ -989,7 +989,8 @@ exports.updateMealSelection = async (req, res) => {
       selected = options.find((item) => item.name === option.name);
       if (!selected) return res.status(400).json({ success: false, message: "The selected option is not part of this meal plan." });
     }
-    if (!selected.nutrition) await attachMealNutrition(selected, true);
+    if (!recipeId) await attachMealNutrition(selected, true);
+    else if (!selected.nutrition) await attachMealNutrition(selected, true);
     dayPlan[mealType] = selected.name;
     dayPlan[mealType + "Ingredients"] = selected.ingredients || [];
     mealPlan.markModified("meals");
