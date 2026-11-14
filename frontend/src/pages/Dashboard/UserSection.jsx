@@ -74,6 +74,8 @@ export default function UserSection() {
   const [mealPlans, setMealPlans] = useState([]);
   const [now, setNow] = useState(new Date());
   const [loadingMeals, setLoadingMeals] = useState(true);
+  const [nutritionData, setNutritionData] = useState(null);
+  const [loadingNutrition, setLoadingNutrition] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 30000);
@@ -102,6 +104,32 @@ export default function UserSection() {
 
     loadTodayMeals();
   }, [user]);
+
+  const todayDateKey = getLocalDateKey(now);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadNutritionSummary = async () => {
+      setLoadingNutrition(true);
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        const response = await fetch(`http://localhost:5000/api/nutrition/dashboard?dateKey=${todayDateKey}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Could not load nutrition summary.");
+        const data = await response.json();
+        if (!cancelled) setNutritionData(data);
+      } catch (error) {
+        console.error("Dashboard nutrition summary error:", error);
+        if (!cancelled) setNutritionData(null);
+      } finally {
+        if (!cancelled) setLoadingNutrition(false);
+      }
+    };
+    loadNutritionSummary();
+    return () => { cancelled = true; };
+  }, [user, todayDateKey]);
 
   const activeMealPlans = useMemo(
     () => mealPlans.filter((plan) => !plan.isArchived),
@@ -231,6 +259,69 @@ export default function UserSection() {
               </button>
             </div>
           </>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between md:px-7">
+          <div>
+            <p className="text-primary text-xs font-bold uppercase tracking-wider">Nutrition tracking</p>
+            <h2 className="mt-1 text-xl font-black text-gray-900">Today's nutrition</h2>
+            <p className="mt-1 text-sm text-gray-500">Your progress from meals you have confirmed eating</p>
+          </div>
+          <button onClick={() => setLocation("/nutrition")} className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-2.5 text-sm font-bold text-primary hover:bg-green-100 transition">
+            Full nutrition dashboard <ArrowRight className="h-4 w-4"/>
+          </button>
+        </div>
+        {loadingNutrition ? (
+          <div className="p-7 text-center text-sm text-gray-500">Loading your nutrition progress...</div>
+        ) : (
+          <div className="p-6 md:p-7">
+            {(() => {
+              const totals = nutritionData?.today?.totals || { calories: 0, protein: 0, carbohydrates: 0, fat: 0 };
+              const goals = nutritionData?.goals || { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
+              const nutrients = [
+                { key: "protein", label: "Protein", unit: "g", color: "bg-blue-500", track: "bg-blue-50" },
+                { key: "carbohydrates", label: "Carbs", unit: "g", color: "bg-amber-500", track: "bg-amber-50" },
+                { key: "fat", label: "Fat", unit: "g", color: "bg-rose-500", track: "bg-rose-50" },
+              ];
+              const calories = Number(totals.calories) || 0;
+              const calorieGoal = Number(goals.calories) || 2000;
+              const caloriePercent = Math.min(100, Math.round((calories / calorieGoal) * 100));
+              const hasEntries = (nutritionData?.today?.meals || []).length > 0;
+              return <>
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.05fr_2fr]">
+                  <div className="rounded-2xl bg-green-50 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-primary"><Flame className="h-5 w-5"/></div>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-primary">{caloriePercent}% of goal</span>
+                    </div>
+                    <p className="mt-4 text-sm font-semibold text-gray-600">Calories consumed</p>
+                    <div className="mt-1 flex items-baseline gap-2"><span className="text-3xl font-black tabular-nums text-gray-900">{Math.round(calories).toLocaleString()}</span><span className="text-sm text-gray-500">/ {calorieGoal.toLocaleString()} kcal</span></div>
+                    <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-primary transition-all" style={{ width: `${caloriePercent}%` }}/></div>
+                    <p className="mt-2 text-xs text-gray-600">{Math.max(0, Math.round(calorieGoal - calories)).toLocaleString()} kcal remaining</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {nutrients.map((nutrient) => {
+                      const value = Number(totals[nutrient.key]) || 0;
+                      const goal = Number(goals[nutrient.key]) || 0;
+                      const percent = goal > 0 ? Math.min(100, Math.round((value / goal) * 100)) : 0;
+                      return <div key={nutrient.key} className="rounded-2xl border border-gray-100 p-4">
+                        <div className="flex items-center justify-between gap-2"><span className="text-sm font-bold text-gray-700">{nutrient.label}</span><span className="text-xs font-bold tabular-nums text-gray-500">{percent}%</span></div>
+                        <p className="mt-3 text-2xl font-black tabular-nums text-gray-900">{Math.round(value * 10) / 10}<span className="ml-1 text-xs font-semibold text-gray-400">{nutrient.unit}</span></p>
+                        <p className="mt-1 text-xs text-gray-500">of {goal} {nutrient.unit}</p>
+                        <div className={`mt-3 h-2 overflow-hidden rounded-full ${nutrient.track}`}><div className={`h-full rounded-full ${nutrient.color} transition-all`} style={{ width: `${percent}%` }}/></div>
+                      </div>;
+                    })}
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-col gap-2 rounded-xl border border-dashed border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-gray-500">{hasEntries ? `${nutritionData.today.meals.length} confirmed meal entries counted today.` : "No confirmed meals logged yet. Planned meals are not included in these totals."}</p>
+                  <button onClick={() => setLocation("/nutrition")} className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline">Log or update food <ArrowRight className="h-3.5 w-3.5"/></button>
+                </div>
+              </>;
+            })()}
+          </div>
         )}
       </section>
 
