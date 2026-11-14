@@ -37,7 +37,7 @@ export default function Security() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/security/overview", {
+      const response = await fetch("/api/admin/security/overview", {
         headers: authHeaders(),
       });
 
@@ -71,7 +71,7 @@ export default function Security() {
       setBusyId(admin._id);
 
       const response = await fetch(
-        `http://localhost:5000/api/admin/users/${admin._id}/role`,
+        `/api/admin/users/${admin._id}/role`,
         {
           method: "PATCH",
           headers: { ...authHeaders(), "Content-Type": "application/json" },

@@ -41,7 +41,7 @@ export default function Analytics() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/analytics/stats", {
+      const response = await fetch("/api/admin/analytics/stats", {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -24,8 +24,13 @@ const adminAnalyticsRoutes = require("./routes/admin/analyticsRoutes");
 const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
 
-app.use(cors());
+app.use(cors({ origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",").map((value) => value.trim()) : true }));
 app.use(express.json());
+
+app.get("/api/health", (_req, res) => {
+  const connected = mongoose.connection.readyState === 1;
+  res.status(connected ? 200 : 503).json({ status: connected ? "ok" : "starting", database: connected ? "connected" : "disconnected" });
+});
 
 mongoose
   .connect(process.env.MONGO_URI)
@@ -81,8 +86,8 @@ app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server Running on ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server Running on " + PORT);
 });

@@ -35,7 +35,7 @@ export default function MealPlans() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/meal-plans", {
+      const response = await fetch("/api/admin/meal-plans", {
         headers: authHeaders(),
       });
 
@@ -62,7 +62,7 @@ export default function MealPlans() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/meal-plans/${plan._id}`,
+        `/api/admin/meal-plans/${plan._id}`,
         { method: "DELETE", headers: authHeaders() }
       );
 

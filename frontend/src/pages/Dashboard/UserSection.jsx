@@ -88,7 +88,7 @@ export default function UserSection() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("http://localhost:5000/api/meal-plans", {
+        const response = await fetch("/api/meal-plans", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -114,7 +114,7 @@ export default function UserSection() {
       try {
         const token = localStorage.getItem("token");
         if (!token) return;
-        const response = await fetch(`http://localhost:5000/api/nutrition/dashboard?dateKey=${todayDateKey}`, {
+        const response = await fetch(`/api/nutrition/dashboard?dateKey=${todayDateKey}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) throw new Error("Could not load nutrition summary.");

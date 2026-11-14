@@ -31,7 +31,7 @@ export default function AdminSection() {
       if (!token) return;
 
       const response = await fetch(
-        "http://localhost:5000/api/admin/analytics/stats",
+        "/api/admin/analytics/stats",
         {
           headers: {
             Authorization: `Bearer ${token}`,

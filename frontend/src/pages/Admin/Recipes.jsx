@@ -54,7 +54,7 @@ export default function Recipes() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/recipes", {
+      const response = await fetch("/api/admin/recipes", {
         headers: authHeaders(),
       });
 
@@ -128,8 +128,8 @@ export default function Recipes() {
       setSaving(true);
 
       const url = editingId
-        ? `http://localhost:5000/api/admin/recipes/${editingId}`
-        : "http://localhost:5000/api/admin/recipes";
+        ? `/api/admin/recipes/${editingId}`
+        : "/api/admin/recipes";
 
       const response = await fetch(url, {
         method: editingId ? "PUT" : "POST",
@@ -167,7 +167,7 @@ export default function Recipes() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/recipes/${recipe._id}`,
+        `/api/admin/recipes/${recipe._id}`,
         { method: "DELETE", headers: authHeaders() }
       );
 

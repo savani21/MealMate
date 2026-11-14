@@ -37,7 +37,7 @@ function RecipeDiscoverySection() {
 
   useEffect(() => {
     let active = true;
-    fetch("http://localhost:5000/api/recipes")
+    fetch("/api/recipes")
       .then((response) => response.json())
       .then((data) => { if (active) setRecipes(data.recipes || []); })
       .catch((error) => console.error("Home recipe discovery:", error))

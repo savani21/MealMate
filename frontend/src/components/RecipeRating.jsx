@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Star, X } from "lucide-react";
 
-const API = "http://localhost:5000";
+const API = "";
 
 export default function RecipeRating({ recipeId, promptOpen = false, onPromptClose }) {
   const [rating, setRating] = useState(0);

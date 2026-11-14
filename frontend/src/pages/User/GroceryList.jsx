@@ -12,7 +12,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-const API = "http://localhost:5000";
+const API = "";
 
 export default function GroceryList() {
   const [, setLocation] = useLocation();

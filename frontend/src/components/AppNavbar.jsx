@@ -72,7 +72,7 @@ export default function AppNavbar({ children }) {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const response = await fetch("http://localhost:5000/api/notifications", {
+        const response = await fetch("/api/notifications", {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) return;
