@@ -63,7 +63,7 @@ exports.saveGoals = async (req, res) => {
     const values = {};
     for (const field of fields) {
       const value = Number(req.body[field]);
-      if (!Number.isFinite(value) || value < 0 || value > (field === "calories" ? 10000 : 1000)) {
+      if (!Number.isFinite(value) || value < (field === "calories" ? 500 : 0) || value > (field === "calories" ? 10000 : field === "protein" || field === "fat" ? 500 : 1000)) {
         return res.status(400).json({ message: `Enter a valid ${field} target.` });
       }
       values[field] = value;
