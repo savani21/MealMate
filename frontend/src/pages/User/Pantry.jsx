@@ -8,7 +8,7 @@ import {
   Carrot, Wheat, Milk, Sparkles, Clock3, ShoppingBasket
 } from "lucide-react";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 const API = `${API_BASE}/user/pantry`;
 
 function IngredientImage({ name }) {
