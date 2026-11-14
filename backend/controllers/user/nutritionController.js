@@ -4,6 +4,7 @@ const NutritionGoal = require("../../models/user/NutritionGoal");
 const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
 const { estimateRecipeNutritionWithUSDA } = require("../../services/nutritionEstimator");
+const MealReminderPreference = require("../../models/user/MealReminderPreference");
 
 const DEFAULT_GOALS = { calories: 2000, protein: 75, carbohydrates: 250, fat: 65 };
 const MEAL_TYPES = ["breakfast", "lunch", "dinner"];
@@ -30,6 +31,34 @@ function totals(logs) {
     return sum;
   }, { calories: 0, protein: 0, carbohydrates: 0, fat: 0 });
 }
+
+exports.getReminderPreferences = async (req, res) => {
+  try {
+    const preferences = await MealReminderPreference.findOne({ user: req.user.id }).lean();
+    res.json({ success: true, preferences: preferences || { enabled: false, timezone: "Asia/Kolkata", breakfast: "08:00", lunch: "13:00", dinner: "19:00" } });
+  } catch (error) {
+    res.status(500).json({ message: "Could not load reminder preferences." });
+  }
+};
+
+exports.saveReminderPreferences = async (req, res) => {
+  try {
+    const { enabled = false, timezone = "Asia/Kolkata", breakfast = "08:00", lunch = "13:00", dinner = "19:00" } = req.body;
+    if (typeof enabled !== "boolean" || !["breakfast", "lunch", "dinner"].every((key) => /^([01]\\d|2[0-3]):[0-5]\\d$/.test(String({ breakfast, lunch, dinner }[key]))) ) {
+      return res.status(400).json({ message: "Choose valid reminder times." });
+    }
+    try { new Intl.DateTimeFormat("en-US", { timeZone: timezone }).format(new Date()); }
+    catch { return res.status(400).json({ message: "Choose a valid timezone." }); }
+    const preferences = await MealReminderPreference.findOneAndUpdate(
+      { user: req.user.id },
+      { $set: { enabled, timezone, breakfast, lunch, dinner } },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    res.json({ success: true, preferences });
+  } catch (error) {
+    res.status(500).json({ message: "Could not save reminder preferences." });
+  }
+};
 
 exports.getTodayPlan = async (req, res) => {
   try {
