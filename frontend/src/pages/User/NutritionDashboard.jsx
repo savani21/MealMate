@@ -64,6 +64,9 @@ export default function NutritionDashboard() {
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [checkinSaving, setCheckinSaving] = useState(false);
   const [checkinMessage, setCheckinMessage] = useState("");
+  const [reminders, setReminders] = useState({ enabled: false, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata", breakfast: "08:00", lunch: "13:00", dinner: "19:00" });
+  const [savingReminders, setSavingReminders] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState("");
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -78,6 +81,9 @@ export default function NutritionDashboard() {
       if (!response.ok) throw new Error(data.message || "Could not load nutrition data.");
       setDashboard(data);
       setGoals(data.goals || DEFAULT_GOALS);
+      const reminderResponse = await fetch(`${API}/reminders`, { headers: { Authorization: `Bearer ${token}` } });
+      const reminderData = await reminderResponse.json();
+      if (reminderResponse.ok && reminderData.preferences) setReminders((current) => ({ ...current, ...reminderData.preferences }));
       const planResponse = await fetch(`${API}/today-plan?dateKey=${dateKey}`, { headers: { Authorization: `Bearer ${token}` } });
       const planData = await planResponse.json();
       if (planResponse.ok && planData.plan && planData.day) {
@@ -134,6 +140,25 @@ export default function NutritionDashboard() {
     } finally {
       setSavingGoals(false);
     }
+  };
+
+  const saveReminders = async (event) => {
+    event.preventDefault();
+    setSavingReminders(true);
+    setReminderMessage("");
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API}/reminders`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(reminders),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not save reminders.");
+      setReminders((current) => ({ ...current, ...data.preferences }));
+      setReminderMessage(reminders.enabled ? "Meal reminders are enabled." : "Meal reminders are turned off.");
+    } catch (err) { setReminderMessage(err.message); }
+    finally { setSavingReminders(false); }
   };
 
   const updateCheckinMeal = (mealType, patch) => {
@@ -215,6 +240,19 @@ export default function NutritionDashboard() {
             </div>
           </>}
         </section>}
+
+        <section className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+          <form onSubmit={saveReminders}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div><h2 className="font-black text-gray-900">Meal reminders</h2><p className="mt-1 text-xs text-gray-500">Get an in-app reminder when it is time to check in. Reminders are created while the MealMate backend is running.</p></div>
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700"><input type="checkbox" checked={Boolean(reminders.enabled)} onChange={(event) => setReminders((current) => ({ ...current, enabled: event.target.checked }))} className="h-4 w-4 accent-green-600"/> Enable reminders</label>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {["breakfast", "lunch", "dinner"].map((meal) => <label key={meal} className="text-xs font-semibold capitalize text-gray-600">{meal} reminder<input type="time" value={reminders[meal] || "08:00"} onChange={(event) => setReminders((current) => ({ ...current, [meal]: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900"/></label>)}
+            </div>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><p className="text-xs text-gray-500">{reminderMessage || `Timezone: ${reminders.timezone || "Asia/Kolkata"}`}</p><button disabled={savingReminders} className="rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm font-bold text-primary disabled:opacity-50">{savingReminders ? "Saving..." : "Save reminder settings"}</button></div>
+          </form>
+        </section>
 
         {editingGoals && <form onSubmit={saveGoals} className="mb-6 rounded-2xl border border-green-100 bg-white p-5 shadow-sm">
           <div className="mb-4"><h2 className="font-bold text-gray-900">Personal daily targets</h2><p className="mt-1 text-xs text-gray-500">These are tracking targets, not medical advice. Adjust them to goals set with a qualified professional.</p></div>
