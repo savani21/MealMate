@@ -22,7 +22,7 @@ async function processMealReminders(now = new Date()) {
     try { parts = datePartsInZone(now, preference.timezone); }
     catch { parts = datePartsInZone(now, "Asia/Kolkata"); }
     const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
-    const currentTime = `${parts.hour}:${parts.minute}`;
+    const currentMinutes = Number(parts.hour) * 60 + Number(parts.minute);
     const plans = await MealPlan.find({ user: preference.user, isArchived: { $ne: true } }).sort({ createdAt: -1 }).limit(20).lean();
     let activePlan = null;
     let activeDay = null;
@@ -36,7 +36,11 @@ async function processMealReminders(now = new Date()) {
     }
     if (!activePlan || !activeDay) continue;
     for (const mealType of MEALS) {
-      if (preference[mealType] !== currentTime || !activeDay[mealType]) continue;
+      const [reminderHour, reminderMinute] = String(preference[mealType] || "00:00").split(":").map(Number);
+      const reminderAt = reminderHour * 60 + reminderMinute;
+      // A two-minute window avoids missing a reminder if the worker starts
+      // slightly late; the unique notification reference prevents duplicates.
+      if (currentMinutes < reminderAt || currentMinutes > reminderAt + 2 || !activeDay[mealType]) continue;
       const logged = await NutritionLog.exists({
         user: preference.user, mealPlan: activePlan._id,
         dayNumber: Number(activeDay.day), mealType, dateKey,
