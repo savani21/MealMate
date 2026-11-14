@@ -54,7 +54,10 @@ async function searchFoodDataCentral(foodName) {
       .filter((item) => item.score >= 0.75)
       .sort((a, b) => b.score - a.score);
     const selected = ranked[0]?.food;
-    if (!selected) return null;
+    if (!selected) {
+      cache.set(query, { value: null, expiresAt: Date.now() + 30 * 60 * 1000 });
+      return null;
+    }
 
     const nutrients = {
       calories: getNutrient(selected, 1008, ["energy"]),
@@ -62,7 +65,10 @@ async function searchFoodDataCentral(foodName) {
       carbohydrates: getNutrient(selected, 1005, ["carbohydrate, by difference", "carbohydrate"]),
       fat: getNutrient(selected, 1004, ["total lipid (fat)", "total lipid"]),
     };
-    if (Object.values(nutrients).some((value) => value === null)) return null;
+    if (Object.values(nutrients).some((value) => value === null)) {
+      cache.set(query, { value: null, expiresAt: Date.now() + 30 * 60 * 1000 });
+      return null;
+    }
     const result = {
       ...nutrients,
       source: "USDA FoodData Central",
