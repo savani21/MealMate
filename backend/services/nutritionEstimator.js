@@ -84,7 +84,7 @@ function parseAmount(text) {
 }
 
 function gramsFor(food, amount) {
-  const [,, , , pieceGrams] = FOODS[food];
+  const pieceGrams = FOODS[food][4];
   const unit = amount.unit;
   if (/^kg/.test(unit)) return amount.quantity * 1000;
   if (/^(g|gm|gram)/.test(unit)) return amount.quantity;
