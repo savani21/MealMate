@@ -15,7 +15,7 @@ import {
   History,
 } from "lucide-react";
 
-const API = "http://localhost:5000";
+const API = "";
 
 function maskEmail(email) {
   if (!email) return "";
