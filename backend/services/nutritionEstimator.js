@@ -174,4 +174,78 @@ function estimateRecipeNutrition(ingredients, servings = 1) {
   };
 }
 
-module.exports = { estimateRecipeNutrition, parseIngredient };
+async function estimateRecipeNutritionWithUSDA(ingredients, servings = 1) {
+  const { searchFoodDataCentral } = require("./usdaFoodData");
+  const local = estimateRecipeNutrition(ingredients, servings);
+  const localBySource = new Map((local.ingredientBreakdown || []).map((item) => [item.sourceText, item]));
+  const breakdown = [];
+  const missingIngredients = [];
+  const totals = { calories: 0, protein: 0, carbohydrates: 0, fat: 0 };
+  let usdaCount = 0;
+  let localCount = 0;
+
+  for (const line of Array.isArray(ingredients) ? ingredients : []) {
+    const parsed = parseIngredient(line);
+    if (!parsed) continue;
+    if (parsed.error) {
+      missingIngredients.push({ ingredient: parsed.name, reason: parsed.error });
+      continue;
+    }
+
+    const usda = await searchFoodDataCentral(parsed.name);
+    let values;
+    let source;
+    if (usda) {
+      const factor = parsed.grams / 100;
+      values = {
+        calories: usda.calories * factor,
+        protein: usda.protein * factor,
+        carbohydrates: usda.carbohydrates * factor,
+        fat: usda.fat * factor,
+      };
+      source = "USDA FoodData Central";
+      usdaCount += 1;
+    } else {
+      const fallback = localBySource.get(parsed.original);
+      if (!fallback) {
+        missingIngredients.push({ ingredient: parsed.name, reason: "No matching USDA or local nutrition data" });
+        continue;
+      }
+      values = {
+        calories: fallback.calories,
+        protein: fallback.protein,
+        carbohydrates: fallback.carbohydrates,
+        fat: fallback.fat,
+      };
+      source = "MealMate local food catalogue";
+      localCount += 1;
+    }
+
+    Object.keys(totals).forEach((key) => { totals[key] += values[key]; });
+    breakdown.push({
+      ingredient: parsed.name,
+      sourceText: parsed.original,
+      estimatedGrams: Math.round(parsed.grams),
+      source,
+      ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Math.round(value * 10) / 10])),
+    });
+  }
+
+  const servingCount = Math.max(1, Number(servings) || 1);
+  const perServing = Object.fromEntries(Object.entries(totals).map(([key, value]) => [key, Math.round((value / servingCount) * 10) / 10]));
+  const complete = missingIngredients.length === 0 && breakdown.length > 0;
+  const source = usdaCount && localCount ? "mixed_estimate" : usdaCount ? "usda_fdc" : "local_ingredient_estimate";
+  return {
+    ...perServing,
+    servingSize: "1 serving",
+    servings: servingCount,
+    source,
+    status: !breakdown.length ? "unavailable" : complete ? "estimated" : "partial_estimate",
+    confidence: !breakdown.length ? "unknown" : !complete ? "low" : localCount ? "moderate" : "high",
+    missingIngredients,
+    ingredientBreakdown: breakdown,
+    calculatedAt: new Date(),
+  };
+}
+
+module.exports = { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA, parseIngredient };
