@@ -178,7 +178,9 @@ const createRecipe = async (req, res) => {
       instructions: req.body.instructions,
       prepTime: req.body.prepTime,
       servings: Number(req.body.servings) || 1,
-      nutrition: estimateRecipeNutrition(req.body.ingredients, Number(req.body.servings) || 1),
+      nutrition: req.body.nutrition && ["calories", "protein", "carbohydrates", "fat"].every((key) => Number.isFinite(Number(req.body.nutrition[key])))
+        ? { ...req.body.nutrition, source: "manual", status: "manual", confidence: "unknown" }
+        : estimateRecipeNutrition(req.body.ingredients, Number(req.body.servings) || 1),
       image: req.body.image,
       createdBy: req.user.id,
     });
