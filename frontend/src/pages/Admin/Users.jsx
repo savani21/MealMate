@@ -45,7 +45,7 @@ export default function Users() {
         return;
       }
 
-      const response = await fetch("http://localhost:5000/api/admin/users", {
+      const response = await fetch("/api/admin/users", {
         headers: authHeaders(),
       });
 
@@ -71,7 +71,7 @@ export default function Users() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/admin/users/${targetUser._id}`,
+        `/api/admin/users/${targetUser._id}`,
         { headers: authHeaders() }
       );
 
@@ -108,7 +108,7 @@ export default function Users() {
       setBusyId(targetUser._id);
 
       const response = await fetch(
-        `http://localhost:5000/api/admin/users/${targetUser._id}/role`,
+        `/api/admin/users/${targetUser._id}/role`,
         {
           method: "PATCH",
           headers: { ...authHeaders(), "Content-Type": "application/json" },
@@ -147,7 +147,7 @@ export default function Users() {
       setBusyId(targetUser._id);
 
       const response = await fetch(
-        `http://localhost:5000/api/admin/users/${targetUser._id}`,
+        `/api/admin/users/${targetUser._id}`,
         { method: "DELETE", headers: authHeaders() }
       );
 
