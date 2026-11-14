@@ -121,7 +121,11 @@ function gramsFor(food, amount) {
 }
 
 function parseIngredient(line) {
-  const original = String(line || "").trim();
+  // AI meal plans store ingredients as { name, quantity }; accept that shape
+  // directly instead of converting the object to "[object Object]".
+  const original = line && typeof line === "object"
+    ? `${String(line.quantity || "").trim()} ${String(line.name || "").trim()}`.trim()
+    : String(line || "").trim();
   if (!original) return null;
   const amount = parseAmount(original);
   if (!amount) {
