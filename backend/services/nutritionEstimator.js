@@ -25,6 +25,8 @@ const FOODS = {
   "toor dal": [343, 22, 62, 1.5, 190],
   lentils: [352, 24.6, 63.1, 1.1, 190],
   oats: [389, 16.9, 66.3, 6.9, 80],
+  "baking powder": [53, 0, 28, 0, 4],
+  "cardamom powder": [311, 11, 68, 7, 2],
   paneer: [265, 18.3, 1.2, 20.8, 100],
   yogurt: [61, 3.5, 4.7, 3.3, 245],
   curd: [61, 3.5, 4.7, 3.3, 245],
@@ -70,7 +72,7 @@ const FOODS = {
 };
 
 const ALIASES = {
-  "flattened rice": "poha", oat: "oats", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma", "pea": "peas", "lentil": "lentils", "almond": "almonds", "peanut": "peanuts", "apple": "apple", "date": "dates", "raisin": "raisins", "soy chunk": "soy chunks",
+  "flattened rice": "poha", oat: "oats", "baking soda": "baking powder", cardamom: "cardamom powder", "red lentil": "lentils", "masoor dal": "lentils", "mung dal": "moong dal", "green gram": "moong dal", "black gram": "urad dal", "kidney bean": "rajma", "pea": "peas", "lentil": "lentils", "almond": "almonds", "peanut": "peanuts", "apple": "apple", "date": "dates", "raisin": "raisins", "soy chunk": "soy chunks",
   "chickpea": "chickpeas", chana: "chickpeas", "gram flour": "besan", besan: "besan",
   atta: "wheat flour", "whole wheat flour": "wheat flour", "rice flour": "rice",
   "green peas": "peas", "bell pepper": "capsicum", "sweet pepper": "capsicum",
@@ -91,7 +93,8 @@ function resolveFood(name) {
 
 function parseAmount(text) {
   const value = String(text || "").trim().toLowerCase();
-  const match = value.match(/^\s*(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i);
+  const pattern = /(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i;
+  const match = value.match(pattern);
   if (!match) return null;
   let quantity = match[1];
   if (quantity.includes("/")) { const [a, b] = quantity.split("/").map(Number); quantity = a / b; }
@@ -99,7 +102,7 @@ function parseAmount(text) {
   else if (quantity === "¼") quantity = 0.25;
   else if (quantity === "¾") quantity = 0.75;
   else quantity = Number(quantity);
-  return { quantity, unit: String(match[2] || "piece").toLowerCase() };
+  return { quantity, unit: String(match[2] || "piece").toLowerCase(), matchedText: match[0] };
 }
 
 function gramsFor(food, amount) {
@@ -111,8 +114,9 @@ function gramsFor(food, amount) {
   if (/^(ml|milliliter)/.test(unit)) return amount.quantity; // approximate water-like density
   if (/^(l|liter|litre)/.test(unit)) return amount.quantity * 1000;
   if (/^cup/.test(unit)) return amount.quantity * (cupWeights[food] || pieceGrams * 1.4);
+  if (/^(small|medium|large)$/.test(unit)) return amount.quantity * pieceGrams * (unit === "small" ? 0.75 : unit === "large" ? 1.3 : 1);
   if (/^tbsp|^tablespoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" || food === "butter" ? 14 : food === "sugar" ? 12 : 15);
-  if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : ["cumin", "turmeric", "chili powder", "salt"].includes(food) ? 2.5 : 5);
+  if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : ["cumin", "turmeric", "chili powder", "salt", "cardamom powder"].includes(food) ? 2.5 : food === "baking powder" ? 4 : 5);
   return amount.quantity * pieceGrams;
 }
 
@@ -121,15 +125,21 @@ function parseIngredient(line) {
   if (!original) return null;
   const amount = parseAmount(original);
   if (!amount) {
+    if (/\boptional\b/i.test(original)) return null;
     const seasoning = resolveFood(original);
     if (seasoning && ["salt", "cumin", "turmeric", "chili powder", "coriander", "curry leaves"].includes(seasoning)) {
       return { name: seasoning, grams: 1, original, assumedQuantity: true };
     }
     return { name: original, error: "Quantity not recognized" };
   }
-  const remainder = original.replace(/^\s*(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i, "").replace(/^[\s,.-]+/, "");
+  // Accept both "1 cup wheat flour" and "wheat flour 1 cup (have)" formats.
+  const remainder = original
+    .replace(amount.matchedText, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(have|available|optional|to taste)\b/gi, " ")
+    .replace(/^[\s,.-]+|[\s,.-]+$/g, "");
   const food = resolveFood(remainder);
-  if (!food) return { name: remainder || original, error: "Ingredient not in local nutrition catalogue" };
+  if (!food) return { name: remainder || original, error: "Ingredient not in nutrition catalogue" };
   return { name: food, grams: gramsFor(food, amount), original };
 }
 
@@ -165,4 +175,81 @@ function estimateRecipeNutrition(ingredients, servings = 1) {
   };
 }
 
-module.exports = { estimateRecipeNutrition };
+async function estimateRecipeNutritionWithUSDA(ingredients, servings = 1) {
+  const { searchFoodDataCentral } = require("./usdaFoodData");
+  const local = estimateRecipeNutrition(ingredients, servings);
+  const localBySource = new Map((local.ingredientBreakdown || []).map((item) => [item.sourceText, item]));
+  const breakdown = [];
+  const missingIngredients = [];
+  const totals = { calories: 0, protein: 0, carbohydrates: 0, fat: 0 };
+  let usdaCount = 0;
+  let localCount = 0;
+
+  const parsedLines = (Array.isArray(ingredients) ? ingredients : []).map((line) => ({ line, parsed: parseIngredient(line) })).filter((item) => item.parsed);
+  const enrichedLines = await Promise.all(parsedLines.map(async ({ line, parsed }) => {
+    if (parsed.error) return { parsed, line, usda: null };
+    return { parsed, line, usda: await searchFoodDataCentral(parsed.name) };
+  }));
+
+  for (const { parsed } of enrichedLines) {
+    if (parsed.error) {
+      missingIngredients.push({ ingredient: parsed.name, reason: parsed.error });
+      continue;
+    }
+    const usda = enrichedLines.find((item) => item.parsed.original === parsed.original)?.usda;
+    let values;
+    let source;
+    if (usda) {
+      const factor = parsed.grams / 100;
+      values = {
+        calories: usda.calories * factor,
+        protein: usda.protein * factor,
+        carbohydrates: usda.carbohydrates * factor,
+        fat: usda.fat * factor,
+      };
+      source = "USDA FoodData Central";
+      usdaCount += 1;
+    } else {
+      const fallback = localBySource.get(parsed.original);
+      if (!fallback) {
+        missingIngredients.push({ ingredient: parsed.name, reason: "No matching USDA or local nutrition data" });
+        continue;
+      }
+      values = {
+        calories: fallback.calories,
+        protein: fallback.protein,
+        carbohydrates: fallback.carbohydrates,
+        fat: fallback.fat,
+      };
+      source = "MealMate local food catalogue";
+      localCount += 1;
+    }
+
+    Object.keys(totals).forEach((key) => { totals[key] += values[key]; });
+    breakdown.push({
+      ingredient: parsed.name,
+      sourceText: parsed.original,
+      estimatedGrams: Math.round(parsed.grams),
+      source,
+      ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, Math.round(value * 10) / 10])),
+    });
+  }
+
+  const servingCount = Math.max(1, Number(servings) || 1);
+  const perServing = Object.fromEntries(Object.entries(totals).map(([key, value]) => [key, Math.round((value / servingCount) * 10) / 10]));
+  const complete = missingIngredients.length === 0 && breakdown.length > 0;
+  const source = usdaCount && localCount ? "mixed_estimate" : usdaCount ? "usda_fdc" : "local_ingredient_estimate";
+  return {
+    ...perServing,
+    servingSize: "1 serving",
+    servings: servingCount,
+    source,
+    status: !breakdown.length ? "unavailable" : complete ? "estimated" : "partial_estimate",
+    confidence: !breakdown.length ? "unknown" : !complete ? "low" : localCount ? "moderate" : "high",
+    missingIngredients,
+    ingredientBreakdown: breakdown,
+    calculatedAt: new Date(),
+  };
+}
+
+module.exports = { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA, parseIngredient };

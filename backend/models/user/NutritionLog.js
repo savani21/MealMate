@@ -12,7 +12,7 @@ const nutritionLogSchema = new mongoose.Schema({
   protein: { type: Number, required: true, min: 0, max: 2000 },
   carbohydrates: { type: Number, required: true, min: 0, max: 2000 },
   fat: { type: Number, required: true, min: 0, max: 2000 },
-  nutritionSource: { type: String, enum: ["verified_label", "manual", "local_ingredient_estimate", "unknown"], default: "unknown" },
+  nutritionSource: { type: String, enum: ["verified_label", "manual", "local_ingredient_estimate", "usda_fdc", "mixed_estimate", "unknown"], default: "unknown" },
   nutritionStatus: { type: String, enum: ["verified", "estimated", "partial_estimate", "unavailable", "manual"], default: "unavailable" },
   confidence: { type: String, enum: ["high", "moderate", "low", "unknown"], default: "unknown" },
   missingIngredients: { type: [mongoose.Schema.Types.Mixed], default: [] },
