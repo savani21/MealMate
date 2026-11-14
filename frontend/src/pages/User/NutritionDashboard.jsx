@@ -153,7 +153,7 @@ export default function NutritionDashboard() {
             {[
               ["calories", "Calories", "kcal"], ["protein", "Protein", "g"],
               ["carbohydrates", "Carbohydrates", "g"], ["fat", "Fat", "g"],
-            ].map(([key, label, unit]) => <label key={key} className="text-xs font-semibold text-gray-600">{label} ({unit})<input type="number" min="0" max={key === "calories" ? "10000" : "1000"} step="1" required value={goals[key]} onChange={(event) => setGoals((current) => ({ ...current, [key]: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-primary" /></label>)}
+            ].map(([key, label, unit]) => <label key={key} className="text-xs font-semibold text-gray-600">{label} ({unit})<input type="number" min={key === "calories" ? "500" : "0"} max={key === "calories" ? "10000" : key === "protein" || key === "fat" ? "500" : "1000"} step="1" required value={goals[key]} onChange={(event) => setGoals((current) => ({ ...current, [key]: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-primary" /></label>)}
           </div>
           <div className="mt-4 flex justify-end gap-2"><button type="button" onClick={() => setEditingGoals(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600">Cancel</button><button disabled={savingGoals} className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{savingGoals ? "Saving..." : "Save targets"}</button></div>
         </form>}
