@@ -116,7 +116,7 @@ function gramsFor(food, amount) {
   if (/^cup/.test(unit)) return amount.quantity * (cupWeights[food] || pieceGrams * 1.4);
   if (/^(small|medium|large)$/.test(unit)) return amount.quantity * pieceGrams * (unit === "small" ? 0.75 : unit === "large" ? 1.3 : 1);
   if (/^tbsp|^tablespoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" || food === "butter" ? 14 : food === "sugar" ? 12 : 15);
-  if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : ["cumin", "turmeric", "chili powder", "salt"].includes(food) ? 2.5 : 5);
+  if (/^tsp|^teaspoon/.test(unit)) return amount.quantity * (food === "oil" || food === "ghee" ? 4.5 : ["cumin", "turmeric", "chili powder", "salt", "cardamom powder"].includes(food) ? 2.5 : food === "baking powder" ? 4 : 5);
   return amount.quantity * pieceGrams;
 }
 
@@ -125,6 +125,7 @@ function parseIngredient(line) {
   if (!original) return null;
   const amount = parseAmount(original);
   if (!amount) {
+    if (/\boptional\b/i.test(original)) return null;
     const seasoning = resolveFood(original);
     if (seasoning && ["salt", "cumin", "turmeric", "chili powder", "coriander", "curry leaves"].includes(seasoning)) {
       return { name: seasoning, grams: 1, original, assumedQuantity: true };
