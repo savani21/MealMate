@@ -42,6 +42,7 @@ function Router() {
       <Route path="/signup" component={ Signup } />
       <ProtectedRoute path="/dashboard" component={ Dashboard } allowedRoles={ ['admin', 'user'] } />
       <ProtectedRoute path="/meal-planner" component={ MealPlanner } allowedRoles={ ["user"] } />
+      <ProtectedRoute path="/nutrition" component={ NutritionDashboard } allowedRoles={ ["user"] } />
       <ProtectedRoute path="/my-meal-plans" component={ MyMealPlans } allowedRoles={ ["user"] } />
       <ProtectedRoute path="/meal-plans/:id" component={ MealPlanDetails } allowedRoles={ ["user"] } />
       <ProtectedRoute path="/user/grocery" component={ GroceryList } allowedRoles={ ["user"] } />
