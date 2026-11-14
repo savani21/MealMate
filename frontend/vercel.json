@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://mealmate-api-fkgy.onrender.com/api/:path*"
+    }
+  ]
+}
