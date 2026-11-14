@@ -380,15 +380,28 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
   // Do not invent dish names or append artificial "Bowl 1/2/3" labels.
   // If the selected pantry cannot support three distinct Indian recipes,
   // return the genuine recipes that can be prepared from those ingredients.
-  return valid.slice(0, 3).map((recipe, index) => ({
-    name: recipe.name,
-    description: `${recipe.name} prepared with your selected pantry ingredients.`,
-    prepTime: index === 0 ? "20 minutes" : "25 minutes",
-    ingredients: recipe.ingredients.map((name) => ({
-      name,
-      quantity: "as needed",
-    })),
-  }));
+  return valid.slice(0, 3).map((recipe, index) => {
+    // Use measured quantities from MealMate's canonical recipe catalogue,
+    // retaining only ingredients that are actually present in the allowed pool.
+    // Never invent "as needed" quantities for nutrition calculations.
+    const canonical = getCanonicalRecipeIngredients(recipe.name) || [];
+    const measuredIngredients = canonical.flatMap((item) => {
+      const canonicalName = String(item.name || "").toLowerCase();
+      const normalizedCanonical = normalizeIngredientName(item.name);
+      const match = normalizedPool.find((entry) =>
+        entry.normalized === normalizedCanonical ||
+        canonicalName.includes(entry.lower) ||
+        entry.lower.includes(normalizedCanonical)
+      );
+      return match ? [{ name: match.name, quantity: item.quantity }] : [];
+    });
+    return {
+      name: recipe.name,
+      description: `${recipe.name} prepared with your selected pantry ingredients.`,
+      prepTime: index === 0 ? "20 minutes" : "25 minutes",
+      ingredients: measuredIngredients,
+    };
+  }).filter((recipe) => recipe.ingredients.length > 0);
 }
 
 function generateLocalMealPlan({ duration, diet, allowedPool }) {
@@ -663,8 +676,10 @@ Rules:
     );
 
     days.forEach((day) => {
-      const usedNames = new Set();
       ["breakfast", "lunch", "dinner"].forEach((type) => {
+        // Duplicate recipe names are checked within this meal category only.
+        // A breakfast alternative must not consume an available lunch/dinner slot.
+        const usedNames = new Set();
         const original = Array.isArray(day[type + "Options"])
           ? day[type + "Options"]
           : [];
