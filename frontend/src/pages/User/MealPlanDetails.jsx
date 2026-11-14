@@ -19,6 +19,9 @@ export default function MealPlanDetails() {
   const [nutritionLogs, setNutritionLogs] = useState([]);
   const [nutritionMeal, setNutritionMeal] = useState(null);
   const [nutritionSaving, setNutritionSaving] = useState(false);
+  const [nutritionLoading, setNutritionLoading] = useState(false);
+  const [nutritionMeta, setNutritionMeta] = useState({ source: "unknown", status: "unavailable", confidence: "unknown", missingIngredients: [] });
+  const [editNutritionValues, setEditNutritionValues] = useState(false);
   const [nutritionForm, setNutritionForm] = useState({ servings: "1", calories: "", protein: "", carbohydrates: "", fat: "" });
 
   useEffect(() => {
@@ -64,19 +67,57 @@ export default function MealPlanDetails() {
     }
   };
 
-  const openNutritionEntry = (day, mealType) => {
+  const openNutritionEntry = async (day, mealType) => {
     const mealName = day?.[mealType] || "";
     const recipe = findRecipe(mealName);
-    const nutrition = recipe?.nutrition || {};
     const existing = nutritionLogs.find((log) => Number(log.dayNumber) === Number(day.day) && log.mealType === mealType && log.mealName === mealName);
-    setNutritionForm({
-      servings: String(existing?.servings || 1),
-      calories: String(existing ? existing.calories / existing.servings : nutrition.calories ?? ""),
-      protein: String(existing ? existing.protein / existing.servings : nutrition.protein ?? ""),
-      carbohydrates: String(existing ? existing.carbohydrates / existing.servings : nutrition.carbohydrates ?? ""),
-      fat: String(existing ? existing.fat / existing.servings : nutrition.fat ?? ""),
-    });
-    setNutritionMeal({ dayNumber: day.day, mealType, mealName });
+    setNutritionMeal({ dayNumber: day.day, mealType, mealName, recipeId: recipe?._id || null });
+    setNutritionLoading(true);
+    setEditNutritionValues(false);
+    try {
+      let nutrition = recipe?.nutrition || {};
+      let meta = {
+        source: nutrition.source || "unknown",
+        status: nutrition.status || "unavailable",
+        confidence: nutrition.confidence || "unknown",
+        missingIngredients: nutrition.missingIngredients || [],
+      };
+      if (recipe?._id) {
+        const token = localStorage.getItem("token");
+        const response = await fetch(`http://localhost:5000/api/nutrition/recipe/${recipe._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (response.ok && data.nutrition) {
+          nutrition = data.nutrition;
+          meta = {
+            source: nutrition.source || "unknown",
+            status: nutrition.status || "unavailable",
+            confidence: nutrition.confidence || "unknown",
+            missingIngredients: nutrition.missingIngredients || [],
+          };
+        }
+      }
+      setNutritionMeta({
+        source: existing?.nutritionSource || meta.source,
+        status: existing?.nutritionStatus || meta.status,
+        confidence: existing?.confidence || meta.confidence,
+        missingIngredients: existing?.missingIngredients?.length ? existing.missingIngredients : meta.missingIngredients,
+      });
+      setNutritionForm({
+        servings: String(existing?.servings || recipe?.servings || 1),
+        calories: String(existing ? existing.calories / existing.servings : nutrition.calories ?? ""),
+        protein: String(existing ? existing.protein / existing.servings : nutrition.protein ?? ""),
+        carbohydrates: String(existing ? existing.carbohydrates / existing.servings : nutrition.carbohydrates ?? ""),
+        fat: String(existing ? existing.fat / existing.servings : nutrition.fat ?? ""),
+      });
+    } catch (error) {
+      console.error("Automatic nutrition lookup failed:", error);
+      setNutritionMeta({ source: "unknown", status: "unavailable", confidence: "unknown", missingIngredients: [] });
+      setNutritionForm({ servings: String(existing?.servings || 1), calories: "", protein: "", carbohydrates: "", fat: "" });
+    } finally {
+      setNutritionLoading(false);
+    }
   };
 
   const saveNutritionEntry = async (event) => {
@@ -95,6 +136,10 @@ export default function MealPlanDetails() {
           mealName: nutritionMeal.mealName,
           dateKey: (() => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; })(),
           ...Object.fromEntries(Object.entries(nutritionForm).map(([key, value]) => [key, Number(value)])),
+          nutritionSource: nutritionMeta.source,
+          nutritionStatus: nutritionMeta.status,
+          confidence: nutritionMeta.confidence,
+          missingIngredients: nutritionMeta.missingIngredients,
         }),
       });
       const data = await response.json();
