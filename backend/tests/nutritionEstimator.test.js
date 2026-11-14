@@ -25,6 +25,14 @@ test("calculates nutrition from structured AI ingredient objects", () => {
   assert.equal(result.missingIngredients.length, 0);
 });
 
+test("distinguishes cooked rice from raw rice", () => {
+  const raw = estimateRecipeNutrition([{ name: "rice", quantity: "100 g", state: "raw" }], 1);
+  const cooked = estimateRecipeNutrition([{ name: "rice", quantity: "100 g", state: "cooked" }], 1);
+  assert.ok(raw.calories > cooked.calories * 2);
+  assert.equal(raw.status, "estimated");
+  assert.equal(cooked.status, "estimated");
+});
+
 test("flags fallback ingredients with no measurable quantity", () => {
   const result = parseIngredient({ name: "poha", quantity: "as needed" });
   assert.equal(result.error, "Quantity not recognized");
