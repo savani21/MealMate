@@ -25,6 +25,11 @@ test("calculates nutrition from structured AI ingredient objects", () => {
   assert.equal(result.missingIngredients.length, 0);
 });
 
+test("flags fallback ingredients with no measurable quantity", () => {
+  const result = parseIngredient({ name: "poha", quantity: "as needed" });
+  assert.equal(result.error, "Quantity not recognized");
+});
+
 test("parses fractional ingredient quantities", () => {
   const result = estimateRecipeNutrition(["1/2 cup oats"], 1);
   assert.equal(result.status, "estimated");
