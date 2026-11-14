@@ -33,7 +33,7 @@ export default function MealPlanDetails() {
     try {
       const token = localStorage.getItem("token");
       if (!token) { setLocation("/login"); return; }
-      const response = await fetch(`http://localhost:5000/api/meal-plans/${params.id}`, {
+      const response = await fetch(`/api/meal-plans/${params.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -57,7 +57,7 @@ export default function MealPlanDetails() {
   const fetchNutritionLogs = async (planId) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/nutrition/plan/${planId}`, {
+      const response = await fetch(`/api/nutrition/plan/${planId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -88,7 +88,7 @@ export default function MealPlanDetails() {
       };
       if (!plannedMeal?.nutrition && recipe?._id) {
         const token = localStorage.getItem("token");
-        const response = await fetch(`http://localhost:5000/api/nutrition/recipe/${recipe._id}`, {
+        const response = await fetch(`/api/nutrition/recipe/${recipe._id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -130,7 +130,7 @@ export default function MealPlanDetails() {
     setNutritionSaving(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("http://localhost:5000/api/nutrition/logs", {
+      const response = await fetch("/api/nutrition/logs", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
@@ -160,7 +160,7 @@ export default function MealPlanDetails() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/recipes");
+      const response = await fetch("/api/recipes");
       const data = await response.json();
       if (response.ok) setRecipes(data.recipes || []);
     } catch (error) { console.error("Recipe loading error:", error); }
@@ -204,7 +204,7 @@ export default function MealPlanDetails() {
   const selectMealOption = async (day, mealType, option, recipeId = "") => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`http://localhost:5000/api/meal-plans/${plan._id}/selection`, {
+      const response = await fetch(`/api/meal-plans/${plan._id}/selection`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ day, mealType, option, recipeId }),
@@ -271,7 +271,7 @@ export default function MealPlanDetails() {
       setGroceryLoading(true);
       const token = localStorage.getItem("token");
       if (!token) { setLocation("/login"); return; }
-      const response = await fetch("http://localhost:5000/api/user/grocery", {
+      const response = await fetch("/api/user/grocery", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ mealPlanId: plan._id }),
