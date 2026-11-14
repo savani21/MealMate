@@ -72,7 +72,7 @@ function resolveFood(name) {
 
 function parseAmount(text) {
   const value = String(text || "").trim().toLowerCase();
-  const match = value.match(/^\s*(\d+(?:\.\d+)?|\d+\s*\/\s*\d+|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i);
+  const match = value.match(/^\s*(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i);
   if (!match) return null;
   let quantity = match[1];
   if (quantity.includes("/")) { const [a, b] = quantity.split("/").map(Number); quantity = a / b; }
@@ -80,8 +80,7 @@ function parseAmount(text) {
   else if (quantity === "¼") quantity = 0.25;
   else if (quantity === "¾") quantity = 0.75;
   else quantity = Number(quantity);
-  const unit = String(match[2] || "piece").toLowerCase();
-  return { quantity, unit };
+  return { quantity, unit: String(match[2] || "piece").toLowerCase() };
 }
 
 function gramsFor(food, amount) {
@@ -101,8 +100,14 @@ function parseIngredient(line) {
   const original = String(line || "").trim();
   if (!original) return null;
   const amount = parseAmount(original);
-  if (!amount) return { name: original, error: "Quantity not recognized" };
-  const remainder = original.replace(/^\s*(\d+(?:\.\d+)?|\d+\s*\/\s*\d+|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i, "").replace(/^[\s,.-]+/, "");
+  if (!amount) {
+    const seasoning = resolveFood(original);
+    if (seasoning && ["salt", "cumin", "turmeric", "chili powder", "coriander", "curry leaves"].includes(seasoning)) {
+      return { name: seasoning, grams: 1, original, assumedQuantity: true };
+    }
+    return { name: original, error: "Quantity not recognized" };
+  }
+  const remainder = original.replace(/^\s*(\d+\s*\/\s*\d+|\d+(?:\.\d+)?|½|¼|¾)\s*(kg|kgs|kilograms?|g|gm|grams?|ml|milliliters?|l|liters?|litres?|cups?|tbsp|tablespoons?|tsp|teaspoons?|pieces?|pcs|nos?\.?|medium|large|small)?\b/i, "").replace(/^[\s,.-]+/, "");
   const food = resolveFood(remainder);
   if (!food) return { name: remainder || original, error: "Ingredient not in local nutrition catalogue" };
   return { name: food, grams: gramsFor(food, amount), original };
