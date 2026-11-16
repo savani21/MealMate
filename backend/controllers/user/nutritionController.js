@@ -52,7 +52,7 @@ exports.saveReminderPreferences = async (req, res) => {
     const preferences = await MealReminderPreference.findOneAndUpdate(
       { user: req.user.id },
       { $set: { enabled, timezone, breakfast, lunch, dinner } },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.json({ success: true, preferences });
   } catch (error) {
@@ -141,7 +141,7 @@ exports.saveDailyCheckin = async (req, res) => {
           nutritionSource: nutrition.source || "unknown", nutritionStatus: nutrition.status || "unavailable",
           confidence: nutrition.confidence || "unknown", missingIngredients: nutrition.missingIngredients || [],
         } },
-        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+        { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true }
       );
       saved.push(log);
     }
@@ -199,7 +199,7 @@ exports.saveGoals = async (req, res) => {
       values[field] = value;
     }
     const goals = await NutritionGoal.findOneAndUpdate(
-      { user: req.user.id }, { $set: values }, { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      { user: req.user.id }, { $set: values }, { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.json({ success: true, goals });
   } catch (error) {
@@ -255,7 +255,7 @@ exports.logPlannedMeal = async (req, res) => {
     const log = await NutritionLog.findOneAndUpdate(
       { user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType },
       { $set: { ...nutrition, nutritionSource: finalNutritionSource, nutritionStatus: finalNutritionStatus, confidence: finalConfidence, missingIngredients: finalMissingIngredients, user: req.user.id, mealPlan: mealPlanId, dayNumber: Number(dayNumber), mealType, dateKey, mealName, servings: servingCount } },
-      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
     res.status(200).json({ success: true, message: "Meal nutrition saved.", log });
   } catch (error) {
