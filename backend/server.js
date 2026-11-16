@@ -24,6 +24,7 @@ const adminAnalyticsRoutes = require("./routes/admin/analyticsRoutes");
 const adminReportRoutes = require("./routes/admin/reportRoutes");
 const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
+const adminAlertRoutes = require("./routes/admin/alertRoutes");
 
 app.use(cors({ origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",").map((value) => value.trim()) : true }));
 app.use(express.json());
@@ -87,6 +88,7 @@ app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/admin/reports", adminReportRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
+app.use("/api/admin/alerts", adminAlertRoutes);
 
 const PORT = process.env.PORT || 5000;
 
