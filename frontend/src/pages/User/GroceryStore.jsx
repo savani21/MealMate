@@ -751,10 +751,17 @@ export default function GroceryStore() {
                       <p className="font-bold text-primary">₹{order.totalAmount}</p>
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{formatDateTime(order.createdAt)}</p>
-                    <div className="flex items-center justify-between gap-2 mt-2">
-                      <span className={`text-[11px] font-bold rounded-full px-2 py-1 ${order.status === "delivered" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>{order.status === "delivered" ? "Delivered · Added to pantry" : "On the way · Pantry pending"}</span>
-                      <span className="text-[11px] text-gray-500">ETA {formatDateTime(order.deliveryTime)}</span>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+                      <span className={`text-[11px] font-bold rounded-full px-2 py-1 ${order.status === "delivered" ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"}`}>
+                        {order.status === "delivered"
+                          ? `Delivered · Added to pantry · ${order.deliveryOutcome === "early" ? "Early" : order.deliveryOutcome === "late" ? "Late" : "On time"}`
+                          : "On the way · Pantry pending"}
+                      </span>
+                      <span className="text-[11px] text-gray-500">Expected {formatDateTime(order.deliveryTime)}</span>
                     </div>
+                    {order.status === "delivered" && order.deliveredAt && (
+                      <p className="mt-1 text-[11px] font-medium text-green-700">Delivered at {formatDateTime(order.deliveredAt)}</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -780,7 +787,7 @@ export default function GroceryStore() {
                 <Row label="Name" value={receipt.user?.name} />
                 <Row label="Email" value={maskEmail(receipt.user?.email)} />
                 <Row
-                  label="Delivery Time"
+                  label="Expected Delivery"
                   value={
                     <span className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" />
@@ -788,6 +795,21 @@ export default function GroceryStore() {
                     </span>
                   }
                 />
+                {receipt.order.status === "delivered" && receipt.order.deliveredAt && (
+                  <>
+                    <Row label="Delivered At" value={formatDateTime(receipt.order.deliveredAt)} />
+                    <Row
+                      label="Delivery Timing"
+                      value={
+                        receipt.order.deliveryOutcome === "early"
+                          ? "Arrived early"
+                          : receipt.order.deliveryOutcome === "late"
+                            ? "Delivered late"
+                            : "Delivered on time"
+                      }
+                    />
+                  </>
+                )}
               </div>
 
               <div className="space-y-2 max-h-48 overflow-y-auto">
