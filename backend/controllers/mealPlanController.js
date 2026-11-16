@@ -379,10 +379,16 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
 
   // Do not invent dish names or append artificial "Bowl 1/2/3" labels.
   // If the selected pantry cannot support three distinct Indian recipes,
-  // return the genuine recipes that can be prepared from those ingredients.
-  const safeDayNumber = Math.max(1, Number(dayNumber) || 1);
-  const startIndex = valid.length > 3 ? (safeDayNumber - 1) % (valid.length - 2) : 0;
-  return valid.slice(startIndex, startIndex + 3).map((recipe, index) => {
+  // return only genuine recipes that can be prepared from those ingredients.
+  // Shuffle compatible candidates for each generation so identical inputs do
+  // not always produce the same first three recipes. This changes selection,
+  // not recipe validity: every candidate is still pantry- and diet-validated.
+  const shuffled = [...valid];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled.slice(0, 3).map((recipe, index) => {
     // Use measured quantities from MealMate's canonical recipe catalogue,
     // retaining only ingredients that are actually present in the allowed pool.
     // Never invent "as needed" quantities for nutrition calculations.
