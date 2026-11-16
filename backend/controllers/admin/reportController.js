@@ -44,12 +44,12 @@ const getReport = async (req, res) => {
       }
     }
 
-    let query = config.model.find(filter).select(config.select).sort({ createdAt: -1 }).limit(5000).lean();
+    let query = config.model.find(filter).select(config.select).sort({ createdAt: -1 }).lean();
     if (config.populate) query = query.populate(config.populate);
     const rows = await query;
     res.status(200).json({
       success: true,
-      report: { type: req.params.type, title: config.label, from: from || null, to: to || null, generatedAt: new Date(), rowCount: rows.length, truncated: rows.length === 5000 },
+      report: { type: req.params.type, title: config.label, from: from || null, to: to || null, generatedAt: new Date(), rowCount: rows.length, truncated: false },
       rows,
     });
   } catch (error) {
