@@ -121,12 +121,12 @@ export default function AIFeatures() {
                 </div>
                 <div>
                   <h2 className="font-bold text-gray-900">
-                    Gemini API {status.configured ? "Connected" : "Not Configured"}
+                    OpenRouter API {status.configured ? "Connected" : "Not Configured"}
                   </h2>
                   <p className="text-sm text-gray-500">
                     {status.configured
                       ? `Model in use: ${status.model}`
-                      : "Add GEMINI_API_KEY to your backend .env file."}
+                      : "Add OPENROUTER_API_KEY to your backend .env file."}
                   </p>
                 </div>
               </div>

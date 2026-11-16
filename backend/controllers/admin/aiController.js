@@ -13,7 +13,7 @@ const getAIStatus = async (req, res) => {
       success: true,
       status: {
         configured: Boolean(process.env.OPENROUTER_API_KEY),
-        model: process.env.OPENROUTER_API_KEY ? "openrouter/free" : "local fallback",
+        model: process.env.OPENROUTER_API_KEY ? (process.env.OPENROUTER_MODEL || "openrouter/free") : "local fallback",
         aiRecipes,
         manualRecipes,
         aiMealPlans: totalMealPlans,
