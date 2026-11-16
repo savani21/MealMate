@@ -82,6 +82,26 @@ export default function AppNavbar({ children }) {
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
 
   useEffect(() => {
+    if (!notificationOpen) return undefined;
+
+    const handleOutsideClick = (event) => {
+      if (!event.target.closest("[data-notification-root]")) {
+        setNotificationOpen(false);
+      }
+    };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setNotificationOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handleOutsideClick);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsideClick);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [notificationOpen]);
+
+  useEffect(() => {
     if (!user) {
       previousUnreadCount.current = null;
       setDeliveryAlert(null);
@@ -234,7 +254,7 @@ export default function AppNavbar({ children }) {
 
         <div className="ml-auto hidden shrink-0 items-center gap-2 lg:flex">
           {children}
-          <div className="relative">
+          <div className="relative" data-notification-root>
             <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
               <Bell className="h-5 w-5" />
               {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
@@ -259,7 +279,7 @@ export default function AppNavbar({ children }) {
           {user && <button type="button" onClick={() => { logout(); navigate("/login"); }} aria-label="Log out" title="Log out" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"><LogOut className="h-5 w-5" /></button>}
         </div>
 
-        {user && <div className="relative lg:hidden">
+        {user && <div className="relative lg:hidden" data-notification-root>
           <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700">
             <Bell className="h-5 w-5" />
             {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
