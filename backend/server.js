@@ -21,6 +21,7 @@ const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
 const adminRecipeReviewRoutes = require("./routes/admin/recipeReviewRoutes");
 const adminMealPlanRoutes = require("./routes/admin/mealPlanRoutes");
 const adminAnalyticsRoutes = require("./routes/admin/analyticsRoutes");
+const adminReportRoutes = require("./routes/admin/reportRoutes");
 const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
 
@@ -83,6 +84,7 @@ app.use("/api/admin/recipes", adminRecipeRoutes);
 app.use("/api/admin/recipe-reviews", adminRecipeReviewRoutes);
 app.use("/api/admin/meal-plans", adminMealPlanRoutes);
 app.use("/api/admin/analytics", adminAnalyticsRoutes);
+app.use("/api/admin/reports", adminReportRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
 
