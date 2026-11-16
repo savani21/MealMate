@@ -2,9 +2,9 @@ const RecipeCatalog = require("../models/RecipeCatalog");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 
 const DIET_BLOCKED = {
-  vegetarian: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|gelatin)\\b/i,
-  vegan: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|cream|butter|cheese|yogurt|curd|paneer|ghee|honey|gelatin)\\b/i,
-  eggetarian: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|gelatin)\\b/i,
+  vegetarian: /\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|gelatin)\b/i,
+  vegan: /\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|cream|butter|cheese|yogurt|curd|paneer|ghee|honey|gelatin)\b/i,
+  eggetarian: /\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|gelatin)\b/i,
 };
 
 function shuffle(items) {
@@ -16,22 +16,15 @@ function shuffle(items) {
   return result;
 }
 
-function matchesPoolIngredient(recipeName, allowed) {
-  const target = normalizeIngredientName(recipeName);
-  return allowed.some((item) => {
-    const candidate = normalizeIngredientName(item);
-    return candidate === target || candidate.includes(target) || target.includes(candidate);
-  });
+function ingredientMatches(recipeIngredient, allowedNames) {
+  const target = normalizeIngredientName(recipeIngredient);
+  if (!target) return false;
+  return allowedNames.some((allowed) =>
+    allowed && (target === allowed || target.includes(allowed) || allowed.includes(target))
+  );
 }
 
-function classifyMealTypes(category, name) {
-  const value = `${category || ""} ${name || ""}`.toLowerCase();
-  if (/breakfast|starter|side|dessert|snack/.test(value)) return ["breakfast", "snack"];
-  if (/soup|salad|pasta|seafood|beef|chicken|lamb|pork|vegetarian|vegan|miscellaneous/.test(value)) return ["lunch", "dinner"];
-  return ["lunch", "dinner"];
-}
-
-function toOption(recipe) {
+function toOption(recipe, matchedIngredients, missingIngredients) {
   return {
     name: recipe.name,
     description: recipe.description || `A ${recipe.cuisine || "global"} recipe from MealMate's recipe catalogue.`,
@@ -40,62 +33,87 @@ function toOption(recipe) {
     recipeCatalogId: String(recipe._id),
     image: recipe.image || "",
     source: recipe.source?.provider || "catalog",
+    // Keep the complete source recipe. Missing items are explicitly identified
+    // so the grocery list can account for them rather than silently dropping them.
     ingredients: recipe.ingredients.map((item) => ({
       name: item.name,
       quantity: item.quantity || "quantity not provided",
     })),
+    matchedIngredients,
+    missingIngredients,
     instructions: recipe.instructions || [],
   };
 }
 
-async function generateCatalogMealPlan({ duration, diet, allowedPool, excludedNames = [] }) {
+async function generateCatalogMealPlan({
+  duration,
+  diet,
+  allowedPool,
+  ingredientMode = "available",
+  excludedNames = [],
+}) {
   if (!allowedPool?.length) return null;
-  const normalizedAllowed = allowedPool.map(normalizeIngredientName).filter(Boolean);
+
+  const normalizedAllowed = [...new Set(allowedPool.map(normalizeIngredientName).filter(Boolean))];
   const blocked = DIET_BLOCKED[diet];
   const recipes = await RecipeCatalog.find({ isActive: true })
     .select("name description cuisine category mealTypes dietaryTags ingredients instructions image source")
     .lean();
 
-  const eligible = recipes.filter((recipe) => {
-    if (!recipe.ingredients?.length || !recipe.instructions?.length) return false;
-    const allText = `${recipe.name} ${recipe.ingredients.map((i) => i.name).join(" ")}`;
-    if (blocked?.test(allText)) return false;
-    if (diet === "vegan" && recipe.dietaryTags?.includes("non-vegetarian")) return false;
-    if (diet === "vegetarian" && recipe.dietaryTags?.includes("non-vegetarian")) return false;
-    // In pantry-only mode, do not recommend recipes that require ingredients
-    // the user has not selected. Alias normalization is intentionally conservative.
-    return recipe.ingredients.every((ingredient) =>
-      normalizedAllowed.some((allowed) => {
-        const item = normalizeIngredientName(ingredient.normalizedName || ingredient.name);
-        return item === allowed || item.includes(allowed) || allowed.includes(item);
-      })
-    );
+  const eligible = recipes.flatMap((recipe) => {
+    if (!recipe.ingredients?.length || !recipe.instructions?.length) return [];
+    const allText = `${recipe.name} ${recipe.ingredients.map((item) => item.name).join(" ")}`;
+    if (blocked?.test(allText)) return [];
+    if (["vegan", "vegetarian"].includes(diet) && recipe.dietaryTags?.includes("non-vegetarian")) return [];
+
+    const matched = recipe.ingredients
+      .filter((ingredient) => ingredientMatches(ingredient.normalizedName || ingredient.name, normalizedAllowed))
+      .map((ingredient) => ingredient.name);
+    const missing = recipe.ingredients
+      .filter((ingredient) => !ingredientMatches(ingredient.normalizedName || ingredient.name, normalizedAllowed))
+      .map((ingredient) => ingredient.name);
+    const coverage = matched.length / recipe.ingredients.length;
+
+    // Pantry-only mode remains strict. In Available + Recommended mode, allow
+    // sensible partial matches and expose every missing ingredient to shopping.
+    const pantryOnly = ingredientMode !== "recommended";
+    if (pantryOnly && missing.length) return [];
+    if (!pantryOnly && (matched.length < 2 || coverage < 0.35)) return [];
+
+    return [{
+      ...recipe,
+      matchedIngredients: matched,
+      missingIngredients: missing,
+      coverage,
+    }];
   });
 
   if (!eligible.length) return null;
-  const used = new Set(excludedNames.map((name) => String(name).toLowerCase()));
+
+  const used = new Set(excludedNames.map((name) => String(name).trim().toLowerCase()));
   const days = [];
   for (let day = 1; day <= Number(duration); day += 1) {
     const result = { day };
     for (const type of ["breakfast", "lunch", "dinner"]) {
       const candidates = eligible.filter((recipe) =>
-        recipe.mealTypes?.includes(type) && !used.has(recipe.name.toLowerCase())
+        recipe.mealTypes?.includes(type) && !used.has(recipe.name.trim().toLowerCase())
       );
-      const pool = candidates.length ? candidates : eligible.filter((recipe) =>
-        recipe.mealTypes?.includes(type) && !used.has(recipe.name.toLowerCase())
-      );
-      const options = shuffle(pool).slice(0, 3).map(toOption);
+      const options = shuffle(candidates)
+        .slice(0, 3)
+        .map((recipe) => toOption(recipe, recipe.matchedIngredients, recipe.missingIngredients));
+
       if (!options.length) continue;
       result[type] = options[0].name;
       result[type + "Ingredients"] = options[0].ingredients;
       result[type + "Options"] = options;
-      options.forEach((option) => used.add(option.name.toLowerCase()));
+      options.forEach((option) => used.add(option.name.trim().toLowerCase()));
     }
     days.push(result);
   }
-  return days.every((day) => ["breakfast", "lunch", "dinner"].every((type) => day[type + "Options"]?.length))
-    ? { days }
-    : null;
+
+  return days.every((day) =>
+    ["breakfast", "lunch", "dinner"].every((type) => day[type + "Options"]?.length)
+  ) ? { days } : null;
 }
 
 module.exports = { generateCatalogMealPlan };
