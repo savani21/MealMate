@@ -7,20 +7,53 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    let active = true;
+
+    const restoreSession = async () => {
+      const storedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+
+      if (!storedUser || !token) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const parsedUser = JSON.parse(storedUser);
-        // Old browser-only theme preferences are intentionally not inherited
-        // by other accounts. Theme now belongs to the authenticated profile.
-        setUser(parsedUser);
+        const cachedUser = JSON.parse(storedUser);
+        // Rehydrate from the authenticated profile so the database, not a
+        // browser-wide preference, is the source of truth for this account.
+        const response = await fetch("/api/auth/profile", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Session profile could not be restored.");
+        const data = await response.json();
+        const serverUser = data.user || cachedUser;
+        const normalizedUser = {
+          ...serverUser,
+          preferences: {
+            ...(serverUser.preferences || {}),
+            theme: serverUser.preferences?.theme === "dark" ? "dark" : "light",
+          },
+        };
+
+        if (!active) return;
+        localStorage.setItem("user", JSON.stringify(normalizedUser));
+        setUser(normalizedUser);
       } catch (error) {
         console.error("Failed to restore user session:", error);
+        if (!active) return;
+        // Do not keep a stale browser-only theme if the authenticated profile
+        // cannot be verified.
         localStorage.removeItem("user");
         localStorage.removeItem("token");
+        setUser(null);
+      } finally {
+        if (active) setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+
+    restoreSession();
+    return () => { active = false; };
   }, []);
 
   const login = (userData, token) => {
