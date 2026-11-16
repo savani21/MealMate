@@ -16,7 +16,7 @@ const getAIStatus = async (req, res) => {
         model: process.env.OPENROUTER_API_KEY ? (process.env.OPENROUTER_MODEL || "openrouter/free") : "local fallback",
         aiRecipes,
         manualRecipes,
-        aiMealPlans: totalMealPlans,
+        totalMealPlans,
       },
     });
   } catch (error) {
