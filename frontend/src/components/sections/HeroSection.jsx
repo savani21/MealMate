@@ -38,7 +38,7 @@ export function HeroSection() {
               <button className="bg-primary text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-primary/90 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-testid="hero-cta-primary" onClick={() => toast({ title: "You're on the list! 🎉", description: "Thanks for your interest — we'll email you the moment MealMate AI opens up." })}>
                 Get Started Free
               </button>
-              <button className="group flex items-center gap-2 px-8 py-4 rounded-full text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}>
+              <button className="group flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}>
                 Explore Recipes
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
               </button>
@@ -62,7 +62,7 @@ export function HeroSection() {
 
           {/* Right Side: CSS Mockup */}
           <div className="relative mt-4 sm:mt-8 lg:mt-0 h-[540px] sm:h-[600px] w-full min-w-0 flex items-center justify-center lg:justify-end perspective-1000">
-            <motion.div className="relative w-64 xs:w-72 md:w-80 h-[520px] sm:h-[580px] bg-white border-[8px] border-gray-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col" initial={{ opacity: 0, rotateY: 20, scale: 0.9, x: 20 }} animate={{ opacity: 1, rotateY: 0, scale: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}>
+            <motion.div className="relative w-64 sm:w-72 md:w-80 h-[520px] sm:h-[580px] bg-white border-[8px] border-gray-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col" initial={{ opacity: 0, rotateY: 20, scale: 0.9, x: 20 }} animate={{ opacity: 1, rotateY: 0, scale: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}>
               {/* Phone Notch */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl z-20"/>
               
