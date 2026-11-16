@@ -86,10 +86,10 @@ async function generateWithOpenRouter(prompt, duration = 1, maxTokensOverride = 
     !configuredModel || legacyFreeModels.has(configuredModel)
       ? "openrouter/free"
       : configuredModel;
-  const timeoutMs = Math.max(
-    75000,
-    Number(process.env.OPENROUTER_TIMEOUT_MS) || 75000
-  );
+  // Never let an optional AI provider hold a meal-plan request for over
+  // 25 seconds. Preview generation uses local recipes and does not call AI.
+  const configuredTimeout = Number(process.env.OPENROUTER_TIMEOUT_MS) || 20000;
+  const timeoutMs = Math.min(25000, Math.max(5000, configuredTimeout));
   const dayCount = Math.max(1, Math.min(7, Number(duration) || 1));
   // Three candidates for breakfast, lunch and dinner produce a sizeable JSON
   // response. A fixed 3,500-token budget truncates even short plans, while
@@ -380,7 +380,9 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
   // Do not invent dish names or append artificial "Bowl 1/2/3" labels.
   // If the selected pantry cannot support three distinct Indian recipes,
   // return the genuine recipes that can be prepared from those ingredients.
-  return valid.slice(0, 3).map((recipe, index) => {
+  const safeDayNumber = Math.max(1, Number(dayNumber) || 1);
+  const startIndex = valid.length > 3 ? (safeDayNumber - 1) % (valid.length - 2) : 0;
+  return valid.slice(startIndex, startIndex + 3).map((recipe, index) => {
     // Use measured quantities from MealMate's canonical recipe catalogue,
     // retaining only ingredients that are actually present in the allowed pool.
     // Never invent "as needed" quantities for nutrition calculations.
@@ -420,14 +422,14 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
     const dinnerOptions = buildLocalOptions(pool, "dinner", day, diet);
     days.push({
       day,
-      breakfast: breakfastOptions[0].name,
-      breakfastIngredients: breakfastOptions[0].ingredients,
+      breakfast: breakfastOptions[0]?.name || "",
+      breakfastIngredients: breakfastOptions[0]?.ingredients || [],
       breakfastOptions,
-      lunch: lunchOptions[0].name,
-      lunchIngredients: lunchOptions[0].ingredients,
+      lunch: lunchOptions[0]?.name || "",
+      lunchIngredients: lunchOptions[0]?.ingredients || [],
       lunchOptions,
-      dinner: dinnerOptions[0].name,
-      dinnerIngredients: dinnerOptions[0].ingredients,
+      dinner: dinnerOptions[0]?.name || "",
+      dinnerIngredients: dinnerOptions[0]?.ingredients || [],
       dinnerOptions,
     });
   }
@@ -563,10 +565,15 @@ Do not include markdown or explanations outside JSON.
     if (Array.isArray(req.body.selectedDays) && req.body.selectedDays.length) {
       generatedMeals = { days: req.body.selectedDays };
       generatedBy = "user-selected";
+    } else if (req.body.previewOnly === true) {
+      // Recipe previews must be immediate and predictable. OpenRouter's free
+      // model can queue or throttle requests, so keep it out of the interactive
+      // preview path and build choices from the user's permitted ingredients.
+      generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+      generatedBy = "local-preview";
     } else {
-      // Try the configured AI provider for previews and direct generation.
-      // If the key is missing or the provider fails, keep planning available
-      // with the deterministic local recipe templates.
+      // AI is reserved for non-preview generation. If it is unavailable,
+      // fall back to the same deterministic pantry-aware recipe templates.
       let aiErrorMessage = null;
       try {
         // Generate each day/category independently. This keeps every response
@@ -798,10 +805,10 @@ Rules:
       });
     }
 
-    // Calculate nutrition as part of generation, before preview or persistence.
-    // Every alternative gets an immediate local estimate; the default selected
-    // meal also receives USDA enrichment when a configured API key is available.
-    const selectedNutritionJobs = [];
+    // Calculate nutrition locally for every option. Do not make USDA network
+    // requests during preview or plan creation: one request per ingredient can
+    // add many seconds to an otherwise instant recipe-selection workflow.
+    // The local catalogue reports its estimate source/confidence transparently.
     for (const day of days) {
       for (const type of ["breakfast", "lunch", "dinner"]) {
         const options = Array.isArray(day[type + "Options"]) ? day[type + "Options"] : [];
@@ -810,17 +817,10 @@ Rules:
         }
         const selected = options.find((option) => option.name === day[type]) || options[0];
         if (selected) {
-          selectedNutritionJobs.push({ day, type, selected });
           day[type] = selected.name;
           day[type + "Ingredients"] = selected.ingredients || [];
         }
       }
-    }
-    // USDA lookups run in small batches to avoid flooding the external API on
-    // 3- or 7-day plans. Local estimates are already attached to every option.
-    for (let index = 0; index < selectedNutritionJobs.length; index += 4) {
-      const batch = selectedNutritionJobs.slice(index, index + 4);
-      await Promise.all(batch.map(({ selected }) => attachMealNutrition(selected, true)));
     }
 
     if (req.body.previewOnly === true) {
