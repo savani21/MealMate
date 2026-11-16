@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
   Users, ChefHat, ClipboardList, ShoppingBasket, BarChart3,
-  FileBarChart, ShieldCheck, RefreshCw, UserPlus, Utensils, Bell,
+  FileBarChart, ShieldCheck, RefreshCw, UserPlus, Utensils,
 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
@@ -134,9 +134,9 @@ export default function AdminSection() {
               <QuickLink icon={ChefHat} label="Recipe management" onClick={() => setLocation("/admin/recipes")} />
               <QuickLink icon={BarChart3} label="Analytics" onClick={() => setLocation("/admin/analytics")} />
               <QuickLink icon={FileBarChart} label="Reports & exports" onClick={() => setLocation("/admin/reports")} />
-              <QuickLink icon={Bell} label="Platform alerts" onClick={() => setLocation("/admin/alerts")} />
               <QuickLink icon={ShieldCheck} label="Security settings" onClick={() => setLocation("/admin/security")} />
             </div>
+            <p className="mt-4 rounded-xl bg-green-50 px-3 py-3 text-xs leading-relaxed text-green-800">Platform alerts and unread admin updates are available from the notification bell in the top navigation.</p>
           </div>
         </section>
       </> : !error ? <p className="text-sm text-gray-500">No dashboard data available.</p> : null}

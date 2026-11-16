@@ -145,8 +145,8 @@ export default function AIFeatures() {
               />
               <StatCard
                 icon={<ClipboardList className="w-6 h-6 text-primary" />}
-                label="AI Meal Plans Generated"
-                value={status.aiMealPlans}
+                label="Meal Plans Saved"
+                value={status.totalMealPlans}
               />
             </section>
 
