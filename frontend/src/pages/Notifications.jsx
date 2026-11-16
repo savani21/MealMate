@@ -37,7 +37,7 @@ function getNotificationMessage(item) {
   const expected = formatTime(item.expectedDeliveryAt);
   const actual = formatTime(item.deliveredAt);
   if (!expected || !actual) return item.message;
-  return `${outcomeText} Expected by ${expected; delivered at ${actual}. Your purchased ingredients have been added to your pantry.`;
+  return `${outcomeText} Expected by ${expected}; delivered at ${actual}. Your purchased ingredients have been added to your pantry.`;
 }
 
 function localDateKey(date = new Date()) {
