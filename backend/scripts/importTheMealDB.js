@@ -31,8 +31,9 @@ function normalizeMeal(meal) {
     : /egg|milk|cream|butter|cheese|yogurt|curd|paneer|ghee|honey/.test(allIngredients)
       ? ["vegetarian"]
       : ["vegetarian", "vegan"];
-  const mealTypes = /breakfast/.test(category.toLowerCase()) ? ["breakfast", "snack"] :
-    /starter|side|dessert/.test(category.toLowerCase()) ? ["snack"] : ["lunch", "dinner"];
+  const mealTypes = /dessert/.test(category.toLowerCase()) ? ["snack"] :
+    /starter|side/.test(category.toLowerCase()) ? ["breakfast", "snack"] :
+    /breakfast/.test(category.toLowerCase()) ? ["breakfast", "snack"] : ["breakfast", "lunch", "dinner"];
   return {
     name,
     description: `${name} — ${area} cuisine`,
