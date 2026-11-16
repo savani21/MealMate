@@ -422,14 +422,14 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
     const dinnerOptions = buildLocalOptions(pool, "dinner", day, diet);
     days.push({
       day,
-      breakfast: breakfastOptions[0].name,
-      breakfastIngredients: breakfastOptions[0].ingredients,
+      breakfast: breakfastOptions[0]?.name || "",
+      breakfastIngredients: breakfastOptions[0]?.ingredients || [],
       breakfastOptions,
-      lunch: lunchOptions[0].name,
-      lunchIngredients: lunchOptions[0].ingredients,
+      lunch: lunchOptions[0]?.name || "",
+      lunchIngredients: lunchOptions[0]?.ingredients || [],
       lunchOptions,
-      dinner: dinnerOptions[0].name,
-      dinnerIngredients: dinnerOptions[0].ingredients,
+      dinner: dinnerOptions[0]?.name || "",
+      dinnerIngredients: dinnerOptions[0]?.ingredients || [],
       dinnerOptions,
     });
   }
@@ -565,7 +565,7 @@ Do not include markdown or explanations outside JSON.
     if (Array.isArray(req.body.selectedDays) && req.body.selectedDays.length) {
       generatedMeals = { days: req.body.selectedDays };
       generatedBy = "user-selected";
-    } else if (req.body.previewOnly === true) {
+    } else if (req.body.previewOnly === true && req.body.useAI !== true) {
       // Fast path: retrieve existing validated catalogue recipes first. The
       // current local templates remain a fallback when the catalogue has no
       // compatible recipe for a meal/category combination.
@@ -831,11 +831,13 @@ Rules:
         }
       }
     }
-    // USDA lookups run in small batches to avoid flooding the external API on
-    // 3- or 7-day plans. Local estimates are already attached to every option.
-    for (let index = 0; index < selectedNutritionJobs.length; index += 4) {
-      const batch = selectedNutritionJobs.slice(index, index + 4);
-      await Promise.all(batch.map(({ selected }) => attachMealNutrition(selected, true)));
+    // Keep interactive previews local and fast. USDA enrichment is reserved
+    // for the explicit save/selection flow, never the initial recipe-options call.
+    if (req.body.previewOnly !== true) {
+      for (let index = 0; index < selectedNutritionJobs.length; index += 4) {
+        const batch = selectedNutritionJobs.slice(index, index + 4);
+        await Promise.all(batch.map(({ selected }) => attachMealNutrition(selected, true)));
+      }
     }
 
     if (req.body.previewOnly === true) {
