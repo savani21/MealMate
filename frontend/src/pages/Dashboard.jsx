@@ -1,5 +1,5 @@
 import AppNavbar from "@/components/AppNavbar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 
@@ -30,6 +30,8 @@ export default function Dashboard() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButtonRef = useRef(null);
+  const menuPanelRef = useRef(null);
 
   const [dashboardStats, setDashboardStats] = useState({
     mealsLogged: 0,
@@ -95,6 +97,29 @@ export default function Dashboard() {
     loadDashboardStats();
   }, [user]);
 
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const handleOutsidePointer = (event) => {
+      const target = event.target;
+      if (
+        menuPanelRef.current?.contains(target) ||
+        menuButtonRef.current?.contains(target)
+      ) return;
+      setMenuOpen(false);
+    };
+    const handleEscape = (event) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
+
   if (!user) return null;
 
   const handleLogout = () => {
@@ -108,18 +133,18 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-clip bg-[radial-gradient(ellipse_at_top_left,_#fcfefc_0%,_#ffffff_52%,_#fbfdfb_100%)]">
+    <div className="dashboard-shell relative isolate min-h-screen overflow-x-clip bg-[radial-gradient(ellipse_at_top_left,_#fcfefc_0%,_#ffffff_52%,_#fbfdfb_100%)]">
       <AppNavbar>
           <button onClick={() => goTo("/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-50" aria-label="Notifications">
             <Bell className="h-5 w-5 text-gray-600" />
             {dashboardStats.notifications > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />}
           </button>
-          <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm hover:bg-gray-50" aria-label="Toggle account menu">
+          <button ref={menuButtonRef} type="button" onClick={() => setMenuOpen(value => !value)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm hover:bg-gray-50" aria-label="Toggle account menu" aria-expanded={menuOpen} aria-haspopup="true">
             {menuOpen ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
           </button>
         </AppNavbar>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="dashboard-content max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-8">
           <p className="text-sm text-primary font-semibold">Welcome back</p>
           <h1 className="text-2xl md:text-3xl font-black text-gray-900 mt-1">{user.name}</h1>
@@ -138,7 +163,7 @@ export default function Dashboard() {
 
       {menuOpen && <div className="fixed inset-0 bg-black/20 z-40 lg:hidden" onClick={() => setMenuOpen(false)} />}
 
-      <div className={`fixed z-50 top-24 right-4 w-[calc(100%-2rem)] sm:w-80 lg:w-80 max-h-[calc(100vh-7rem)] bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transition-all duration-300 ease-out ${menuOpen ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" : "opacity-0 -translate-y-3 scale-95 pointer-events-none"}`}>
+      <div ref={menuPanelRef} className={`dashboard-account-menu fixed z-50 top-24 right-4 w-[calc(100%-2rem)] sm:w-80 lg:w-80 max-h-[calc(100vh-7rem)] bg-white rounded-2xl border border-gray-200 shadow-2xl overflow-hidden transition-all duration-300 ease-out ${menuOpen ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" : "opacity-0 -translate-y-3 scale-95 pointer-events-none"}`}>
         <div className="max-h-[calc(100vh-7rem)] overflow-y-auto">
           <div className="p-5 border-b border-gray-100">
             <div className="flex items-center gap-3">
