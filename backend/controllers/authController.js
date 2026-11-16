@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { createAdminAlert } = require("../services/adminAlertService");
 
 exports.register = async (req, res) => {
   try {
@@ -13,6 +14,7 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ name, email, password: hashedPassword });
     const userResponse = await User.findById(user._id).select("-password");
+    await createAdminAlert({ type: "user-registered", severity: "info", title: "New user registered", message: `${user.name} created a MealMate account.`, source: "User registration", referenceId: String(user._id), actionUrl: "/admin/users", dedupeKey: `user-registered:${user._id}` });
 
     res.status(201).json({
       success: true,
