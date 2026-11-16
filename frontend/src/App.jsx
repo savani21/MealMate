@@ -75,7 +75,7 @@ function Router() {
 
       <Route path="/profile" component={Profile} />
       <Route path="/notifications" component={Notifications} />
-      <Route path="/settings" component={Settings} />
+      <ProtectedRoute path="/settings" component={Settings} allowedRoles={["user", "admin"]} />
       <Route path="/favorites" component={Favorites} />
       <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />
       <ProtectedRoute path="/recipes/:id" component={RecipeDetails} allowedRoles={["user", "admin"]} />
