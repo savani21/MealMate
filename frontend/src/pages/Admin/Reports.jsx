@@ -8,7 +8,6 @@ const REPORT_TYPES = [
   { value: "mealPlans", label: "Meal plans" },
   { value: "orders", label: "Orders" },
   { value: "groceryLists", label: "Grocery lists" },
-  { value: "pantry", label: "Pantry inventory" },
   { value: "nutrition", label: "Nutrition logs" },
   { value: "reviews", label: "Recipe reviews" },
   { value: "products", label: "Store products" },
