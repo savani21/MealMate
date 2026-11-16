@@ -135,10 +135,6 @@ export default function Dashboard() {
   return (
     <div className="dashboard-shell relative isolate min-h-screen overflow-x-clip bg-[radial-gradient(ellipse_at_top_left,_#fcfefc_0%,_#ffffff_52%,_#fbfdfb_100%)]">
       <AppNavbar>
-          <button onClick={() => goTo("/notifications")} className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-gray-50" aria-label="Notifications">
-            <Bell className="h-5 w-5 text-gray-600" />
-            {dashboardStats.notifications > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />}
-          </button>
           <button ref={menuButtonRef} type="button" onClick={() => setMenuOpen(value => !value)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white shadow-sm hover:bg-gray-50" aria-label="Toggle account menu" aria-expanded={menuOpen} aria-haspopup="true">
             {menuOpen ? <X className="h-5 w-5 text-gray-700" /> : <Menu className="h-5 w-5 text-gray-700" />}
           </button>
