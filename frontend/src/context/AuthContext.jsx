@@ -2,12 +2,6 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 
 const AuthContext = createContext(null);
 
-function applyAccountTheme(user) {
-  const root = document.getElementById("root");
-  const enabled = Boolean(user && user.preferences?.theme === "dark");
-  root?.classList.toggle("dark", enabled);
-}
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,10 +22,6 @@ export function AuthProvider({ children }) {
     }
     setLoading(false);
   }, []);
-
-  useEffect(() => {
-    applyAccountTheme(user);
-  }, [user]);
 
   const login = (userData, token) => {
     const normalizedUser = {
