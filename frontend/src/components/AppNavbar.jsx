@@ -188,7 +188,7 @@ export default function AppNavbar({ children }) {
         aria-expanded={openMenu === group.label}
         className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${openMenu === group.label || group.items.some((item) => active(item.path)) ? "bg-green-50 text-primary" : "text-gray-700 hover:bg-gray-50 hover:text-primary"}`}
       >
-        {group.label}{((isAdmin && group.label === "Manage") || (!isAdmin && group.label === "Explore")) && unreadNotifications > 0 && <span className="ml-0.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+        {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
       </button>
       {openMenu === group.label && (
         <div className="absolute left-0 top-full z-50 mt-3 w-64 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
@@ -259,6 +259,12 @@ export default function AppNavbar({ children }) {
           {user && <button type="button" onClick={() => { logout(); navigate("/login"); }} aria-label="Log out" title="Log out" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"><LogOut className="h-5 w-5" /></button>}
         </div>
 
+        {user && <div className="relative lg:hidden">
+          <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700">
+            <Bell className="h-5 w-5" />
+            {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+          </button>
+        </div>}
         <button type="button" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? "Close menu" : "Open menu"} aria-expanded={mobileOpen} className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700 lg:hidden">
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -275,10 +281,10 @@ export default function AppNavbar({ children }) {
           {groups.map((group) => (
             <section key={group.label} className="border-t border-gray-100 py-2">
               <button type="button" onClick={() => setOpenMenu((current) => current === group.label ? "" : group.label)} aria-expanded={openMenu === group.label} className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-bold text-gray-900">
-                {group.label}{((isAdmin && group.label === "Manage") || (!isAdmin && group.label === "Explore")) && unreadNotifications > 0 && <span className="ml-auto mr-2 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+                {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
               </button>
               {openMenu === group.label && <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}{((isAdmin && path === "/admin/alerts") || (!isAdmin && label === "Notifications")) && unreadNotifications > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}</button>)}
+                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}</button>)}
               </div>}
             </section>
           ))}
