@@ -2,6 +2,7 @@ const Recipe = require("../../models/user/Recipe");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 const { buildCuratedFallback, curatedRecipeCount } = require("../../utils/curatedFallbackRecipes");
 const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
+const { createAdminAlert } = require("../../services/adminAlertService");
 
 async function generateWithOpenRouter(messages, responseFormat) {
   const apiKey = String(process.env.OPENROUTER_API_KEY || "").trim();
@@ -174,7 +175,7 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       }
     } catch (aiError) {
       usedFallback = true;
-      console.warn("AI recipe generation unavailable; using curated local fallback:", aiError.message);
+      console.warn("AI recipe generation unavailable; using curated local fallback:", aiError.message);\n      await createAdminAlert({ type: "ai-failure", severity: "warning", title: "AI recipe generation used fallback", message: String(aiError.message || "OpenRouter request failed").slice(0, 700), source: "OpenRouter recipe generation", dedupeKey: `ai-recipe-fallback:${Math.floor(Date.now() / 300000)}` });
       recipeData = buildCuratedFallback({ ingredients, diet, category, mealName });
       if (!recipeData) {
         console.warn(`No curated recipe matched the supplied ingredients and diet. Using safe basic fallback. Curated recipes available: ${curatedRecipeCount}.`);
