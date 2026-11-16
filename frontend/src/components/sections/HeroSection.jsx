@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Salad, Carrot, Apple, Fish } from 'lucide-react';
 import { staggerContainer } from '../AnimatedSection';
-import { toast } from '@/hooks/use-toast';
 export function HeroSection() {
     const words = ['Plan', 'Better.', 'Eat', 'Healthier.', 'Waste', 'Less.'];
     return (<section id="home" className="relative min-h-0 lg:min-h-[100dvh] pt-28 sm:pt-32 pb-12 sm:pb-20 flex items-center overflow-hidden">
@@ -35,7 +34,7 @@ export function HeroSection() {
             </motion.p>
 
             <motion.div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }}>
-              <button className="bg-primary text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-primary/90 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-testid="hero-cta-primary" onClick={() => toast({ title: "You're on the list! 🎉", description: "Thanks for your interest — we'll email you the moment MealMate AI opens up." })}>
+              <button className="bg-primary text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-primary/90 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-testid="hero-cta-primary" onClick={() => { window.location.href = "/login"; }}>
                 Get Started Free
               </button>
               <button className="group flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}>
@@ -146,7 +145,7 @@ export function HeroSection() {
               <span className="text-sm font-semibold text-gray-800 pr-2">Carrot</span>
             </motion.div>
 
-            <motion.div className="absolute top-1/2 right-0 lg:-right-16 bg-white p-2.5 sm:p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30 hidden md:flex" animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 0.5 }}>
+            <motion.div className="absolute top-[2%] right-0 sm:top-[8%] md:top-1/2 md:right-0 lg:-right-16 bg-white p-2.5 sm:p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 0.5 }}>
               <div className="bg-red-100 p-2 rounded-lg"><Apple className="w-5 h-5 text-red-600"/></div>
               <span className="text-sm font-semibold text-gray-800 pr-2">Apple</span>
             </motion.div>
