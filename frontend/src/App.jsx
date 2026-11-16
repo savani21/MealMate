@@ -28,6 +28,7 @@ import AdminUsers from "@/pages/Admin/Users";
 import AdminRecipes from "@/pages/Admin/Recipes";
 import AdminMealPlans from "@/pages/Admin/MealPlans";
 import AdminAnalytics from "@/pages/Admin/Analytics";
+import AdminReports from "@/pages/Admin/Reports";
 import AdminAIFeatures from "@/pages/Admin/AIFeatures";
 import AdminSecurity from "@/pages/Admin/Security";
 import "@/navbar-layout.css";
@@ -70,11 +71,12 @@ function Router() {
       <ProtectedRoute path="/admin/recipes" component={ AdminRecipes } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/meal-plans" component={ AdminMealPlans } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/analytics" component={ AdminAnalytics } allowedRoles={ ["admin"] } />
+      <ProtectedRoute path="/admin/reports" component={ AdminReports } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/ai-features" component={ AdminAIFeatures } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/security" component={ AdminSecurity } allowedRoles={ ["admin"] } />
 
       <Route path="/profile" component={Profile} />
-      <Route path="/notifications" component={Notifications} />
+      <ProtectedRoute path="/notifications" component={Notifications} allowedRoles={["user"]} />
       <ProtectedRoute path="/settings" component={Settings} allowedRoles={["user", "admin"]} />
       <Route path="/favorites" component={Favorites} />
       <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />
