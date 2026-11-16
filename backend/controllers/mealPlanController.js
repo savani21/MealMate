@@ -86,10 +86,10 @@ async function generateWithOpenRouter(prompt, duration = 1, maxTokensOverride = 
     !configuredModel || legacyFreeModels.has(configuredModel)
       ? "openrouter/free"
       : configuredModel;
-  const timeoutMs = Math.max(
-    75000,
-    Number(process.env.OPENROUTER_TIMEOUT_MS) || 75000
-  );
+  // Keep preview requests responsive. If the free-model router is busy,
+  // fall back to local recipes rather than blocking the planner for 75+ seconds.
+  const configuredTimeout = Number(process.env.OPENROUTER_TIMEOUT_MS) || 30000;
+  const timeoutMs = Math.min(30000, Math.max(12000, configuredTimeout));
   const dayCount = Math.max(1, Math.min(7, Number(duration) || 1));
   // Three candidates for breakfast, lunch and dinner produce a sizeable JSON
   // response. A fixed 3,500-token budget truncates even short plans, while
@@ -377,6 +377,49 @@ function buildLocalOptions(pool, type, dayNumber, diet) {
       return { ...recipe, ingredients };
     });
 
+  // If the curated catalogue has no exact match, use a few simple,
+  // realistic combinations that can be prepared from the selected ingredients.
+  // These are deliberately conservative: no unselected oil, salt or spices are added.
+  if (valid.length === 0) {
+    const find = (aliases) => normalizedPool.find((entry) => matches(entry, aliases));
+    const makeOption = (name, description, items) => ({
+      name,
+      description,
+      prepTime: "10 minutes",
+      ingredients: items.filter(Boolean).map(({ entry, quantity }) => ({
+        name: entry.name,
+        quantity,
+      })),
+    });
+    const banana = find(["banana"]);
+    const milk = find(["milk"]);
+    const corn = find(["corn", "sweet corn"]);
+    const tomato = find(["tomato"]);
+    const onion = find(["onion"]);
+
+    if (type === "breakfast" && banana && milk) {
+      return [makeOption("Banana Milk Smoothie", "A quick smoothie made with your banana and milk.", [
+        { entry: banana, quantity: "100 g" },
+        { entry: milk, quantity: "200 ml" },
+      ])];
+    }
+    if (type === "lunch" && corn && tomato) {
+      return [makeOption("Corn and Tomato Chaat", "A simple corn and tomato chaat using your selected ingredients.", [
+        { entry: corn, quantity: "100 g" },
+        { entry: tomato, quantity: "50 g" },
+        onion ? { entry: onion, quantity: "25 g" } : null,
+      ])];
+    }
+    if (type === "dinner" && corn && tomato && onion) {
+      return [makeOption("Corn Tomato Onion Bowl", "A simple bowl combining your selected corn, tomato and onion.", [
+        { entry: corn, quantity: "100 g" },
+        { entry: tomato, quantity: "50 g" },
+        { entry: onion, quantity: "25 g" },
+      ])];
+    }
+    return [];
+  }
+
   // Do not invent dish names or append artificial "Bowl 1/2/3" labels.
   // If the selected pantry cannot support three distinct Indian recipes,
   // return the genuine recipes that can be prepared from those ingredients.
@@ -418,6 +461,18 @@ function generateLocalMealPlan({ duration, diet, allowedPool }) {
     const breakfastOptions = buildLocalOptions(pool, "breakfast", day, diet);
     const lunchOptions = buildLocalOptions(pool, "lunch", day, diet);
     const dinnerOptions = buildLocalOptions(pool, "dinner", day, diet);
+    // Never dereference an empty option list. Return a useful validation
+    // error instead of crashing with "Cannot read properties of undefined (name)".
+    const missingMeals = [
+      !breakfastOptions.length ? "breakfast" : null,
+      !lunchOptions.length ? "lunch" : null,
+      !dinnerOptions.length ? "dinner" : null,
+    ].filter(Boolean);
+    if (missingMeals.length) {
+      throw new Error(
+        `MealMate could not build ${missingMeals.join(", ")} from your selected ingredients. Add more suitable pantry ingredients or choose Available + Recommended Ingredients.`
+      );
+    }
     days.push({
       day,
       breakfast: breakfastOptions[0].name,
@@ -606,8 +661,9 @@ Rules:
 `;
             let result;
             let lastError;
-            // Retry only the failed category once.
-            for (let attempt = 1; attempt <= 2; attempt += 1) {
+            // Do not repeat a slow free-model request. A failed category
+            // falls back to the local pantry recipe catalogue immediately.
+            for (let attempt = 1; attempt <= 1; attempt += 1) {
               try {
                 result = await generateWithOpenRouter(categoryPrompt, 1, 12000);
                 const candidateOptions = Array.isArray(result?.options)
