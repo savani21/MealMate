@@ -2,7 +2,7 @@ const RecipeCatalog = require("../models/RecipeCatalog");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 
 const DIET_BLOCKED = {
-  vegetarian: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|gelatin)\\b/i,
+  vegetarian: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|gelatin)\\b/i,
   vegan: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|cream|butter|cheese|yogurt|curd|paneer|ghee|honey|gelatin)\\b/i,
   eggetarian: /\\b(chicken|beef|pork|lamb|mutton|fish|salmon|tuna|prawn|shrimp|seafood|bacon|ham|gelatin)\\b/i,
 };
