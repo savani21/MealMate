@@ -384,3 +384,73 @@
   .dark .border-gray-100,
   .dark .border-gray-200 { border-color: rgb(51 65 85); }
 }
+
+
+/* Dashboard-specific dark theme contrast. Keep semantic green labels and buttons intact. */
+@layer utilities {
+  .dark .dashboard-shell {
+    background: #0b1220 !important;
+    color: #e2e8f0;
+  }
+
+  .dark .dashboard-content .text-gray-900,
+  .dark .dashboard-content h1,
+  .dark .dashboard-content h2,
+  .dark .dashboard-content h3 {
+    color: #f1f5f9 !important;
+  }
+
+  .dark .dashboard-content .text-gray-800,
+  .dark .dashboard-content .text-gray-700,
+  .dark .dashboard-content .text-gray-600 {
+    color: #cbd5e1 !important;
+  }
+
+  .dark .dashboard-content .text-gray-500,
+  .dark .dashboard-content .text-gray-400 {
+    color: #94a3b8 !important;
+  }
+
+  .dark .dashboard-content .bg-white {
+    background-color: #111c30 !important;
+  }
+
+  .dark .dashboard-content .bg-gray-50 {
+    background-color: #172338 !important;
+  }
+
+  .dark .dashboard-content .bg-green-50 {
+    background-color: #123326 !important;
+  }
+
+  .dark .dashboard-content .border-gray-100,
+  .dark .dashboard-content .border-gray-200,
+  .dark .dashboard-content .border-green-100 {
+    border-color: #29384f !important;
+  }
+
+  .dark .dashboard-content .bg-white .bg-white {
+    background-color: #1b2a40 !important;
+  }
+
+  .dark .dashboard-account-menu {
+    background-color: #111c30 !important;
+    border-color: #334155 !important;
+    color: #e2e8f0;
+  }
+
+  .dark .dashboard-account-menu .text-gray-900,
+  .dark .dashboard-account-menu .text-gray-800 {
+    color: #f1f5f9 !important;
+  }
+
+  .dark .dashboard-account-menu .text-gray-600,
+  .dark .dashboard-account-menu .text-gray-500,
+  .dark .dashboard-account-menu .text-gray-400 {
+    color: #cbd5e1 !important;
+  }
+
+  .dark .dashboard-account-menu .hover\\:bg-gray-50:hover {
+    background-color: #1e293b !important;
+  }
+}
