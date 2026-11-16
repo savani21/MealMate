@@ -16,6 +16,15 @@ const notificationSchema = new mongoose.Schema(
     title: { type: String, required: true, trim: true },
     message: { type: String, required: true, trim: true },
     referenceId: { type: String, required: true },
+    // Optional delivery details let the UI show the promised and actual times
+    // in the user's local timezone without relying on the server timezone.
+    expectedDeliveryAt: { type: Date, default: null },
+    deliveredAt: { type: Date, default: null },
+    deliveryOutcome: {
+      type: String,
+      enum: ["early", "on-time", "late"],
+      default: null,
+    },
     read: { type: Boolean, default: false },
     readAt: { type: Date, default: null },
   },
