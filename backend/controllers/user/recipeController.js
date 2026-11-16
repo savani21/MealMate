@@ -3,6 +3,7 @@ const User = require("../../models/User");
 const RecipeReview = require("../../models/user/RecipeReview");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
+const { createAdminAlert } = require("../../services/adminAlertService");
 
 const HIGHLY_LIKED_MIN_LIKES = Math.max(1, Number(process.env.HIGHLY_LIKED_MIN_LIKES) || 5);
 
@@ -184,6 +185,9 @@ const createRecipe = async (req, res) => {
       image: req.body.image,
       createdBy: req.user.id,
     });
+    if (req.user?.role !== "admin") {
+      await createAdminAlert({ type: "recipe-submitted", severity: "info", title: "New recipe submitted", message: `A new recipe, “${recipe.name}”, was added to the catalogue.`, source: "Recipe management", referenceId: String(recipe._id), actionUrl: "/admin/recipes", dedupeKey: `recipe-submitted:${recipe._id}` });
+    }
     res.status(201).json({ message: "Recipe created successfully", recipe });
   } catch (error) {
     console.error("CREATE RECIPE ERROR:", error);
