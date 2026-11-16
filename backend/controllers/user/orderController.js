@@ -121,30 +121,63 @@ exports.processDueOrders = async () => {
         for (let index = 0; index < order.items.length; index += 1) {
           await addDeliveredOrderItem(order.user, order._id, order.items[index], index);
         }
-        await Order.updateOne(
-          { _id: order._id },
-          { $set: { status: "delivered", inventoryAppliedAt: new Date(), inventorySyncing: false }, $unset: { inventorySyncingAt: 1 } }
+        // Compare the actual completion time with the promised ETA. A five-minute
+        // grace window avoids calling a delivery late because of the 15-second
+        // background-worker interval or small server scheduling delays.
+        const deliveredAt = new Date();
+        const deliveryDifferenceMs = deliveredAt.getTime() - new Date(order.deliveryTime).getTime();
+        const deliveryOutcome = deliveryDifferenceMs < -60 * 1000
+          ? "early"
+          : deliveryDifferenceMs <= 5 * 60 * 1000
+            ? "on-time"
+            : "late";
+        const outcomeLabel = deliveryOutcome === "early"
+          ? "earlier than expected"
+          : deliveryOutcome === "late"
+            ? "later than scheduled"
+            : "on time";
+        const notificationTitle = deliveryOutcome === "early"
+          ? "Your grocery order arrived early!"
+          : deliveryOutcome === "late"
+            ? "Your grocery order arrived later than expected."
+            : "Your grocery order was delivered on time!";
+        const notificationMessage = `Order ${order.orderId} was delivered ${outcomeLabel}. Your purchased ingredients have been added to your pantry.`;
+
+        // Upsert the notification before marking the order complete. If either
+        // database write fails, the worker can safely retry: pantry receipt keys
+        // prevent duplicate quantities and this unique notification key prevents
+        // duplicate delivery alerts.
+        const deliveryNotification = await Notification.findOneAndUpdate(
+          { user: order.user, type: "order-delivered", referenceId: String(order._id) },
+          {
+            $setOnInsert: {
+              user: order.user,
+              type: "order-delivered",
+              referenceId: String(order._id),
+              title: notificationTitle,
+              message: notificationMessage,
+              expectedDeliveryAt: order.deliveryTime,
+              deliveredAt,
+              deliveryOutcome,
+              read: false,
+            },
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        // Persist one delivery notification per order; a retry cannot duplicate it.
-        try {
-          await Notification.updateOne(
-            { user: order.user, type: "order-delivered", referenceId: String(order._id) },
-            {
-              $setOnInsert: {
-                user: order.user,
-                type: "order-delivered",
-                referenceId: String(order._id),
-                title: "Your grocery order has arrived!",
-                message: `Order ${order.orderId} has been delivered successfully. Your purchased ingredients have been added to your pantry.`,
-                read: false,
-              },
+        await Order.updateOne(
+          { _id: order._id },
+          {
+            $set: {
+              status: "delivered",
+              deliveredAt: deliveryNotification.deliveredAt || deliveredAt,
+              deliveryOutcome: deliveryNotification.deliveryOutcome || deliveryOutcome,
+              inventoryAppliedAt: deliveredAt,
+              inventorySyncing: false,
             },
-            { upsert: true }
-          );
-        } catch (notificationError) {
-          console.error(`Could not create delivery notification for ${order.orderId}:`, notificationError.message);
-        }
+            $unset: { inventorySyncingAt: 1 },
+          }
+        );
       } catch (error) {
         await Order.updateOne(
           { _id: order._id },
