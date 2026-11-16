@@ -61,7 +61,6 @@ const ADMIN_GROUPS = [
       { label: "Meal Plans", path: "/admin/meal-plans", icon: CalendarDays },
       { label: "Analytics", path: "/admin/analytics", icon: BarChart3 },
       { label: "Reports & Exports", path: "/admin/reports", icon: FileBarChart },
-      { label: "Platform Alerts", path: "/admin/alerts", icon: Bell },
       { label: "AI Features", path: "/admin/ai-features", icon: Sparkles },
       { label: "Security", path: "/admin/security", icon: ShieldCheck },
     ],
@@ -75,6 +74,8 @@ export default function AppNavbar({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationItems, setNotificationItems] = useState([]);
   const [deliveryAlert, setDeliveryAlert] = useState(null);
   const previousUnreadCount = useRef(null);
   const isAdmin = user?.role === "admin" || location.startsWith("/admin/");
@@ -85,69 +86,85 @@ export default function AppNavbar({ children }) {
       previousUnreadCount.current = null;
       setDeliveryAlert(null);
       setUnreadNotifications(0);
+      setNotificationItems([]);
       return;
     }
-    if (isAdmin) {
-      previousUnreadCount.current = null;
-      setDeliveryAlert(null);
-      return;
-    }
-    const loadUnreadCount = async () => {
+
+    let active = true;
+    const loadNotifications = async () => {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const response = await fetch("/api/notifications", {
+        const endpoint = isAdmin ? "/api/admin/alerts?limit=30" : "/api/notifications";
+        const response = await fetch(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) return;
         const data = await response.json();
+        const items = isAdmin ? (data.alerts || []) : (data.notifications || []);
+        if (!active) return;
+
         const nextUnreadCount = Number(data.unreadCount) || 0;
-        if (previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
-          const latestUnread = (data.notifications || []).find((item) => !item.read);
-          if (latestUnread?.type === "order-delivered") {
-            setDeliveryAlert({
-              title: latestUnread.title,
-              message: formatNotificationDeliveryMessage(latestUnread),
-            });
-          } else if (latestUnread) {
+        if (!isAdmin && previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
+          const latestUnread = items.find((item) => !item.read);
+          if (latestUnread) {
             setDeliveryAlert({
               title: latestUnread.title || "New MealMate notification",
-              message: latestUnread.message || "You have a new update. View your notifications for details.",
+              message: latestUnread.type === "order-delivered"
+                ? formatNotificationDeliveryMessage(latestUnread)
+                : (latestUnread.message || "You have a new update. View your notifications for details."),
             });
           }
         }
         previousUnreadCount.current = nextUnreadCount;
         setUnreadNotifications(nextUnreadCount);
+        setNotificationItems(items);
       } catch (error) {
-        console.error("Notification badge error:", error);
+        console.error("Notification loading error:", error);
       }
     };
-    loadUnreadCount();
-    const timer = setInterval(loadUnreadCount, 15000);
-    return () => clearInterval(timer);
+
+    loadNotifications();
+    const timer = setInterval(loadNotifications, 15000);
+    return () => { active = false; clearInterval(timer); };
   }, [user, isAdmin, location]);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    let active = true;
-    const loadAdminUnread = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-      try {
-        const response = await fetch("/api/admin/alerts?limit=1", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) return;
-        const data = await response.json();
-        if (active) setUnreadNotifications(Number(data.unreadCount) || 0);
-      } catch (error) {
-        console.error("Admin alert badge error:", error);
-      }
-    };
-    loadAdminUnread();
-    const timer = setInterval(loadAdminUnread, 30000);
-    return () => { active = false; clearInterval(timer); };
-  }, [isAdmin, user]);
+  const markNotificationRead = async (item) => {
+    if (item.read) return;
+    const token = localStorage.getItem("token");
+    const endpoint = isAdmin
+      ? `/api/admin/alerts/${item._id}/read`
+      : `/api/notifications/${item._id}/read`;
+    try {
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Unable to update notification.");
+      setNotificationItems((items) => items.map((entry) =>
+        entry._id === item._id ? { ...entry, read: true } : entry
+      ));
+      setUnreadNotifications((count) => Math.max(0, count - 1));
+    } catch (error) {
+      console.error("Mark notification as read failed:", error);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    const token = localStorage.getItem("token");
+    const endpoint = isAdmin ? "/api/admin/alerts/read-all" : "/api/notifications/read-all";
+    try {
+      const response = await fetch(endpoint, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Unable to update notifications.");
+      setNotificationItems((items) => items.map((item) => ({ ...item, read: true })));
+      setUnreadNotifications(0);
+    } catch (error) {
+      console.error("Mark all notifications as read failed:", error);
+    }
+  };
 
   const navigate = (path) => {
     setLocation(path);
@@ -171,7 +188,7 @@ export default function AppNavbar({ children }) {
         aria-expanded={openMenu === group.label}
         className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${openMenu === group.label || group.items.some((item) => active(item.path)) ? "bg-green-50 text-primary" : "text-gray-700 hover:bg-gray-50 hover:text-primary"}`}
       >
-        {group.label}{((isAdmin && group.label === "Manage") || (!isAdmin && group.label === "Explore")) && unreadNotifications > 0 && <span className="ml-0.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+        {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
       </button>
       {openMenu === group.label && (
         <div className="absolute left-0 top-full z-50 mt-3 w-64 rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
@@ -217,11 +234,44 @@ export default function AppNavbar({ children }) {
 
         <div className="ml-auto hidden shrink-0 items-center gap-2 lg:flex">
           {children}
-          <button type="button" onClick={() => navigate("/profile")} aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary"><UserRound className="h-5 w-5" /></button>
+          <div className="relative">
+            <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
+              <Bell className="h-5 w-5" />
+              {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+            </button>
+            {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                <div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>
+                {unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary hover:underline">Mark all read</button>}
+              </div>
+              <div className="max-h-[min(65vh,420px)] overflow-y-auto">
+                {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 30).map((item) => (
+                  <button key={item._id || item.id} type="button" onClick={() => markNotificationRead(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left transition hover:bg-green-50/60 ${item.read ? "bg-white" : "bg-green-50/40"}`}>
+                    <span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs leading-5 text-gray-500">{item.message || item.source || "A platform update is available."}</span><span className="mt-1 block text-[11px] text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</span></span></span>
+                  </button>
+                ))}
+              </div>
+              {!isAdmin && <button type="button" onClick={() => { setNotificationOpen(false); navigate("/notifications"); }} className="w-full px-4 py-3 text-sm font-bold text-primary hover:bg-green-50">View all notifications</button>}
+            </div>}
+          </div>
+          <button type="button" onClick={() => navigate("/profile") aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary"><UserRound className="h-5 w-5" /></button>
           <button type="button" onClick={() => navigate("/settings")} aria-label="Settings" className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-gray-50"><Settings className="h-5 w-5" /></button>
           {user && <button type="button" onClick={() => { logout(); navigate("/login"); }} aria-label="Log out" title="Log out" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"><LogOut className="h-5 w-5" /></button>}
         </div>
 
+        {user && <div className="relative lg:hidden">
+          <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700">
+            <Bell className="h-5 w-5" />
+            {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+          </button>
+          {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>{unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary">Mark all read</button>}</div>
+            <div className="max-h-[min(65vh,420px)] overflow-y-auto">
+              {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.map((item) => <button key={item._id || item.id} type="button" onClick={() => markNotificationRead(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left ${item.read ? "bg-white" : "bg-green-50/40"}`}><span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs text-gray-500">{item.message || item.source || "A platform update is available."}</span></span></span></button>)}
+            </div>
+            {!isAdmin && <button type="button" onClick={() => { setNotificationOpen(false); navigate("/notifications"); }} className="w-full px-4 py-3 text-sm font-bold text-primary">View all notifications</button>}
+          </div>}
+        </div>}
         <button type="button" onClick={() => setMobileOpen((value) => !value)} aria-label={mobileOpen ? "Close menu" : "Open menu"} aria-expanded={mobileOpen} className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700 lg:hidden">
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
@@ -238,10 +288,10 @@ export default function AppNavbar({ children }) {
           {groups.map((group) => (
             <section key={group.label} className="border-t border-gray-100 py-2">
               <button type="button" onClick={() => setOpenMenu((current) => current === group.label ? "" : group.label)} aria-expanded={openMenu === group.label} className="flex w-full items-center justify-between px-3 py-3 text-left text-sm font-bold text-gray-900">
-                {group.label}{((isAdmin && group.label === "Manage") || (!isAdmin && group.label === "Explore")) && unreadNotifications > 0 && <span className="ml-auto mr-2 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
+                {group.label}<ChevronDown className={`h-4 w-4 transition-transform ${openMenu === group.label ? "rotate-180" : ""}`} />
               </button>
               {openMenu === group.label && <div className="grid grid-cols-2 gap-2 px-2 pb-2">
-                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}{((isAdmin && path === "/admin/alerts") || (!isAdmin && label === "Notifications")) && unreadNotifications > 0 && <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}</button>)}
+                {group.items.map(({ label, path, icon: Icon }) => <button key={path + label} type="button" onClick={() => navigate(path)} className="flex items-center gap-2 rounded-xl bg-gray-50 px-3 py-3 text-left text-xs font-semibold text-gray-700"><Icon className="h-4 w-4 text-primary" />{label}</button>)}
               </div>}
             </section>
           ))}
