@@ -8,7 +8,10 @@ const {
   clearNotifications,
 } = require("../../controllers/user/notificationController");
 
-router.use(auth, (req, res, next) => {\n  if (req.user?.role !== "user") return res.status(403).json({ success: false, message: "Personal notifications are only available to user accounts." });\n  next();\n});
+router.use(auth, (req, res, next) => {
+  if (req.user?.role !== "user") return res.status(403).json({ success: false, message: "Personal notifications are only available to user accounts." });
+  next();
+});
 router.get("/", getMyNotifications);
 router.patch("/read-all", markAllAsRead);
 router.delete("/", clearNotifications);
