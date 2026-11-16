@@ -454,3 +454,152 @@
     background-color: #1e293b !important;
   }
 }
+
+
+/* -------------------------------------------------------------------------
+   PROJECT-WIDE DARK THEME COMPATIBILITY
+   Legacy pages use fixed Tailwind gray/white utilities instead of semantic
+   theme tokens. Normalize those utilities globally so every route and the
+   shared navbar retain readable contrast when .dark is active.
+   ------------------------------------------------------------------------- */
+@layer utilities {
+  /* Shared page surfaces */
+  .dark .bg-white,
+  .dark .bg-white\/95,
+  .dark .bg-white\/90,
+  .dark .bg-white\/80 {
+    background-color: #111c30 !important;
+  }
+
+  .dark .bg-gray-50,
+  .dark .bg-slate-50,
+  .dark .bg-neutral-50 {
+    background-color: #172338 !important;
+  }
+
+  .dark .bg-gray-100,
+  .dark .bg-slate-100,
+  .dark .bg-neutral-100 {
+    background-color: #1e2b40 !important;
+  }
+
+  .dark .bg-gray-200,
+  .dark .bg-slate-200,
+  .dark .bg-neutral-200 {
+    background-color: #29384f !important;
+  }
+
+  .dark .bg-green-50,
+  .dark .bg-emerald-50 {
+    background-color: #123326 !important;
+  }
+
+  .dark .bg-green-100,
+  .dark .bg-emerald-100 {
+    background-color: #17432f !important;
+  }
+
+  /* Shared text hierarchy */
+  .dark .text-black,
+  .dark .text-gray-950,
+  .dark .text-gray-900,
+  .dark .text-slate-950,
+  .dark .text-slate-900,
+  .dark .text-neutral-900 {
+    color: #f1f5f9 !important;
+  }
+
+  .dark .text-gray-800,
+  .dark .text-gray-700,
+  .dark .text-gray-600,
+  .dark .text-slate-800,
+  .dark .text-slate-700,
+  .dark .text-slate-600,
+  .dark .text-neutral-800,
+  .dark .text-neutral-700,
+  .dark .text-neutral-600 {
+    color: #cbd5e1 !important;
+  }
+
+  .dark .text-gray-500,
+  .dark .text-gray-400,
+  .dark .text-slate-500,
+  .dark .text-slate-400,
+  .dark .text-neutral-500,
+  .dark .text-neutral-400 {
+    color: #94a3b8 !important;
+  }
+
+  /* Borders and separators */
+  .dark .border-gray-50,
+  .dark .border-gray-100,
+  .dark .border-gray-200,
+  .dark .border-slate-100,
+  .dark .border-slate-200,
+  .dark .border-neutral-100,
+  .dark .border-neutral-200,
+  .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+  .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #29384f !important;
+  }
+
+  /* Navbar, dropdowns, popovers and shared floating panels */
+  .dark header.sticky,
+  .dark header.sticky.bg-white\/95 {
+    background-color: rgb(11 18 32 / 96%) !important;
+    border-color: #29384f !important;
+  }
+
+  .dark header.sticky .bg-white,
+  .dark [role="menu"],
+  .dark [role="listbox"],
+  .dark [data-radix-popper-content-wrapper] > *,
+  .dark [data-radix-dialog-content],
+  .dark [role="dialog"] {
+    background-color: #111c30 !important;
+    color: #e2e8f0;
+    border-color: #334155 !important;
+  }
+
+  .dark header.sticky input,
+  .dark input:not([type="checkbox"]):not([type="radio"]),
+  .dark textarea,
+  .dark select {
+    background-color: #172338;
+    color: #f1f5f9;
+    border-color: #475569;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+  }
+
+  /* Hover surfaces and focus states */
+  .dark .hover\\:bg-gray-50:hover,
+  .dark .hover\\:bg-gray-100:hover,
+  .dark .hover\\:bg-slate-50:hover,
+  .dark .hover\\:bg-slate-100:hover {
+    background-color: #26364d !important;
+  }
+
+  .dark .focus\\:bg-white:focus,
+  .dark .focus-within\\:bg-white:focus-within {
+    background-color: #172338 !important;
+  }
+
+  /* Preserve readable semantic green actions and status colors. */
+  .dark .text-primary,
+  .dark .text-green-600,
+  .dark .text-green-700,
+  .dark .text-emerald-600,
+  .dark .text-emerald-700 {
+    color: #4ade80;
+  }
+}
+
+/* The shared navbar also uses translucent white and gray utilities. */
+.dark header.sticky {
+  color: #e2e8f0;
+}
