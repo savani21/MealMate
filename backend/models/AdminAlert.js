@@ -13,7 +13,7 @@ const adminAlertSchema = new mongoose.Schema({
   source: { type: String, required: true, trim: true, maxlength: 80 },
   referenceId: { type: String, default: null, index: true },
   actionUrl: { type: String, default: null, maxlength: 300 },
-  dedupeKey: { type: String, default: null },
+  dedupeKey: { type: String, default: undefined },
   read: { type: Boolean, default: false, index: true },
   readAt: { type: Date, default: null },
 }, { timestamps: true });
