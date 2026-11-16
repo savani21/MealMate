@@ -96,10 +96,12 @@ function normalizeAmount(quantity, unit) {
   if (/^(g|gm|gms|gram|grams)$/.test(normalizedUnit)) return { quantity, unit: "g" };
   if (/^(l|liter|liters|litre|litres)$/.test(normalizedUnit)) return { quantity: quantity * 1000, unit: "ml" };
   if (/^(ml|milliliter|milliliters|millilitre|millilitres)$/.test(normalizedUnit)) return { quantity, unit: "ml" };
-  if (/^(cup|cups)$/.test(normalizedUnit)) return { quantity, unit: "cup" };
+  // Use millilitres as the common base for household volume measures.
+  // Metric cooking cup = 250 ml; tablespoon = 15 ml; teaspoon = 5 ml.
+  if (/^(cup|cups)$/.test(normalizedUnit)) return { quantity: quantity * 250, unit: "ml" };
+  if (/^(tbsp|tablespoon|tablespoons)$/.test(normalizedUnit)) return { quantity: quantity * 15, unit: "ml" };
+  if (/^(tsp|teaspoon|teaspoons)$/.test(normalizedUnit)) return { quantity: quantity * 5, unit: "ml" };
   if (/^(piece|pieces)$/.test(normalizedUnit)) return { quantity, unit: "piece" };
-  if (/^(tbsp|tablespoon|tablespoons)$/.test(normalizedUnit)) return { quantity, unit: "tbsp" };
-  if (/^(tsp|teaspoon|teaspoons)$/.test(normalizedUnit)) return { quantity, unit: "tsp" };
   return { quantity, unit: normalizedUnit };
 }
 
@@ -271,27 +273,72 @@ exports.compareRecipeWithPantry = async (req, res) => {
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 
-    // Pantry status is presence-only. Recipe quantities and pantry quantities
-    // are deliberately not compared; users choose what to purchase manually.
     const rows = (recipe.ingredients || []).map((raw) => {
       const required = parseRequiredIngredient(raw);
       const normalizedRequired = normalizeIngredientName(required.name);
       const match = pantry.find((item) =>
         normalizeIngredientName(item.name) === normalizedRequired
       );
-      return match
-        ? {
-            ingredient: raw,
-            status: "available",
-            message: "Available in Pantry",
-            pantryItemId: match._id,
-            pantryName: match.name,
-          }
-        : {
-            ingredient: raw,
-            status: "missing",
-            message: "Not in Pantry",
-          };
+
+      if (!match || Number(match.quantity) <= 0) {
+        return {
+          ingredient: raw,
+          status: "missing",
+          message: "Not in Pantry",
+        };
+      }
+
+      // Ingredients without a measurable recipe quantity can only be matched
+      // by name; do not pretend that their available quantity was verified.
+      if (required.quantity === null) {
+        return {
+          ingredient: raw,
+          status: "available",
+          message: "In Pantry (quantity not specified)",
+          pantryItemId: match._id,
+          pantryName: match.name,
+          pantryQuantity: match.quantity,
+          pantryUnit: match.unit,
+        };
+      }
+
+      const need = normalizeAmount(required.quantity, required.unit);
+      const have = normalizeAmount(Number(match.quantity), match.unit);
+
+      // Only compare compatible dimensions. For example, ml and tsp can be
+      // compared after conversion, but grams cannot be converted to cups
+      // without ingredient-specific density data.
+      if (need.unit !== have.unit) {
+        return {
+          ingredient: raw,
+          status: "check",
+          message: "Check pantry unit",
+          pantryItemId: match._id,
+          pantryName: match.name,
+          pantryQuantity: match.quantity,
+          pantryUnit: match.unit,
+          requiredQuantity: required.quantity,
+          requiredUnit: required.unit,
+        };
+      }
+
+      const remaining = Math.max(0, need.quantity - have.quantity);
+      const enough = remaining <= 0.000001;
+      return {
+        ingredient: raw,
+        status: enough ? "available" : "partial",
+        message: enough
+          ? "Available in Pantry"
+          : `Need ${Number(remaining.toFixed(2))} more ${need.unit}`,
+        pantryItemId: match._id,
+        pantryName: match.name,
+        pantryQuantity: match.quantity,
+        pantryUnit: match.unit,
+        requiredQuantity: required.quantity,
+        requiredUnit: required.unit,
+        remainingQuantity: remaining,
+        normalizedUnit: need.unit,
+      };
     });
 
     return res.json({ recipeId: recipe._id, comparison: rows });
