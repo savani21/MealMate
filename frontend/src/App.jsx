@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
@@ -6,8 +7,8 @@ import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Signup from '@/pages/Signup';
 import Dashboard from '@/pages/Dashboard';
-import { Route, Switch } from 'wouter';
-import { AuthProvider } from '@/context/AuthContext';
+import { Route, Switch, useLocation } from 'wouter';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import MealPlanner from "@/pages/User/MealPlanner";
 import NutritionDashboard from "@/pages/User/NutritionDashboard";
@@ -33,8 +34,25 @@ import "@/navbar-layout.css";
 
 const queryClient = new QueryClient();
 
+function AccountThemeController() {
+  const [location] = useLocation();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const isPrivateAppRoute = Boolean(user) && !["/", "/login", "/signup"].includes(location);
+    document.getElementById("root")?.classList.toggle(
+      "dark",
+      isPrivateAppRoute && user?.preferences?.theme === "dark"
+    );
+  }, [user, location]);
+
+  return null;
+}
+
 function Router() {
   return (
+    <>
+      <AccountThemeController />
     <Switch>
       <Route path="/" component={ Home } />
       <Route path="/login" component={ Login } />
@@ -57,12 +75,13 @@ function Router() {
 
       <Route path="/profile" component={Profile} />
       <Route path="/notifications" component={Notifications} />
-      <Route path="/settings" component={Settings} />
+      <ProtectedRoute path="/settings" component={Settings} allowedRoles={["user", "admin"]} />
       <Route path="/favorites" component={Favorites} />
       <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />
       <ProtectedRoute path="/recipes/:id" component={RecipeDetails} allowedRoles={["user", "admin"]} />
       <Route component={ NotFound } />
     </Switch>
+    </>
   );
 }
 
