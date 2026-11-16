@@ -162,7 +162,7 @@ exports.processDueOrders = async () => {
               read: false,
             },
           },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
+          { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
         );
 
         await Order.updateOne(
