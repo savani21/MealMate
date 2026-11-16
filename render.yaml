@@ -24,7 +24,7 @@ services:
       - key: OPENROUTER_MODEL
         value: openrouter/free
       - key: OPENROUTER_TIMEOUT_MS
-        value: "40000"
+        value: "75000"
       - key: OPENROUTER_MAX_TOKENS
         value: "9000"
       - key: OPENAI_API_KEY
