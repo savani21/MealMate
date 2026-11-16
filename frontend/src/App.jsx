@@ -31,7 +31,6 @@ import AdminAnalytics from "@/pages/Admin/Analytics";
 import AdminReports from "@/pages/Admin/Reports";
 import AdminAIFeatures from "@/pages/Admin/AIFeatures";
 import AdminSecurity from "@/pages/Admin/Security";
-import AdminAlerts from "@/pages/Admin/Alerts";
 import "@/navbar-layout.css";
 
 const queryClient = new QueryClient();
@@ -75,7 +74,6 @@ function Router() {
       <ProtectedRoute path="/admin/reports" component={ AdminReports } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/ai-features" component={ AdminAIFeatures } allowedRoles={ ["admin"] } />
       <ProtectedRoute path="/admin/security" component={ AdminSecurity } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/alerts" component={ AdminAlerts } allowedRoles={ ["admin"] } />
 
       <Route path="/profile" component={Profile} />
       <ProtectedRoute path="/notifications" component={Notifications} allowedRoles={["user"]} />
