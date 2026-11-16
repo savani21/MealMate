@@ -14,7 +14,12 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
-      "/api": { target: "http://localhost:5000", changeOrigin: true },
+      // Use an explicit IPv4 loopback address. On some Windows setups,
+      // "localhost" resolves to IPv6 (::1), while the backend listens on IPv4.
+      '/api': {
+        target: 'http://127.0.0.1:5000',
+        changeOrigin: true,
+      },
     },
   },
 });
