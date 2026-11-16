@@ -81,10 +81,15 @@ export default function AppNavbar({ children }) {
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
 
   useEffect(() => {
-    if (!user || isAdmin) {
+    if (!user) {
       previousUnreadCount.current = null;
       setDeliveryAlert(null);
       setUnreadNotifications(0);
+      return;
+    }
+    if (isAdmin) {
+      previousUnreadCount.current = null;
+      setDeliveryAlert(null);
       return;
     }
     const loadUnreadCount = async () => {
