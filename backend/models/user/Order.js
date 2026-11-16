@@ -28,9 +28,17 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Promised ETA shown to the customer at checkout.
     deliveryTime: {
       type: Date,
       required: true,
+    },
+    // Actual completion time, recorded only after pantry sync succeeds.
+    deliveredAt: { type: Date, default: null },
+    deliveryOutcome: {
+      type: String,
+      enum: ["early", "on-time", "late"],
+      default: null,
     },
 
     status: {
