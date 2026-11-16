@@ -98,7 +98,7 @@ exports.updateThemePreference = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { $set: { "preferences.theme": theme } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     ).select("_id name email role preferences");
 
     if (!user) return res.status(404).json({ message: "User not found" });
