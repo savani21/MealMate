@@ -35,6 +35,23 @@ const USER_GROUPS = [
   },
 ];
 
+function formatNotificationDeliveryMessage(notification) {
+  const outcomeText = notification?.deliveryOutcome === "early"
+    ? "Your order arrived earlier than expected."
+    : notification?.deliveryOutcome === "late"
+      ? "Your order arrived later than scheduled."
+      : "Your order was delivered on time.";
+  const formatTime = (value) => value
+    ? new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+    : "";
+  const expected = formatTime(notification?.expectedDeliveryAt);
+  const actual = formatTime(notification?.deliveredAt);
+  const timing = expected && actual
+    ? ` Expected by ${expected}; delivered at ${actual}.`
+    : "";
+  return `${outcomeText}${timing} Your ingredients are now in your pantry.`;
+}
+
 const ADMIN_GROUPS = [
   {
     label: "Manage",
@@ -56,7 +73,7 @@ export default function AppNavbar({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [deliveryAlert, setDeliveryAlert] = useState(false);
+  const [deliveryAlert, setDeliveryAlert] = useState(null);
   const previousUnreadCount = useRef(null);
   const isAdmin = user?.role === "admin" || location.startsWith("/admin/");
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
@@ -64,7 +81,7 @@ export default function AppNavbar({ children }) {
   useEffect(() => {
     if (!user || isAdmin) {
       previousUnreadCount.current = null;
-      setDeliveryAlert(false);
+      setDeliveryAlert(null);
       setUnreadNotifications(0);
       return;
     }
@@ -79,7 +96,18 @@ export default function AppNavbar({ children }) {
         const data = await response.json();
         const nextUnreadCount = Number(data.unreadCount) || 0;
         if (previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
-          setDeliveryAlert(true);
+          const latestUnread = (data.notifications || []).find((item) => !item.read);
+          if (latestUnread?.type === "order-delivered") {
+            setDeliveryAlert({
+              title: latestUnread.title,
+              message: formatNotificationDeliveryMessage(latestUnread),
+            });
+          } else if (latestUnread) {
+            setDeliveryAlert({
+              title: latestUnread.title || "New MealMate notification",
+              message: latestUnread.message || "You have a new update. View your notifications for details.",
+            });
+          }
         }
         previousUnreadCount.current = nextUnreadCount;
         setUnreadNotifications(nextUnreadCount);
@@ -132,14 +160,14 @@ export default function AppNavbar({ children }) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-xl">
       {deliveryAlert && (
-        <div role="status" className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-2xl">
+        <div role="status" aria-live="polite" className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-2xl">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50"><Bell className="h-5 w-5 text-primary" /></span>
           <div className="min-w-0 flex-1">
-            <p className="font-bold text-gray-900">Your grocery order has arrived!</p>
-            <p className="mt-1 text-sm text-gray-500">Your delivery is complete. Check your notifications for order details.</p>
-            <button type="button" onClick={() => { setDeliveryAlert(false); navigate("/notifications"); }} className="mt-2 text-sm font-semibold text-primary hover:underline">View notification</button>
+            <p className="font-bold text-gray-900">{deliveryAlert.title}</p>
+            <p className="mt-1 text-sm text-gray-500">{deliveryAlert.message}</p>
+            <button type="button" onClick={() => { setDeliveryAlert(null); navigate("/notifications"); }} className="mt-2 text-sm font-semibold text-primary hover:underline">View notification</button>
           </div>
-          <button type="button" onClick={() => setDeliveryAlert(false)} aria-label="Dismiss delivery notification" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setDeliveryAlert(null)} aria-label="Dismiss notification" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
         </div>
       )}
       <div className="mx-auto flex min-h-[76px] w-full max-w-7xl items-center gap-5 px-4 sm:px-6 lg:px-8">
