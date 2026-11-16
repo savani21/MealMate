@@ -603,3 +603,83 @@
 .dark header.sticky {
   color: #e2e8f0;
 }
+
+
+/* -------------------------------------------------------------------------
+   Authenticated app theme foundation.
+   The .dark class is placed on #root only for signed-in private routes.
+   Public landing, login and signup screens therefore remain light.
+   ------------------------------------------------------------------------- */
+@layer base {
+  #root {
+    min-height: 100vh;
+  }
+
+  #root.dark {
+    min-height: 100vh;
+    background: #0b1220;
+    color: #e2e8f0;
+    color-scheme: dark;
+  }
+
+  #root.dark > * {
+    background-color: #0b1220 !important;
+    color: #e2e8f0;
+  }
+}
+
+/* Normalize legacy hard-coded page colors throughout all authenticated routes.
+   Use :not() exclusions for semantic/status colors and intentional white text. */
+@layer utilities {
+  #root.dark [class*="bg-[#f7faf7]"],
+  #root.dark [class*="bg-[#f8fafc]"],
+  #root.dark [class*="bg-[#f9fafb]"],
+  #root.dark [class*="bg-[#fffdf"],
+  #root.dark [class*="bg-[#fffc"],
+  #root.dark [class*="bg-[#ffffff]"] {
+    background-color: #111c30 !important;
+  }
+
+  #root.dark :where(h1,h2,h3,h4,p,span,small,label,li,td,th,dt,dd)
+    :not([class*="text-primary"]):not([class*="text-green"]):not([class*="text-emerald"])
+    :not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"])
+    :not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-pink"])
+    :not([class*="text-white"]) {
+    color: #e2e8f0;
+  }
+
+  #root.dark :where(h1,h2,h3,h4,p,span,small,label,li,td,th,dt,dd)[class*="text-[#"] {
+    color: #e2e8f0 !important;
+  }
+
+  #root.dark :where(.text-gray-950,.text-gray-900,.text-gray-800,.text-gray-700,
+    .text-gray-600,.text-slate-950,.text-slate-900,.text-slate-800,.text-slate-700,
+    .text-slate-600,.text-neutral-900,.text-neutral-800,.text-neutral-700,
+    .text-neutral-600) {
+    color: #e2e8f0 !important;
+  }
+
+  #root.dark :where(.text-gray-500,.text-gray-400,.text-slate-500,.text-slate-400,
+    .text-neutral-500,.text-neutral-400) {
+    color: #a8b6c9 !important;
+  }
+
+  #root.dark :where(input,textarea,select) {
+    background-color: #172338 !important;
+    color: #f1f5f9 !important;
+    border-color: #475569 !important;
+  }
+
+  #root.dark :where(input,textarea)::placeholder {
+    color: #a8b6c9 !important;
+    opacity: 1;
+  }
+
+  #root.dark :where(table,th,td) {
+    border-color: #334155;
+  }
+
+  #root.dark :where(.bg-white,.bg-gray-50,.bg-gray-100,.bg-slate-50,.bg-slate-100) {
+    border-color: #334155;
+  }
+}
