@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   ChefHat, Search, ChevronDown, Menu, X, CalendarDays, BookOpen,
   Heart, Package, ShoppingCart, Store, Sparkles, Bell, UserRound,
-  Settings, LogOut, LayoutDashboard, Users, BarChart3, ShieldCheck,
+  Settings, LogOut, LayoutDashboard, Users, BarChart3, ShieldCheck, FileBarChart,
 } from "lucide-react";
 
 const USER_GROUPS = [
@@ -60,6 +60,7 @@ const ADMIN_GROUPS = [
       { label: "Recipes", path: "/admin/recipes", icon: BookOpen },
       { label: "Meal Plans", path: "/admin/meal-plans", icon: CalendarDays },
       { label: "Analytics", path: "/admin/analytics", icon: BarChart3 },
+      { label: "Reports & Exports", path: "/admin/reports", icon: FileBarChart },
       { label: "AI Features", path: "/admin/ai-features", icon: Sparkles },
       { label: "Security", path: "/admin/security", icon: ShieldCheck },
     ],
