@@ -24,6 +24,22 @@ const MEAL_TIMES = {
 
 const mealOrder = ["breakfast", "lunch", "snack", "dinner"];
 
+function getNotificationMessage(item) {
+  if (item.type !== "order-delivered") return item.message;
+  const outcomeText = item.deliveryOutcome === "early"
+    ? "Your grocery order arrived earlier than expected."
+    : item.deliveryOutcome === "late"
+      ? "Your grocery order arrived later than scheduled."
+      : "Your grocery order was delivered on time.";
+  const formatTime = (value) => value
+    ? new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+    : "";
+  const expected = formatTime(item.expectedDeliveryAt);
+  const actual = formatTime(item.deliveredAt);
+  if (!expected || !actual) return item.message;
+  return `${outcomeText} Expected by ${expected; delivered at ${actual}. Your purchased ingredients have been added to your pantry.`;
+}
+
 function localDateKey(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -95,8 +111,11 @@ export default function Notifications() {
           id: item._id,
           type: item.type === "order-delivered" ? "grocery" : item.type,
           title: item.title,
-          message: item.message,
+          message: getNotificationMessage(item),
           time: new Date(item.createdAt).toLocaleString(),
+          expectedDeliveryAt: item.expectedDeliveryAt,
+          deliveredAt: item.deliveredAt,
+          deliveryOutcome: item.deliveryOutcome,
           read: item.read,
           backend: true,
         })));
