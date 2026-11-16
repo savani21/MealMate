@@ -1,6 +1,8 @@
 const MealPlan = require("../models/MealPlan");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
+const RecipeCatalog = require("../models/RecipeCatalog");
+const { generateCatalogMealPlan } = require("../services/recipeCatalogService");
 const { estimateRecipeNutrition, estimateRecipeNutritionWithUSDA, parseIngredient } = require("../services/nutritionEstimator");
 const {
   upsertGroceryListForMealPlan,
@@ -563,6 +565,19 @@ Do not include markdown or explanations outside JSON.
     if (Array.isArray(req.body.selectedDays) && req.body.selectedDays.length) {
       generatedMeals = { days: req.body.selectedDays };
       generatedBy = "user-selected";
+    } else if (req.body.previewOnly === true) {
+      // Fast path: retrieve existing validated catalogue recipes first. The
+      // current local templates remain a fallback when the catalogue has no
+      // compatible recipe for a meal/category combination.
+      generatedMeals = await generateCatalogMealPlan({
+        duration,
+        diet,
+        allowedPool,
+      });
+      generatedBy = generatedMeals ? "recipe-catalog" : "local-fallback";
+      if (!generatedMeals) {
+        generatedMeals = generateLocalMealPlan({ duration, diet, allowedPool });
+      }
     } else {
       // Try the configured AI provider for previews and direct generation.
       // If the key is missing or the provider fails, keep planning available
@@ -993,9 +1008,14 @@ exports.updateMealSelection = async (req, res) => {
     }
     let selected;
     if (recipeId) {
-      const recipe = await Recipe.findById(recipeId).lean();
+      let recipe = await Recipe.findById(recipeId).lean();
+      let isCatalogRecipe = false;
+      if (!recipe) {
+        recipe = await RecipeCatalog.findById(recipeId).lean();
+        isCatalogRecipe = Boolean(recipe);
+      }
       if (!recipe) return res.status(404).json({ success: false, message: "Recipe not found." });
-      const recipeDiet = String(recipe.diet || "").toLowerCase();
+      const recipeDiet = String(recipe.diet || recipe.dietaryTags?.[0] || "").toLowerCase();
       const planDiet = String(mealPlan.diet || "").toLowerCase();
       if (recipeDiet && recipeDiet !== "any" && recipeDiet !== planDiet) {
         return res.status(400).json({ success: false, message: "This recipe does not match your meal plan diet." });
@@ -1004,9 +1024,11 @@ exports.updateMealSelection = async (req, res) => {
         name: recipe.name,
         description: recipe.description || "Selected from MealMate recipes",
         prepTime: recipe.prepTime || "",
-        ingredients: (recipe.ingredients || []).map((name) => ({ name, quantity: "as needed" })),
+        ingredients: (recipe.ingredients || []).map((item) => typeof item === "string" ? ({ name: item, quantity: "quantity not provided" }) : ({ name: item.name, quantity: item.quantity || "quantity not provided" })),
         servings: Number(recipe.servings) || 1,
         nutrition: recipe.nutrition || null,
+        recipeCatalogId: isCatalogRecipe ? String(recipe._id) : undefined,
+        image: recipe.image || "",
       };
       if (!selected.nutrition) await attachMealNutrition(selected, true);
       const options = Array.isArray(dayPlan[mealType + "Options"]) ? dayPlan[mealType + "Options"] : [];
