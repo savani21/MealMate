@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import {
   Users, ChefHat, ClipboardList, ShoppingBasket, BarChart3,
-  FileBarChart, ShieldCheck, RefreshCw, UserPlus, Utensils,
+  FileBarChart, ShieldCheck, RefreshCw, UserPlus, Utensils, Bell,
 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
@@ -134,6 +134,7 @@ export default function AdminSection() {
               <QuickLink icon={ChefHat} label="Recipe management" onClick={() => setLocation("/admin/recipes")} />
               <QuickLink icon={BarChart3} label="Analytics" onClick={() => setLocation("/admin/analytics")} />
               <QuickLink icon={FileBarChart} label="Reports & exports" onClick={() => setLocation("/admin/reports")} />
+              <QuickLink icon={Bell} label="Platform alerts" onClick={() => setLocation("/admin/alerts")} />
               <QuickLink icon={ShieldCheck} label="Security settings" onClick={() => setLocation("/admin/security")} />
             </div>
           </div>
