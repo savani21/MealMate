@@ -3,7 +3,6 @@ const Recipe = require("../../models/user/Recipe");
 const MealPlan = require("../../models/MealPlan");
 const GroceryList = require("../../models/user/GroceryList");
 const Order = require("../../models/user/Order");
-const PantryItem = require("../../models/user/PantryItem");
 const NutritionLog = require("../../models/user/NutritionLog");
 const RecipeReview = require("../../models/user/RecipeReview");
 const StoreProduct = require("../../models/store/StoreProduct");
@@ -14,7 +13,6 @@ const REPORTS = {
   mealPlans: { model: MealPlan, select: "user goal diet duration isArchived createdAt", populate: { path: "user", select: "name email" }, label: "Meal plans" },
   orders: { model: Order, select: "orderId user items totalAmount status deliveryTime deliveredAt createdAt", populate: { path: "user", select: "name email" }, label: "Orders" },
   groceryLists: { model: GroceryList, select: "user mealPlan items createdAt", populate: [{ path: "user", select: "name email" }, { path: "mealPlan", select: "goal diet duration" }], label: "Grocery lists" },
-  pantry: { model: PantryItem, select: "user name quantity unit expiryDate createdAt", populate: { path: "user", select: "name email" }, label: "Pantry items" },
   nutrition: { model: NutritionLog, select: "user mealName mealType dateKey servings calories protein carbohydrates fat nutritionSource nutritionStatus confidence createdAt", populate: { path: "user", select: "name email" }, label: "Nutrition logs" },
   reviews: { model: RecipeReview, select: "user recipe rating feedback createdAt", populate: [{ path: "user", select: "name email" }, { path: "recipe", select: "name category" }], label: "Recipe reviews" },
   products: { model: StoreProduct, select: "name category unit price stock isActive createdAt", label: "Store products" },
