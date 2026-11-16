@@ -1,8 +1,7 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Users, ChefHat, ClipboardList, ShoppingBasket, Package, Activity,
-  Star, ShoppingCart, RefreshCw, Bell, Utensils, Store, CalendarDays,
+  Users, ChefHat, ClipboardList, ShoppingCart, RefreshCw,
 } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -44,13 +43,7 @@ export default function Analytics() {
     { label: "Registered users", value: stats.totalUsers, detail: `${stats.totalAdmins} admins · ${stats.totalAccounts} accounts total`, icon: Users },
     { label: "Recipes", value: stats.totalRecipes, detail: `${stats.aiRecipes} AI · ${stats.manualRecipes} manual`, icon: ChefHat },
     { label: "Meal plans", value: stats.totalMealPlans, detail: `${stats.activeMealPlans} not archived`, icon: ClipboardList },
-    { label: "Grocery lists", value: stats.totalGroceryLists, detail: `${stats.totalGroceryItems} items · ${stats.groceryCompletionRate}% checked`, icon: ShoppingBasket },
     { label: "Orders", value: stats.totalOrders, detail: `Total order value: ₹${stats.totalOrderValue.toLocaleString("en-IN")}`, icon: ShoppingCart },
-    { label: "Pantry items", value: stats.totalPantryItems, detail: `${stats.expiringPantryItems} expiring in 7 days`, icon: Package },
-    { label: "Nutrition logs", value: stats.totalNutritionLogs, detail: `${stats.verifiedNutritionLogs} verified/manual · ${stats.estimatedNutritionLogs} estimated`, icon: Activity },
-    { label: "Active store products", value: stats.activeStoreProducts, detail: `${stats.lowStockProducts} low-stock products (≤5)`, icon: Store },
-    { label: "Recipe rating", value: stats.totalReviews ? `${stats.averageRecipeRating}/5` : "No ratings", detail: `${stats.totalReviews} reviews · ${stats.fiveStarReviews} five-star`, icon: Star },
-    { label: "Unread notifications", value: stats.unreadNotifications, detail: "Across all user accounts", icon: Bell },
   ] : [];
 
   return (
@@ -74,7 +67,7 @@ export default function Analytics() {
           <div className="rounded-2xl bg-white dark:bg-slate-900 p-8 text-gray-500">Loading platform analytics…</div>
         ) : stats && charts ? (
           <>
-            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {cards.map(({ label, value, detail, icon: Icon }) => (
                 <div key={label} className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 p-5 shadow-sm min-w-0">
                   <div className="flex items-center justify-between gap-3">
