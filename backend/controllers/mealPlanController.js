@@ -729,14 +729,16 @@ Rules:
             : optionIngredients.every((name) => name && allowedIngredientNames.has(name));
           // Reject AI candidates with missing quantities for calorie-bearing
           // ingredients; otherwise nutrition can collapse to tiny, misleading totals.
-          const quantitiesUsable = option.ingredients.every((item) => {
-            const parsed = parseIngredient(item);
-            if (!parsed || !parsed.error) return true;
-            const ingredientName = normalizeIngredientName(
-              typeof item === "string" ? item : item?.name
-            );
-            return ingredientName === "water";
-          });
+          const quantitiesUsable = option.recipeCatalogId
+            ? true
+            : option.ingredients.every((item) => {
+                const parsed = parseIngredient(item);
+                if (!parsed || !parsed.error) return true;
+                const ingredientName = normalizeIngredientName(
+                  typeof item === "string" ? item : item?.name
+                );
+                return ingredientName === "water";
+              });
           const optionText = `${option.name} ${option.ingredients
             .map((item) => typeof item === "string" ? item : item?.name || "")
             .join(" ")} `;
