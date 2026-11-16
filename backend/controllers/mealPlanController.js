@@ -86,10 +86,10 @@ async function generateWithOpenRouter(prompt, duration = 1, maxTokensOverride = 
     !configuredModel || legacyFreeModels.has(configuredModel)
       ? "openrouter/free"
       : configuredModel;
-  // Keep synchronous meal-plan requests below common hosting proxy timeouts.
-  // A local fallback is preferable to letting the gateway return an HTML 502.
-  const configuredTimeout = Number(process.env.OPENROUTER_TIMEOUT_MS) || 40000;
-  const timeoutMs = Math.min(45000, Math.max(15000, configuredTimeout));
+  const timeoutMs = Math.max(
+    75000,
+    Number(process.env.OPENROUTER_TIMEOUT_MS) || 75000
+  );
   const dayCount = Math.max(1, Math.min(7, Number(duration) || 1));
   // Three candidates for breakfast, lunch and dinner produce a sizeable JSON
   // response. A fixed 3,500-token budget truncates even short plans, while
@@ -116,9 +116,6 @@ async function generateWithOpenRouter(prompt, duration = 1, maxTokensOverride = 
       },
       body: JSON.stringify({
         model,
-        // Prefer responsive providers and allow OpenRouter to fail over when a
-        // free provider is saturated.
-        provider: { sort: "throughput", allow_fallbacks: true },
         messages: [
           {
             role: "system",
@@ -625,12 +622,6 @@ Rules:
                 lastError = new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
               } catch (error) {
                 lastError = error;
-                // A timeout is unlikely to improve on an immediate retry and
-                // can push the whole request beyond the hosting gateway limit.
-                if (error?.name === "TimeoutError" || error?.name === "AbortError" ||
-                    /timed out/i.test(String(error?.message || ""))) {
-                  break;
-                }
               }
             }
             if (!resultsByDay[dayNumber - 1][type]) {
