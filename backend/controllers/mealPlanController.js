@@ -573,6 +573,7 @@ Do not include markdown or explanations outside JSON.
         duration,
         diet,
         allowedPool,
+        ingredientMode,
       });
       generatedBy = generatedMeals ? "recipe-catalog" : "local-fallback";
       if (!generatedMeals) {
@@ -714,9 +715,18 @@ Rules:
           const optionIngredients = option.ingredients.map((item) =>
             normalizeIngredientName(typeof item === "string" ? item : item?.name)
           );
-          const allIngredientsAvailable = optionIngredients.every(
-            (name) => name && allowedIngredientNames.has(name)
-          );
+          // Catalogue recipes in Available + Recommended mode may contain
+          // clearly tracked shopping-list ingredients. Pantry-only recipes and
+          // AI recipes must still use only the user's permitted ingredient pool.
+          const isRecommendedCatalogOption =
+            Boolean(option.recipeCatalogId) &&
+            ingredientMode === "recommended" &&
+            Array.isArray(option.matchedIngredients) &&
+            Array.isArray(option.missingIngredients) &&
+            option.matchedIngredients.length >= 2;
+          const allIngredientsAvailable = isRecommendedCatalogOption
+            ? true
+            : optionIngredients.every((name) => name && allowedIngredientNames.has(name));
           // Reject AI candidates with missing quantities for calorie-bearing
           // ingredients; otherwise nutrition can collapse to tiny, misleading totals.
           const quantitiesUsable = option.ingredients.every((item) => {
