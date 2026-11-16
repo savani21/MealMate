@@ -14,7 +14,7 @@ async function checkLowStockAlerts() {
         message: `${product.name} has ${product.stock} unit(s) remaining.`,
         source: "Grocery store inventory",
         referenceId: String(product._id),
-        actionUrl: "/admin/recipes",
+        actionUrl: "/admin/reports",
         dedupeKey: `low-stock:${product._id}`,
       });
       if (alert) created += 1;
