@@ -611,28 +611,21 @@ Rules:
 - Return valid JSON only, with this exact shape:
 {"options":[{"name":"recipe name","description":"short description","prepTime":"20 minutes","servings":2,"ingredients":[{"name":"ingredient from permitted list","quantity":"120 g","state":"raw"}]}]}
 `;
-            let result;
-            let lastError;
-            // Retry only the failed category once.
-            for (let attempt = 1; attempt <= 2; attempt += 1) {
-              try {
-                result = await generateWithOpenRouter(categoryPrompt, 1, 12000);
-                const candidateOptions = Array.isArray(result?.options)
-                  ? result.options
-                  : Array.isArray(result?.[type + "Options"])
-                    ? result[type + "Options"]
-                    : [];
-                if (candidateOptions.length) {
-                  resultsByDay[dayNumber - 1][type] = candidateOptions;
-                  break;
-                }
-                lastError = new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
-              } catch (error) {
-                lastError = error;
+            try {
+              const result = await generateWithOpenRouter(categoryPrompt, 1, 12000);
+              const candidateOptions = Array.isArray(result?.options)
+                ? result.options
+                : Array.isArray(result?.[type + "Options"])
+                  ? result[type + "Options"]
+                  : [];
+              if (!candidateOptions.length) {
+                throw new Error(`AI returned no valid ${type} options for day ${dayNumber}.`);
               }
-            }
-            if (!resultsByDay[dayNumber - 1][type]) {
-              throw lastError || new Error(`AI failed to generate ${type} for day ${dayNumber}.`);
+              resultsByDay[dayNumber - 1][type] = candidateOptions;
+            } catch (error) {
+              // Do not repeat a slow/failed provider request. The local fallback
+              // below is preferable to making the user wait through a retry.
+              throw error;
             }
           }
         });
