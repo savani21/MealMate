@@ -254,7 +254,7 @@ export default function AppNavbar({ children }) {
               {!isAdmin && <button type="button" onClick={() => { setNotificationOpen(false); navigate("/notifications"); }} className="w-full px-4 py-3 text-sm font-bold text-primary hover:bg-green-50">View all notifications</button>}
             </div>}
           </div>
-          <button type="button" onClick={() => navigate("/profile") aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary"><UserRound className="h-5 w-5" /></button>
+          <button type="button" onClick={() => navigate("/profile")} aria-label="Profile" className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary"><UserRound className="h-5 w-5" /></button>
           <button type="button" onClick={() => navigate("/settings")} aria-label="Settings" className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-gray-50"><Settings className="h-5 w-5" /></button>
           {user && <button type="button" onClick={() => { logout(); navigate("/login"); }} aria-label="Log out" title="Log out" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-red-50 hover:text-red-600"><LogOut className="h-5 w-5" /></button>}
         </div>
