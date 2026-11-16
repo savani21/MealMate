@@ -177,29 +177,29 @@
   --elevate-2: rgba(255, 255, 255, 0.09);
 
   /* Fallback to light mode colors so nothing breaks if .dark is added */
-  --background: 210 40% 98%;
-  --foreground: 222 84% 5%;
-  --border: 214 32% 91%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 84% 5%;
-  --card-border: 214 32% 91%;
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 222 84% 5%;
-  --sidebar-border: 214 32% 91%;
+  --background: 222 47% 8%;
+  --foreground: 210 40% 96%;
+  --border: 217 32% 22%;
+  --card: 222 40% 12%;
+  --card-foreground: 210 40% 96%;
+  --card-border: 217 32% 22%;
+  --sidebar: 222 40% 12%;
+  --sidebar-foreground: 210 40% 96%;
+  --sidebar-border: 217 32% 22%;
   --sidebar-primary: 142 71% 45%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96%;
-  --sidebar-accent-foreground: 222 84% 5%;
+  --sidebar-accent: 217 32% 18%;
+  --sidebar-accent-foreground: 210 40% 96%;
   --sidebar-ring: 142 71% 45%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 84% 5%;
-  --popover-border: 214 32% 91%;
+  --popover: 222 40% 12%;
+  --popover-foreground: 210 40% 96%;
+  --popover-border: 217 32% 22%;
   --primary: 142 71% 45%;
   --primary-foreground: 0 0% 100%;
   --secondary: 142 72% 37%;
   --secondary-foreground: 0 0% 100%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 217 32% 18%;
+  --muted-foreground: 215 20% 68%;
   --accent: 38 92% 50%;
   --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
@@ -368,4 +368,19 @@
   [role="dialog"] {
     max-width: calc(100vw - 1.5rem);
   }
+}
+
+
+/* Dark theme support for older pages that use fixed Tailwind gray utilities. */
+@layer utilities {
+  .dark .bg-white { background-color: rgb(15 23 42); }
+  .dark .bg-gray-50 { background-color: rgb(15 23 42); }
+  .dark .bg-gray-100 { background-color: rgb(30 41 59); }
+  .dark .text-gray-900 { color: rgb(241 245 249); }
+  .dark .text-gray-800 { color: rgb(226 232 240); }
+  .dark .text-gray-700,
+  .dark .text-gray-600 { color: rgb(203 213 225); }
+  .dark .text-gray-500 { color: rgb(148 163 184); }
+  .dark .border-gray-100,
+  .dark .border-gray-200 { border-color: rgb(51 65 85); }
 }
