@@ -4,7 +4,6 @@ const RecipeReview = require("../../models/user/RecipeReview");
 const MealPlan = require("../../models/MealPlan");
 const GroceryList = require("../../models/user/GroceryList");
 const Order = require("../../models/user/Order");
-const PantryItem = require("../../models/user/PantryItem");
 const NutritionLog = require("../../models/user/NutritionLog");
 const StoreProduct = require("../../models/store/StoreProduct");
 const Notification = require("../../models/user/Notification");
@@ -13,8 +12,6 @@ const getStats = async (req, res) => {
   try {
     const now = new Date();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-    const sevenDaysFromNow = new Date(now);
-    sevenDaysFromNow.setDate(now.getDate() + 7);
 
     const [
       totalUsers,
@@ -29,8 +26,6 @@ const getStats = async (req, res) => {
       groceryItemStats,
       totalOrders,
       orderStats,
-      pantryItems,
-      expiringPantryItems,
       nutritionLogCount,
       nutritionAverages,
       activeStoreProducts,
@@ -62,8 +57,6 @@ const getStats = async (req, res) => {
       Order.aggregate([
         { $group: { _id: null, orderValue: { $sum: "$totalAmount" }, averageOrderValue: { $avg: "$totalAmount" } } },
       ]),
-      PantryItem.countDocuments(),
-      PantryItem.countDocuments({ expiryDate: { $gte: now, $lte: sevenDaysFromNow } }),
       NutritionLog.countDocuments(),
       NutritionLog.aggregate([
         { $group: { _id: null, averageCaloriesPerLoggedMeal: { $avg: "$calories" }, verifiedLogs: { $sum: { $cond: [{ $in: ["$nutritionStatus", ["verified", "manual"]] }, 1, 0] } }, estimatedLogs: { $sum: { $cond: [{ $in: ["$nutritionStatus", ["estimated", "partial_estimate"]] }, 1, 0] } } } },
@@ -124,8 +117,6 @@ const getStats = async (req, res) => {
         totalOrders,
         totalOrderValue: Number((orders.orderValue || 0).toFixed(2)),
         averageOrderValue: Number((orders.averageOrderValue || 0).toFixed(2)),
-        totalPantryItems: pantryItems,
-        expiringPantryItems,
         totalNutritionLogs: nutritionLogCount,
         averageCaloriesPerLoggedMeal: Number((nutrition.averageCaloriesPerLoggedMeal || 0).toFixed(1)),
         verifiedNutritionLogs: nutrition.verifiedLogs || 0,
