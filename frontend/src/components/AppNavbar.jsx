@@ -61,6 +61,7 @@ const ADMIN_GROUPS = [
       { label: "Meal Plans", path: "/admin/meal-plans", icon: CalendarDays },
       { label: "Analytics", path: "/admin/analytics", icon: BarChart3 },
       { label: "Reports & Exports", path: "/admin/reports", icon: FileBarChart },
+      { label: "Platform Alerts", path: "/admin/alerts", icon: Bell },
       { label: "AI Features", path: "/admin/ai-features", icon: Sparkles },
       { label: "Security", path: "/admin/security", icon: ShieldCheck },
     ],
