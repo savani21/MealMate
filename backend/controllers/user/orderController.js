@@ -139,7 +139,7 @@ exports.processDueOrders = async () => {
         const notificationTitle = deliveryOutcome === "early"
           ? "Your grocery order arrived early!"
           : deliveryOutcome === "late"
-            ? "Your grocery order was delivered"
+            ? "Your grocery order arrived later than expected."
             : "Your grocery order was delivered on time!";
         const notificationMessage = `Order ${order.orderId} was delivered ${outcomeLabel}. Your purchased ingredients have been added to your pantry.`;
 
