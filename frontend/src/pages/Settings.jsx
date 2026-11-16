@@ -2,29 +2,52 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Bell, Moon, Save, RotateCcw } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Settings() {
+  const { user, updateTheme } = useAuth();
   const [notifications, setNotifications] = useState(localStorage.getItem("notifications") !== "false");
-  const [darkMode, setDarkMode] = useState(localStorage.getItem("darkMode") === "true");
+  const [darkMode, setDarkMode] = useState(user?.preferences?.theme === "dark");
+  const [savingTheme, setSavingTheme] = useState(false);
+  const [themeError, setThemeError] = useState("");
 
-  // Apply theme immediately and preserve it when navigating between pages.
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", darkMode);
-    localStorage.setItem("darkMode", String(darkMode));
-  }, [darkMode]);
+    setDarkMode(user?.preferences?.theme === "dark");
+  }, [user?._id, user?.preferences?.theme]);
+
+  const handleThemeChange = async () => {
+    const nextTheme = darkMode ? "light" : "dark";
+    setSavingTheme(true);
+    setThemeError("");
+    try {
+      await updateTheme(nextTheme);
+      setDarkMode(nextTheme === "dark");
+    } catch (error) {
+      setThemeError(error.message || "Could not save your theme preference.");
+    } finally {
+      setSavingTheme(false);
+    }
+  };
 
   const saveSettings = () => {
     localStorage.setItem("notifications", String(notifications));
-    localStorage.setItem("darkMode", String(darkMode));
     alert("Settings saved successfully");
   };
 
-  const resetSettings = () => {
+  const resetSettings = async () => {
     setNotifications(true);
-    setDarkMode(false);
     localStorage.setItem("notifications", "true");
-    localStorage.setItem("darkMode", "false");
-    alert("Settings reset successfully");
+    setSavingTheme(true);
+    setThemeError("");
+    try {
+      await updateTheme("light");
+      setDarkMode(false);
+      alert("Settings reset successfully");
+    } catch (error) {
+      setThemeError(error.message || "Could not reset your theme preference.");
+    } finally {
+      setSavingTheme(false);
+    }
   };
 
   return (
@@ -58,17 +81,18 @@ export default function Settings() {
                 <div className="w-11 h-11 rounded-xl bg-green-50 flex items-center justify-center"><Moon className="w-5 h-5 text-primary" /></div>
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-slate-100">Dark Mode</h2>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Switch between light and dark appearance.</p>
+                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">This preference is saved to your account and only applies while you are logged in.</p>
                 </div>
               </div>
-              <button type="button" role="switch" aria-checked={darkMode} aria-label="Toggle dark mode" onClick={() => setDarkMode(value => !value)} className={"relative w-12 h-6 rounded-full transition " + (darkMode ? "bg-primary" : "bg-gray-300")}>
+              <button type="button" role="switch" aria-checked={darkMode} aria-label="Toggle dark mode" disabled={savingTheme} onClick={handleThemeChange} className={"relative w-12 h-6 rounded-full transition disabled:opacity-60 " + (darkMode ? "bg-primary" : "bg-gray-300")}>
                 <span className={"absolute top-1 w-4 h-4 bg-white rounded-full transition " + (darkMode ? "left-7" : "left-1")} />
               </button>
             </div>
+            {themeError && <p role="alert" className="mt-3 text-sm text-red-600">{themeError}</p>}
           </div>
           <div className="p-6 md:p-8 flex flex-col sm:flex-row gap-3">
             <button type="button" onClick={saveSettings} className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-semibold hover:opacity-90 transition"><Save className="w-5 h-5" />Save Settings</button>
-            <button type="button" onClick={resetSettings} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 py-3 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition"><RotateCcw className="w-5 h-5" />Reset</button>
+            <button type="button" disabled={savingTheme} onClick={resetSettings} className="flex-1 flex items-center justify-center gap-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 py-3 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-slate-700 transition disabled:opacity-60"><RotateCcw className="w-5 h-5" />Reset</button>
           </div>
         </div>
       </main>
