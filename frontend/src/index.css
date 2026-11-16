@@ -640,15 +640,22 @@
     background-color: #111c30 !important;
   }
 
-  #root.dark :where(h1,h2,h3,h4,p,span,small,label,li,td,th,dt,dd)
-   :not([class*="text-primary"]):not([class*="text-green"]):not([class*="text-emerald"])
-   :not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"])
-   :not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-pink"])
-   :not([class*="text-white"]) {
+  #root.dark :where(h1,h2,h3,h4,p,span,small,label,li,td,th,dt,dd,div)
+    :not([class*="text-primary"])
+    :not([class*="text-green"])
+    :not([class*="text-emerald"])
+    :not([class*="text-red"])
+    :not([class*="text-amber"])
+    :not([class*="text-orange"])
+    :not([class*="text-blue"])
+    :not([class*="text-purple"])
+    :not([class*="text-pink"])
+    :not([class*="text-white"]) {
     color: #e2e8f0;
   }
 
-  #root.dark :where(h1,h2,h3,h4,p,span,small,label,li,td,th,dt,dd)[class*="text-[#"] {
+  /* Replace arbitrary fixed text colors too; semantic Tailwind color classes above remain intact. */
+  #root.dark [class*="text-[#"] {
     color: #e2e8f0 !important;
   }
 
