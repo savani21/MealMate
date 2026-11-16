@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "test": "node --test",
-    "start": "node server.js",
-    "recipes:import": "node scripts/importTheMealDB.js"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
