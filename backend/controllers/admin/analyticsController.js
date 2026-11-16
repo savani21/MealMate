@@ -6,7 +6,6 @@ const GroceryList = require("../../models/user/GroceryList");
 const Order = require("../../models/user/Order");
 const NutritionLog = require("../../models/user/NutritionLog");
 const StoreProduct = require("../../models/store/StoreProduct");
-const Notification = require("../../models/user/Notification");
 
 const getStats = async (req, res) => {
   try {
@@ -38,7 +37,6 @@ const getStats = async (req, res) => {
       orderStatuses,
       recentUsers,
       recentMealPlans,
-      unreadNotifications,
     ] = await Promise.all([
       User.countDocuments({ role: "user" }),
       User.countDocuments({ role: "admin" }),
@@ -90,7 +88,6 @@ const getStats = async (req, res) => {
       ]),
       User.find().select("name email role createdAt").sort({ createdAt: -1 }).limit(8).lean(),
       MealPlan.find().populate("user", "name email").sort({ createdAt: -1 }).limit(8).lean(),
-      Notification.countDocuments({ read: false }),
     ]);
 
     const review = reviewStats[0] || {};
@@ -127,7 +124,6 @@ const getStats = async (req, res) => {
         totalReviews: review.totalReviews || 0,
         fiveStarReviews: review.fiveStar || 0,
         oneStarReviews: review.oneStar || 0,
-        unreadNotifications,
       },
       charts: {
         userGrowth: userGrowth.map((item) => ({ month: item._id, users: item.count })),
