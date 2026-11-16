@@ -641,10 +641,10 @@
   }
 
   #root.dark :where(h1,h2,h3,h4,p,span,small,label,li,td,th,dt,dd)
-    :not([class*="text-primary"]):not([class*="text-green"]):not([class*="text-emerald"])
-    :not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"])
-    :not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-pink"])
-    :not([class*="text-white"]) {
+   :not([class*="text-primary"]):not([class*="text-green"]):not([class*="text-emerald"])
+   :not([class*="text-red"]):not([class*="text-amber"]):not([class*="text-orange"])
+   :not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-pink"])
+   :not([class*="text-white"]) {
     color: #e2e8f0;
   }
 
