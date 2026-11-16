@@ -7,6 +7,7 @@ const GroceryList = require("../../models/user/GroceryList");
 const PantryItem = require("../../models/user/PantryItem");
 const Notification = require("../../models/user/Notification");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
+const { createAdminAlert } = require("../../services/adminAlertService");
 
 
 
@@ -184,6 +185,7 @@ exports.processDueOrders = async () => {
           { $set: { inventorySyncing: false }, $unset: { inventorySyncingAt: 1 } }
         );
         console.error(`Delivery inventory sync failed for ${order.orderId}:`, error.message);
+        await createAdminAlert({ type: "order-issue", severity: "critical", title: "Order delivery processing failed", message: `Order ${order.orderId} could not be completed: ${String(error.message || "Unknown error").slice(0, 650)}`, source: "Order delivery processor", referenceId: String(order._id), actionUrl: "/admin/alerts", dedupeKey: `order-delivery-failure:${order._id}` });
         break;
       }
     }

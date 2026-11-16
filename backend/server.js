@@ -15,6 +15,7 @@ const nutritionRoutes = require("./routes/user/nutritionRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
 const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
 const { processMealReminders } = require("./services/mealReminderService");
+const { checkLowStockAlerts } = require("./services/lowStockAlertService");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
 const adminRecipeRoutes = require("./routes/admin/recipeRoutes");
@@ -24,6 +25,7 @@ const adminAnalyticsRoutes = require("./routes/admin/analyticsRoutes");
 const adminReportRoutes = require("./routes/admin/reportRoutes");
 const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
+const adminAlertRoutes = require("./routes/admin/alertRoutes");
 
 app.use(cors({ origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",").map((value) => value.trim()) : true }));
 app.use(express.json());
@@ -61,6 +63,17 @@ mongoose
     await checkMealReminders();
     setInterval(checkMealReminders, 60 * 1000);
 
+    const monitorLowStock = async () => {
+      try {
+        const result = await checkLowStockAlerts();
+        if (result.created) console.log(`Created ${result.created} admin low-stock alert(s).`);
+      } catch (error) {
+        console.error("Admin low-stock monitor failed:", error);
+      }
+    };
+    await monitorLowStock();
+    setInterval(monitorLowStock, 60 * 60 * 1000);
+
     // Check due grocery deliveries in the background, even when the user is offline.
     setInterval(() => processDueOrders().catch((error) => console.error("Order processing failed:", error)), 15000);
   })
@@ -87,6 +100,7 @@ app.use("/api/admin/analytics", adminAnalyticsRoutes);
 app.use("/api/admin/reports", adminReportRoutes);
 app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
+app.use("/api/admin/alerts", adminAlertRoutes);
 
 const PORT = process.env.PORT || 5000;
 
