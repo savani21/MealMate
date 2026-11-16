@@ -1,8 +1,7 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Users, ChefHat, ClipboardList, ShoppingBasket, Activity,
-  Star, ShoppingCart, RefreshCw, Store,
+  Users, ChefHat, ClipboardList, ShoppingCart, RefreshCw,
 } from "lucide-react";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -44,11 +43,7 @@ export default function Analytics() {
     { label: "Registered users", value: stats.totalUsers, detail: `${stats.totalAdmins} admins · ${stats.totalAccounts} accounts total`, icon: Users },
     { label: "Recipes", value: stats.totalRecipes, detail: `${stats.aiRecipes} AI · ${stats.manualRecipes} manual`, icon: ChefHat },
     { label: "Meal plans", value: stats.totalMealPlans, detail: `${stats.activeMealPlans} not archived`, icon: ClipboardList },
-    { label: "Grocery lists", value: stats.totalGroceryLists, detail: `${stats.totalGroceryItems} items · ${stats.groceryCompletionRate}% checked`, icon: ShoppingBasket },
     { label: "Orders", value: stats.totalOrders, detail: `Total order value: ₹${stats.totalOrderValue.toLocaleString("en-IN")}`, icon: ShoppingCart },
-    { label: "Nutrition logs", value: stats.totalNutritionLogs, detail: `${stats.verifiedNutritionLogs} verified/manual · ${stats.estimatedNutritionLogs} estimated`, icon: Activity },
-    { label: "Active store products", value: stats.activeStoreProducts, detail: `${stats.lowStockProducts} low-stock products (≤5)`, icon: Store },
-    { label: "Recipe rating", value: stats.totalReviews ? `${stats.averageRecipeRating}/5` : "No ratings", detail: `${stats.totalReviews} reviews · ${stats.fiveStarReviews} five-star`, icon: Star },
   ] : [];
 
   return (
