@@ -5,27 +5,13 @@ const jwt = require("jsonwebtoken");
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
-
     if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
+      return res.status(400).json({ message: "User already exists" });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
-
-    // Don't send password to frontend
+    const user = await User.create({ name, email, password: hashedPassword });
     const userResponse = await User.findById(user._id).select("-password");
 
     res.status(201).json({
@@ -34,47 +20,25 @@ exports.register = async (req, res) => {
       user: userResponse,
     });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    res.status(500).json({ message: err.message });
   }
 };
 
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
-    // Find user
     const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    // Compare password
     const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(400).json({ message: "Invalid Password" });
 
-    if (!match) {
-      return res.status(400).json({
-        message: "Invalid Password",
-      });
-    }
-
-    // Create JWT with user ID and role
     const token = jwt.sign(
-      {
-        id: user._id,
-        role: user.role,
-      },
+      { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "7d",
-      }
+      { expiresIn: "7d" }
     );
 
-    // Send user information without password
     res.json({
       success: true,
       token,
@@ -83,12 +47,11 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        preferences: { theme: user.preferences?.theme || "light" },
       },
     });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    res.status(500).json({ message: err.message });
   }
 };
 
@@ -96,53 +59,52 @@ exports.updateProfile = async (req, res) => {
   try {
     const { foodPreference } = req.body;
     const allowedPreferences = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"];
-
     if (!allowedPreferences.includes(foodPreference)) {
-      return res.status(400).json({
-        message: "Invalid food preference",
-      });
+      return res.status(400).json({ message: "Invalid food preference" });
     }
 
     const user = await User.findByIdAndUpdate(
       req.user.id,
       { foodPreference },
-      { returnDocument: 'after', runValidators: true }
+      { returnDocument: "after", runValidators: true }
     ).select("-password");
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      user,
-    });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ success: true, user });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    res.status(500).json({ message: err.message });
   }
 };
 
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.status(200).json({ success: true, user });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
+exports.updateThemePreference = async (req, res) => {
+  try {
+    const { theme } = req.body;
+    if (!["light", "dark"].includes(theme)) {
+      return res.status(400).json({ message: "Theme must be light or dark" });
     }
 
-    res.status(200).json({
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { "preferences.theme": theme } },
+      { new: true, runValidators: true }
+    ).select("_id name email role preferences");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({
       success: true,
-      user,
+      preferences: { theme: user.preferences?.theme || "light" },
     });
   } catch (err) {
-    res.status(500).json({
-      message: err.message,
-    });
+    return res.status(500).json({ message: err.message });
   }
 };
