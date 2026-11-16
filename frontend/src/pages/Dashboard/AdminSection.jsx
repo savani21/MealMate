@@ -11,6 +11,7 @@ import {
   UserPlus,
   ClipboardList,
   Sparkles,
+  FileBarChart,
 } from "lucide-react";
 
 export default function AdminSection() {
@@ -211,9 +212,18 @@ export default function AdminSection() {
           <AdminCard
             icon={<Sparkles className="w-6 h-6 text-primary" />}
             title="AI Features"
-            description="Check the Gemini AI connection, see AI-generated content and test the assistant."
+            description="Check the OpenRouter AI connection, see AI-generated content and test the assistant."
             button="Manage AI"
             onClick={() => setLocation("/admin/ai-features")}
+          />
+
+          {/* Reports */}
+          <AdminCard
+            icon={<FileBarChart className="w-6 h-6 text-primary" />}
+            title="Reports & Exports"
+            description="Generate date-filtered reports for users, recipes, meal plans, orders, pantry, nutrition and reviews."
+            button="Generate Reports"
+            onClick={() => setLocation("/admin/reports")}
           />
 
           {/* Security */}
