@@ -4,7 +4,7 @@ import { staggerContainer } from '../AnimatedSection';
 import { toast } from '@/hooks/use-toast';
 export function HeroSection() {
     const words = ['Plan', 'Better.', 'Eat', 'Healthier.', 'Waste', 'Less.'];
-    return (<section id="home" className="relative min-h-[100dvh] pt-32 pb-20 flex items-center overflow-hidden">
+    return (<section id="home" className="relative min-h-0 lg:min-h-[100dvh] pt-28 sm:pt-32 pb-12 sm:pb-20 flex items-center overflow-hidden">
       {/* Background blobs */}
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-green-50 to-transparent -z-10 blur-3xl opacity-60"/>
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -z-10"/>
@@ -19,7 +19,7 @@ export function HeroSection() {
               <span className="text-sm font-medium text-green-800">AI-Powered Meal Planning</span>
             </motion.div>
 
-            <motion.h1 className="text-6xl md:text-7xl font-black leading-[1.1] tracking-tight mb-6 text-gray-900" variants={staggerContainer} initial="hidden" animate="visible">
+            <motion.h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.1] tracking-tight mb-6 text-gray-900" variants={staggerContainer} initial="hidden" animate="visible">
               <span className="block">Plan Better.</span>
               <span className="block text-primary">Eat Healthier.</span>
               <span className="block relative">
@@ -30,22 +30,22 @@ export function HeroSection() {
               </span>
             </motion.h1>
 
-            <motion.p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}>
+            <motion.p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-7 sm:mb-10 max-w-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5, duration: 0.8 }}>
               MealMate AI helps you create personalized meal plans, manage your pantry, generate grocery lists, monitor nutrition, reduce food waste, and receive AI-powered recipe recommendations.
             </motion.p>
 
-            <motion.div className="flex flex-wrap items-center gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }}>
-              <button className="bg-primary text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-primary/90 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-testid="hero-cta-primary" onClick={() => toast({ title: "You're on the list! 🎉", description: "Thanks for your interest — we'll email you the moment MealMate AI opens up." })}>
+            <motion.div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7, duration: 0.5 }}>
+              <button className="bg-primary text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-primary/90 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-testid="hero-cta-primary" onClick={() => toast({ title: "You're on the list! 🎉", description: "Thanks for your interest — we'll email you the moment MealMate AI opens up." })}>
                 Get Started Free
               </button>
-              <button className="group flex items-center gap-2 px-8 py-4 rounded-full text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}>
+              <button className="group flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}>
                 Explore Recipes
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
               </button>
             </motion.div>
 
             {/* Trust Indicators */}
-            <motion.div className="mt-12 flex items-center gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 0.8 }}>
+            <motion.div className="mt-8 sm:mt-12 flex items-center gap-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1, duration: 0.8 }}>
               <div className="flex -space-x-3">
                 {[1, 2, 3, 4].map((i) => (<div key={i} className={`w-10 h-10 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white shadow-sm ${i === 1 ? 'bg-gradient-to-br from-green-400 to-emerald-600' :
                 i === 2 ? 'bg-gradient-to-br from-amber-400 to-orange-500' :
@@ -61,8 +61,8 @@ export function HeroSection() {
           </div>
 
           {/* Right Side: CSS Mockup */}
-          <div className="relative h-[600px] w-full flex items-center justify-center lg:justify-end perspective-1000">
-            <motion.div className="relative w-72 md:w-80 h-[580px] bg-white border-[8px] border-gray-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col" initial={{ opacity: 0, rotateY: 20, scale: 0.9, x: 20 }} animate={{ opacity: 1, rotateY: 0, scale: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}>
+          <div className="relative mt-4 sm:mt-8 lg:mt-0 h-[540px] sm:h-[600px] w-full min-w-0 flex items-center justify-center lg:justify-end perspective-1000">
+            <motion.div className="relative w-64 sm:w-72 md:w-80 h-[520px] sm:h-[580px] bg-white border-[8px] border-gray-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col" initial={{ opacity: 0, rotateY: 20, scale: 0.9, x: 20 }} animate={{ opacity: 1, rotateY: 0, scale: 1, x: 0 }} transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}>
               {/* Phone Notch */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-gray-900 rounded-b-2xl z-20"/>
               
@@ -136,17 +136,17 @@ export function HeroSection() {
             </motion.div>
 
             {/* Floating Food Icons */}
-            <motion.div className="absolute top-[22%] left-[calc(100%-30rem)] bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}>
+            <motion.div className="absolute top-[12%] sm:top-[22%] left-0 sm:left-[calc(100%-30rem)] bg-white p-2.5 sm:p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, -15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}>
               <div className="bg-green-100 p-2 rounded-lg"><Salad className="w-5 h-5 text-green-600"/></div>
               <span className="text-sm font-semibold text-gray-800 pr-2">Salad</span>
             </motion.div>
 
-            <motion.div className="absolute bottom-1/4 -right-8 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}>
+            <motion.div className="absolute bottom-[16%] sm:bottom-1/4 right-0 sm:-right-8 bg-white p-2.5 sm:p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30" animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut", delay: 1 }}>
               <div className="bg-orange-100 p-2 rounded-lg"><Carrot className="w-5 h-5 text-orange-600"/></div>
               <span className="text-sm font-semibold text-gray-800 pr-2">Carrot</span>
             </motion.div>
 
-            <motion.div className="absolute top-1/2 -right-16 bg-white p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30 hidden md:flex" animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 0.5 }}>
+            <motion.div className="absolute top-1/2 right-0 lg:-right-16 bg-white p-2.5 sm:p-3 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-2 z-30 hidden md:flex" animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut", delay: 0.5 }}>
               <div className="bg-red-100 p-2 rounded-lg"><Apple className="w-5 h-5 text-red-600"/></div>
               <span className="text-sm font-semibold text-gray-800 pr-2">Apple</span>
             </motion.div>
