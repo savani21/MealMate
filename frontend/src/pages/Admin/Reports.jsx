@@ -134,19 +134,40 @@ export default function AdminReports() {
               <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl border border-gray-200 dark:border-slate-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-slate-200"><Printer className="h-4 w-4" /> Print / Save PDF</button>
             </div>
           </section>
-          <section className="rounded-2xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 p-5 overflow-hidden">
-            <div className="flex items-center gap-2 mb-4"><FileText className="h-5 w-5 text-primary" /><h2 className="font-bold text-gray-900 dark:text-slate-100">Report preview</h2></div>
-            {report.rows.length ? <div className="overflow-x-auto max-h-[560px] overflow-y-auto">
-              <table className="w-full text-sm text-left">
+          <section className="report-print-section rounded-2xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 p-5">
+            <div className="hidden print:block mb-6 border-b border-gray-300 pb-4 text-gray-900">
+              <h1 className="text-2xl font-black tracking-tight">MealMate</h1>
+              <h2 className="mt-2 text-lg font-bold">{report.report.title} report</h2>
+              <p className="mt-2 text-sm">From date: {report.report.from || "All dates"}</p>
+              <p className="text-sm">To date: {report.report.to || "All dates"}</p>
+              <p className="mt-1 text-xs">Records: {report.rows.length.toLocaleString()} · Generated: {new Date(report.report.generatedAt).toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-2 mb-4 print:hidden"><FileText className="h-5 w-5 text-primary" /><h2 className="font-bold text-gray-900 dark:text-slate-100">Report preview</h2></div>
+            {report.rows.length ? <div className="report-table-scroll overflow-x-auto max-h-[560px] overflow-y-auto">
+              <table className="report-data-table w-full text-sm text-left">
                 <thead className="sticky top-0 bg-gray-50 dark:bg-slate-800 text-gray-600 dark:text-slate-300"><tr>{Object.keys(flattenRow(report.rows[0])).map((key) => <th key={key} className="px-3 py-3 whitespace-nowrap font-semibold">{key}</th>)}</tr></thead>
-                <tbody>{report.rows.slice(0, 100).map((row, index) => { const flat = flattenRow(row); return <tr key={row._id || index} className="border-t border-gray-100 dark:border-slate-800">{Object.keys(flattenRow(report.rows[0])).map((key) => <td key={key} className="px-3 py-3 max-w-[260px] truncate text-gray-700 dark:text-slate-300">{cellValue(flat[key]) || "—"}</td>)}</tr>; })}</tbody>
+                <tbody>{report.rows.map((row, index) => { const flat = flattenRow(row); return <tr key={row._id || index} className="border-t border-gray-100 dark:border-slate-800">{Object.keys(flattenRow(report.rows[0])).map((key) => <td key={key} className="px-3 py-3 max-w-[260px] truncate text-gray-700 dark:text-slate-300">{cellValue(flat[key]) || "—"}</td>)}</tr>; })}</tbody>
               </table>
-              {report.rows.length > 100 && <p className="text-xs text-gray-400 p-3">Preview shows first 100 rows. CSV export includes all {report.rows.length.toLocaleString()} rows.</p>}
             </div> : <p className="text-sm text-gray-500 py-8 text-center">No records found for this report and date range.</p>}
           </section>
         </>}
       </main>
-      <style>{`@media print { header, nav, button, select, input { display: none !important; } main { max-width: none !important; padding: 0 !important; } section { break-inside: avoid; box-shadow: none !important; } body { background: white !important; } }`}</style>
+      <style>{`@page { size: auto; margin: 14mm; }
+        @media print {
+          body { background: white !important; color: #111827 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          header, nav, button, select, input, main > header, main > section:not(.report-print-section) { display: none !important; }
+          main { display: block !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
+          .report-print-section { display: block !important; overflow: visible !important; max-height: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; break-inside: auto !important; }
+          .report-table-scroll { display: block !important; overflow: visible !important; max-height: none !important; height: auto !important; }
+          .report-data-table { width: 100% !important; border-collapse: collapse !important; font-size: 9pt !important; }
+          .report-data-table thead { display: table-header-group !important; position: static !important; }
+          .report-data-table tr { break-inside: avoid !important; page-break-inside: avoid !important; }
+          .report-data-table th, .report-data-table td { color: #111827 !important; border: 1px solid #d1d5db !important; padding: 5px !important; white-space: normal !important; overflow-wrap: anywhere !important; max-width: none !important; }
+          .report-data-table td { overflow: visible !important; text-overflow: clip !important; }
+          .print\\:block { display: block !important; }
+          .print\\:hidden { display: none !important; }
+        }
+      `}</style>
     </div>
   );
 }
