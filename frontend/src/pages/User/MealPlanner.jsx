@@ -131,7 +131,6 @@ export default function MealPlanner() {
 
   const generatePlan = async () => {
     if (!goal || !diet) { alert("Please select your goal and diet type."); return; }
-    if (pantryItems.length === 0) { alert("Please add ingredients to My Kitchen → Pantry first, then select the items you want to use."); return; }
     if (getAvailableIngredients().length === 0) { alert("Enter your available ingredients first."); return; }
     try {
       setLoading(true);
@@ -303,7 +302,7 @@ export default function MealPlanner() {
                 <span className="shrink-0 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-primary">Select ingredients</span>
               </button>
               
-              {pantryItems.length === 0 && !pantryLoading && <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. Add ingredients in My Kitchen → Pantry before planning meals.</p>}
+              {getAvailableIngredients().length === 0 && !pantryLoading && <p className="mt-2 rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">No ingredients selected yet. Select pantry items or add ingredients above before planning meals.</p>}
             </div>
             <div className="md:col-span-2">
               <label htmlFor="ingredient-mode" className="mb-1.5 block text-sm font-semibold text-gray-700">Ingredient Preference</label>
