@@ -1,7 +1,34 @@
 const Notification = require("../../models/user/Notification");
+const Order = require("../../models/user/Order");
 
 exports.getMyNotifications = async (req, res) => {
   try {
+    // Recovery path: ensure every active order has a persisted placement
+    // notification, even if the checkout notification write previously failed.
+    const activeOrders = await Order.find({
+      user: req.user.id,
+      status: { $ne: "delivered" },
+    }).select("_id orderId deliveryTime createdAt").lean();
+
+    for (const order of activeOrders) {
+      await Notification.updateOne(
+        { user: req.user.id, type: "order-placed", referenceId: String(order._id) },
+        {
+          $setOnInsert: {
+            user: req.user.id,
+            type: "order-placed",
+            referenceId: String(order._id),
+            title: "Your grocery order has been placed!",
+            message: `Order ${order.orderId} is confirmed. Your estimated delivery is ${new Date(order.deliveryTime).toLocaleString()}.`,
+            expectedDeliveryAt: order.deliveryTime,
+            read: false,
+            createdAt: order.createdAt || new Date(),
+          },
+        },
+        { upsert: true }
+      );
+    }
+
     const notifications = await Notification.find({ user: req.user.id })
       .sort({ createdAt: -1 })
       .limit(100)
