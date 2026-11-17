@@ -2,6 +2,10 @@ const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 const { DIET_FORBIDDEN } = require("./validationService");
 
 // Deterministic pantry-only recipe catalogue and fallback generator.
+function makeIngredient(name, quantity) {
+  return { name, quantity };
+}
+
 const CANONICAL_RECIPE_INGREDIENTS = {
   "vegetable pulao": [
     ["Rice", "1/2 cup"], ["Mixed vegetables (carrot, peas, beans)", "3/4 cup"],
