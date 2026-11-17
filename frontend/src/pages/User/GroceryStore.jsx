@@ -522,7 +522,7 @@ export default function GroceryStore() {
                             ) : matched ? (
                               <button type="button" onClick={() => goToStoreProduct(matchedProducts[0])} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">Buy</button>
                             ) : (
-                              <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">Not in store</span>
+                              <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">Currently unavailable</span>
                             )}
                           </div>
                         );
@@ -536,7 +536,7 @@ export default function GroceryStore() {
                       const matchingProducts = products.filter((product) => productMatchesIngredient(product, item.name));
                       const storeMatch = matchingProducts.length > 0;
                       const inCart = matchingProducts.some((product) => isProductInCart(product));
-                      const statusLabel = available ? "In pantry" : inCart ? "In cart" : storeMatch ? "Add failed" : "Not in store";
+                      const statusLabel = available ? "In pantry" : inCart ? "In cart" : storeMatch ? "Add failed" : "Currently unavailable";
                       return (
                         <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
                           <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
@@ -547,7 +547,7 @@ export default function GroceryStore() {
                           ) : storeMatch ? (
                             <button type="button" onClick={() => goToStoreProduct(matchingProducts[0])} className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white hover:opacity-90">Buy</button>
                           ) : (
-                            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">Not in store</span>
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">Currently unavailable</span>
                           )}
                         </div>
                       );
