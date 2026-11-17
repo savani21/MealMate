@@ -387,7 +387,7 @@ export default function MealPlanner() {
                       <span className="shrink-0 text-xs text-gray-400">{item.quantity} {item.unit}</span>
                     </label>)}
                   </div>
-                ) : <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. You can still add ingredients below, or add pantry items in My Kitchen → Pantry.</p>}
+                ) : {getAvailableIngredients().length === 0 && <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. You can still add ingredients below, or add pantry items in My Kitchen → Pantry.</p>}}
                 <div className="mt-5">
                   <label className="mb-2 block text-sm font-semibold text-gray-700">Add another ingredient</label>
                   <div className="flex flex-col gap-2 sm:flex-row">
