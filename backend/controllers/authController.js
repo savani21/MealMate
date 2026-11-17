@@ -6,7 +6,7 @@ const { createAdminAlert } = require("../services/adminAlertService");
 // Used for unknown accounts so login attempts perform a password hash comparison
 // before returning the same response as an incorrect password.
 const DUMMY_PASSWORD_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
-const EMAIL_PATTERN = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validPassword(password) {
   return typeof password === "string" && password.length >= 8 && Buffer.byteLength(password, "utf8") <= 72;
