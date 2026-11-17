@@ -241,6 +241,22 @@ exports.checkout = async (req, res) => {
       deliveryTime,
     });
 
+    // Persist an immediate in-app confirmation after successful checkout.
+    // A notification failure must not invalidate an order that was already created.
+    try {
+      await Notification.create({
+        user: req.user.id,
+        type: "order-placed",
+        referenceId: String(order._id),
+        title: "Your grocery order has been placed!",
+        message: `Order ${order.orderId} is confirmed. Your estimated delivery is ${new Date(order.deliveryTime).toLocaleString()}.`,
+        expectedDeliveryAt: order.deliveryTime,
+        read: false,
+      });
+    } catch (notificationError) {
+      console.error("Order placed notification could not be created:", notificationError);
+    }
+
     // A completed purchase satisfies matching ingredients in every meal-plan
     // grocery list, so they are not offered for purchase again.
     try {
