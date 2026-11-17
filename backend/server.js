@@ -1,5 +1,3 @@
-const dns = require('dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -27,57 +25,28 @@ const adminAiRoutes = require("./routes/admin/aiRoutes");
 const adminSecurityRoutes = require("./routes/admin/securityRoutes");
 const adminAlertRoutes = require("./routes/admin/alertRoutes");
 
-app.use(cors({ origin: process.env.CLIENT_URL ? process.env.CLIENT_URL.split(",").map((value) => value.trim()) : true }));
-app.use(express.json());
+if (!process.env.JWT_SECRET || !process.env.JWT_SECRET.trim()) {
+  throw new Error("JWT_SECRET is required. Set it in backend/.env before starting MealMate.");
+}
+if (!process.env.MONGO_URI || !process.env.MONGO_URI.trim()) {
+  throw new Error("MONGO_URI is required. Set it in backend/.env before starting MealMate.");
+}
+
+app.set("trust proxy", 1);
+app.use(cors({
+  origin: process.env.CLIENT_URL
+    ? process.env.CLIENT_URL.split(",").map((value) => value.trim())
+    : true,
+}));
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => {
   const connected = mongoose.connection.readyState === 1;
-  res.status(connected ? 200 : 503).json({ status: connected ? "ok" : "starting", database: connected ? "connected" : "disconnected" });
+  res.status(connected ? 200 : 503).json({
+    status: connected ? "ok" : "starting",
+    database: connected ? "connected" : "disconnected",
+  });
 });
-
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(async () => {
-    console.log("MongoDB Connected");
-    await processDueOrders();
-    // Persist two-day pantry expiry reminders even when the user is not on the app.
-    const checkPantryExpiries = async () => {
-      try {
-        const result = await createPantryExpiryNotifications();
-        if (result.created) console.log(`Created ${result.created} pantry expiry reminder(s).`);
-      } catch (error) {
-        console.error("Pantry expiry notification check failed:", error);
-      }
-    };
-    await checkPantryExpiries();
-    setInterval(checkPantryExpiries, 60 * 60 * 1000);
-
-    const checkMealReminders = async () => {
-      try {
-        const result = await processMealReminders();
-        if (result.created) console.log(`Created ${result.created} meal reminder(s).`);
-      } catch (error) {
-        console.error("Meal reminder check failed:", error);
-      }
-    };
-    await checkMealReminders();
-    setInterval(checkMealReminders, 60 * 1000);
-
-    const monitorLowStock = async () => {
-      try {
-        const result = await checkLowStockAlerts();
-        if (result.created) console.log(`Created ${result.created} admin low-stock alert(s).`);
-      } catch (error) {
-        console.error("Admin low-stock monitor failed:", error);
-      }
-    };
-    await monitorLowStock();
-    setInterval(monitorLowStock, 60 * 60 * 1000);
-
-    // Check due grocery deliveries in the background, even when the user is offline.
-    setInterval(() => processDueOrders().catch((error) => console.error("Order processing failed:", error)), 15000);
-  })
-  .catch((err) => console.log(err));
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
@@ -91,7 +60,6 @@ app.use("/api/stats", require("./routes/statsRoutes"));
 app.use("/api/recipe-reviews", recipeReviewRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/ai", aiRoutes);
-
 app.use("/api/admin/users", adminUserRoutes);
 app.use("/api/admin/recipes", adminRecipeRoutes);
 app.use("/api/admin/recipe-reviews", adminRecipeReviewRoutes);
@@ -102,8 +70,65 @@ app.use("/api/admin/ai", adminAiRoutes);
 app.use("/api/admin/security", adminSecurityRoutes);
 app.use("/api/admin/alerts", adminAlertRoutes);
 
-const PORT = process.env.PORT || 5000;
+async function runScheduledTask(label, task) {
+  try {
+    await task();
+  } catch (error) {
+    console.error(`${label} failed:`, error);
+  }
+}
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("Server Running on " + PORT);
-});
+async function startServer() {
+  // Do not accept traffic until MongoDB is connected. A failed connection is
+  // fatal so process managers can restart the service instead of serving a
+  // misleading partially-working API.
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("MongoDB Connected");
+
+  await runScheduledTask("Initial order processing", processDueOrders);
+  const checkPantryExpiries = () => runScheduledTask("Pantry expiry notification check", async () => {
+    const result = await createPantryExpiryNotifications();
+    if (result.created) console.log(`Created ${result.created} pantry expiry reminder(s).`);
+  });
+  const checkMealReminders = () => runScheduledTask("Meal reminder check", async () => {
+    const result = await processMealReminders();
+    if (result.created) console.log(`Created ${result.created} meal reminder(s).`);
+  });
+  const monitorLowStock = () => runScheduledTask("Admin low-stock monitor", async () => {
+    const result = await checkLowStockAlerts();
+    if (result.created) console.log(`Created ${result.created} admin low-stock alert(s).`);
+  });
+
+  await checkPantryExpiries();
+  await checkMealReminders();
+  await monitorLowStock();
+  setInterval(checkPantryExpiries, 60 * 60 * 1000);
+  setInterval(checkMealReminders, 60 * 1000);
+  setInterval(monitorLowStock, 60 * 60 * 1000);
+  setInterval(() => runScheduledTask("Order processing", processDueOrders), 15000);
+
+  const PORT = process.env.PORT || 5000;
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log("Server Running on " + PORT);
+  });
+
+  const shutdown = async (signal) => {
+    console.log(`${signal} received. Closing MealMate server...`);
+    server.close(async () => {
+      await mongoose.connection.close();
+      process.exit(0);
+    });
+  };
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+if (require.main === module) {
+  startServer().catch(async (error) => {
+    console.error("MealMate startup failed:", error);
+    await mongoose.disconnect().catch(() => {});
+    process.exit(1);
+  });
+}
+
+module.exports = { app, startServer };

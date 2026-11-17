@@ -1,37 +1,38 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { Toaster } from '@/components/ui/toaster';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import NotFound from '@/pages/not-found';
-import Home from '@/pages/Home';
-import Login from '@/pages/Login';
-import Signup from '@/pages/Signup';
-import Dashboard from '@/pages/Dashboard';
-import { Route, Switch, useLocation } from 'wouter';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { ProtectedRoute } from '@/components/ProtectedRoute';
-import MealPlanner from "@/pages/User/MealPlanner";
-import NutritionDashboard from "@/pages/User/NutritionDashboard";
-import MyMealPlans from "@/pages/User/MyMealPlans";
-import MealPlanDetails from "@/pages/User/MealPlanDetails";
-import GroceryList from "@/pages/User/GroceryList";
-import GroceryStore from "@/pages/User/GroceryStore";
-import Pantry from "@/pages/User/Pantry";
-import Recipes from "@/pages/User/Recipes";
-import RecipeDetails from "@/pages/User/RecipeDetails";
-import Favorites from "@/pages/User/Favorites";
-import Profile from "@/pages/Profile";
-import Notifications from "@/pages/Notifications";
-import Settings from "@/pages/Settings";
-import MealMateAssistant from "@/components/MealMateAssistant";
-import AdminUsers from "@/pages/Admin/Users";
-import AdminRecipes from "@/pages/Admin/Recipes";
-import AdminMealPlans from "@/pages/Admin/MealPlans";
-import AdminAnalytics from "@/pages/Admin/Analytics";
-import AdminReports from "@/pages/Admin/Reports";
-import AdminAIFeatures from "@/pages/Admin/AIFeatures";
-import AdminSecurity from "@/pages/Admin/Security";
+import { lazy, Suspense, useEffect } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Route, Switch, useLocation } from "wouter";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import "@/navbar-layout.css";
+
+const NotFound = lazy(() => import("@/pages/not-found"));
+const Home = lazy(() => import("@/pages/Home"));
+const Login = lazy(() => import("@/pages/Login"));
+const Signup = lazy(() => import("@/pages/Signup"));
+const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const MealPlanner = lazy(() => import("@/pages/User/MealPlanner"));
+const NutritionDashboard = lazy(() => import("@/pages/User/NutritionDashboard"));
+const MyMealPlans = lazy(() => import("@/pages/User/MyMealPlans"));
+const MealPlanDetails = lazy(() => import("@/pages/User/MealPlanDetails"));
+const GroceryList = lazy(() => import("@/pages/User/GroceryList"));
+const GroceryStore = lazy(() => import("@/pages/User/GroceryStore"));
+const Pantry = lazy(() => import("@/pages/User/Pantry"));
+const Recipes = lazy(() => import("@/pages/User/Recipes"));
+const RecipeDetails = lazy(() => import("@/pages/User/RecipeDetails"));
+const Favorites = lazy(() => import("@/pages/User/Favorites"));
+const Profile = lazy(() => import("@/pages/Profile"));
+const Notifications = lazy(() => import("@/pages/Notifications"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const MealMateAssistant = lazy(() => import("@/components/MealMateAssistant"));
+const AdminUsers = lazy(() => import("@/pages/Admin/Users"));
+const AdminRecipes = lazy(() => import("@/pages/Admin/Recipes"));
+const AdminMealPlans = lazy(() => import("@/pages/Admin/MealPlans"));
+const AdminAnalytics = lazy(() => import("@/pages/Admin/Analytics"));
+const AdminReports = lazy(() => import("@/pages/Admin/Reports"));
+const AdminAIFeatures = lazy(() => import("@/pages/Admin/AIFeatures"));
+const AdminSecurity = lazy(() => import("@/pages/Admin/Security"));
 
 const queryClient = new QueryClient();
 
@@ -54,47 +55,48 @@ function Router() {
   return (
     <>
       <AccountThemeController />
-    <Switch>
-      <Route path="/" component={ Home } />
-      <Route path="/login" component={ Login } />
-      <Route path="/signup" component={ Signup } />
-      <ProtectedRoute path="/dashboard" component={ Dashboard } allowedRoles={ ['admin', 'user'] } />
-      <ProtectedRoute path="/meal-planner" component={ MealPlanner } allowedRoles={ ["user"] } />
-      <ProtectedRoute path="/nutrition" component={ NutritionDashboard } allowedRoles={ ["user"] } />
-      <ProtectedRoute path="/my-meal-plans" component={ MyMealPlans } allowedRoles={ ["user"] } />
-      <ProtectedRoute path="/meal-plans/:id" component={ MealPlanDetails } allowedRoles={ ["user"] } />
-      <ProtectedRoute path="/user/grocery" component={ GroceryList } allowedRoles={ ["user"] } />
-      <ProtectedRoute path="/grocery-store" component={ GroceryStore } allowedRoles={ ["user"] } />
-      <ProtectedRoute path="/pantry" component={ Pantry } allowedRoles={ ["user"] } />
+      <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-gray-500">Loading MealMate...</div>}>
+        <Switch>
+          <Route path="/" component={Home} />
+          <Route path="/login" component={Login} />
+          <Route path="/signup" component={Signup} />
+          <ProtectedRoute path="/dashboard" component={Dashboard} allowedRoles={["admin", "user"]} />
+          <ProtectedRoute path="/meal-planner" component={MealPlanner} allowedRoles={["user"]} />
+          <ProtectedRoute path="/nutrition" component={NutritionDashboard} allowedRoles={["user"]} />
+          <ProtectedRoute path="/my-meal-plans" component={MyMealPlans} allowedRoles={["user"]} />
+          <ProtectedRoute path="/meal-plans/:id" component={MealPlanDetails} allowedRoles={["user"]} />
+          <ProtectedRoute path="/user/grocery" component={GroceryList} allowedRoles={["user"]} />
+          <ProtectedRoute path="/grocery-store" component={GroceryStore} allowedRoles={["user"]} />
+          <ProtectedRoute path="/pantry" component={Pantry} allowedRoles={["user"]} />
 
-      <ProtectedRoute path="/admin/users" component={ AdminUsers } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/recipes" component={ AdminRecipes } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/meal-plans" component={ AdminMealPlans } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/analytics" component={ AdminAnalytics } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/reports" component={ AdminReports } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/ai-features" component={ AdminAIFeatures } allowedRoles={ ["admin"] } />
-      <ProtectedRoute path="/admin/security" component={ AdminSecurity } allowedRoles={ ["admin"] } />
+          <ProtectedRoute path="/admin/users" component={AdminUsers} allowedRoles={["admin"]} />
+          <ProtectedRoute path="/admin/recipes" component={AdminRecipes} allowedRoles={["admin"]} />
+          <ProtectedRoute path="/admin/meal-plans" component={AdminMealPlans} allowedRoles={["admin"]} />
+          <ProtectedRoute path="/admin/analytics" component={AdminAnalytics} allowedRoles={["admin"]} />
+          <ProtectedRoute path="/admin/reports" component={AdminReports} allowedRoles={["admin"]} />
+          <ProtectedRoute path="/admin/ai-features" component={AdminAIFeatures} allowedRoles={["admin"]} />
+          <ProtectedRoute path="/admin/security" component={AdminSecurity} allowedRoles={["admin"]} />
 
-      <Route path="/profile" component={Profile} />
-      <ProtectedRoute path="/notifications" component={Notifications} allowedRoles={["user"]} />
-      <ProtectedRoute path="/settings" component={Settings} allowedRoles={["user", "admin"]} />
-      <Route path="/favorites" component={Favorites} />
-      <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />
-      <ProtectedRoute path="/recipes/:id" component={RecipeDetails} allowedRoles={["user", "admin"]} />
-      <Route component={ NotFound } />
-    </Switch>
+          <ProtectedRoute path="/profile" component={Profile} allowedRoles={["user", "admin"]} />
+          <ProtectedRoute path="/notifications" component={Notifications} allowedRoles={["user"]} />
+          <ProtectedRoute path="/settings" component={Settings} allowedRoles={["user", "admin"]} />
+          <ProtectedRoute path="/favorites" component={Favorites} allowedRoles={["user"]} />
+          <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />
+          <ProtectedRoute path="/recipes/:id" component={RecipeDetails} allowedRoles={["user", "admin"]} />
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
     </>
   );
 }
 
-
 function App() {
   return (
-    <QueryClientProvider client={ queryClient }>
+    <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
           <Router />
-          <MealMateAssistant />
+          <Suspense fallback={null}><MealMateAssistant /></Suspense>
           <Toaster />
         </TooltipProvider>
       </AuthProvider>

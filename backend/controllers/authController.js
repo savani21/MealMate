@@ -3,37 +3,84 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { createAdminAlert } = require("../services/adminAlertService");
 
+// Used for unknown accounts so login attempts perform a password hash comparison
+// before returning the same response as an incorrect password.
+const DUMMY_PASSWORD_HASH = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validPassword(password) {
+  return typeof password === "string" && password.length >= 8 && Buffer.byteLength(password, "utf8") <= 72;
+}
+
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+    const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const { password } = req.body || {};
+
+    if (name.length < 2 || name.length > 80) {
+      return res.status(400).json({ success: false, message: "Name must be between 2 and 80 characters." });
+    }
+    if (email.length > 254 || !EMAIL_PATTERN.test(email)) {
+      return res.status(400).json({ success: false, message: "Please provide a valid email address." });
+    }
+    if (!validPassword(password)) {
+      return res.status(400).json({ success: false, message: "Password must be at least 8 characters and no more than 72 bytes." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const existingUser = await User.findOne({ email }).select("_id");
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "Unable to create an account with these details." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
     const user = await User.create({ name, email, password: hashedPassword });
     const userResponse = await User.findById(user._id).select("-password");
-    await createAdminAlert({ type: "user-registered", severity: "info", title: "New user registered", message: `${user.name} created a MealMate account.`, source: "User registration", referenceId: String(user._id), actionUrl: "/admin/users", dedupeKey: `user-registered:${user._id}` });
 
-    res.status(201).json({
+    // Alert delivery must not turn a successfully-created account into a failed
+    // registration response.
+    try {
+      await createAdminAlert({
+        type: "user-registered",
+        severity: "info",
+        title: "New user registered",
+        message: `${user.name} created a MealMate account.`,
+        source: "User registration",
+        referenceId: String(user._id),
+        actionUrl: "/admin/users",
+        dedupeKey: `user-registered:${user._id}`,
+      });
+    } catch (alertError) {
+      console.error("Registration admin alert failed:", alertError);
+    }
+
+    return res.status(201).json({
       success: true,
       message: "Registration successful",
       user: userResponse,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (err?.code === 11000) {
+      return res.status(409).json({ success: false, message: "Unable to create an account with these details." });
+    }
+    console.error("Registration error:", err);
+    return res.status(500).json({ success: false, message: "Registration failed. Please try again." });
   }
 };
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const { password } = req.body || {};
+    if (email.length > 254 || !EMAIL_PATTERN.test(email) || typeof password !== "string" || !password.length || Buffer.byteLength(password, "utf8") > 72) {
+      return res.status(401).json({ success: false, message: "Invalid email or password." });
+    }
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: "Invalid Password" });
+    const user = await User.findOne({ email });
+    const passwordMatches = await bcrypt.compare(password, user?.password || DUMMY_PASSWORD_HASH);
+    if (!user || !passwordMatches) {
+      return res.status(401).json({ success: false, message: "Invalid email or password." });
+    }
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
@@ -41,7 +88,7 @@ exports.login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.json({
+    return res.json({
       success: true,
       token,
       user: {
@@ -53,7 +100,8 @@ exports.login = async (req, res) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Login error:", err);
+    return res.status(500).json({ success: false, message: "Login failed. Please try again." });
   }
 };
 
