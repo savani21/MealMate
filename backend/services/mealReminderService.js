@@ -87,7 +87,7 @@ async function processMealReminders(now = new Date()) {
       });
       if (logged) continue;
 
-      const referenceId = `meal-reminder:${activePlan._id}:${todayKey}:${mealType}`;
+      const referenceId = `meal-reminder:${todayKey}:${mealType}`;
       const result = await Notification.updateOne(
         { user: preference.user, type: "meal", referenceId },
         {
