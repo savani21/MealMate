@@ -13,7 +13,6 @@ const nutritionRoutes = require("./routes/user/nutritionRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
 const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
 const { processMealReminders } = require("./services/mealReminderService");
-const { processMealPlanPromptNotifications } = require("./services/mealPlanPromptNotificationService");
 const { checkLowStockAlerts } = require("./services/lowStockAlertService");
 
 const adminUserRoutes = require("./routes/admin/userRoutes");
@@ -86,6 +85,9 @@ async function startServer() {
   await mongoose.connect(process.env.MONGO_URI);
   console.log("MongoDB Connected");
 
+  const removedMealPlanPrompts = await require("./models/user/Notification").deleteMany({ type: "meal-plan-needed" });
+  if (removedMealPlanPrompts.deletedCount) console.log(`Removed ${removedMealPlanPrompts.deletedCount} obsolete meal-plan prompt notification(s).`);
+
   await runScheduledTask("Initial order processing", processDueOrders);
   const checkPantryExpiries = () => runScheduledTask("Pantry expiry notification check", async () => {
     const result = await createPantryExpiryNotifications();
@@ -95,10 +97,6 @@ async function startServer() {
     const result = await processMealReminders();
     if (result.created) console.log(`Created ${result.created} meal reminder(s).`);
   });
-  const checkMealPlanPrompts = () => runScheduledTask("No-meal-plan notification check", async () => {
-    const result = await processMealPlanPromptNotifications();
-    if (result.created) console.log(`Created ${result.created} meal-plan prompt notification(s).`);
-  });
   const monitorLowStock = () => runScheduledTask("Admin low-stock monitor", async () => {
     const result = await checkLowStockAlerts();
     if (result.created) console.log(`Created ${result.created} admin low-stock alert(s).`);
@@ -106,11 +104,9 @@ async function startServer() {
 
   await checkPantryExpiries();
   await checkMealReminders();
-  await checkMealPlanPrompts();
   await monitorLowStock();
   setInterval(checkPantryExpiries, 15 * 60 * 1000);
   setInterval(checkMealReminders, 60 * 1000);
-  setInterval(checkMealPlanPrompts, 15 * 60 * 1000);
   setInterval(monitorLowStock, 60 * 60 * 1000);
   setInterval(() => runScheduledTask("Order processing", processDueOrders), 15000);
 
