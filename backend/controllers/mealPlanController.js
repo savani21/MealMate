@@ -457,6 +457,13 @@ Rules:
       );
     }
 
+    // Resolve the one-time onboarding prompt as soon as a plan is saved.
+    await require("../models/user/Notification").deleteOne({
+      user: req.user.id,
+      type: "meal-plan-needed",
+      referenceId: `meal-plan-needed:${req.user.id}`,
+    });
+
     res.status(201).json({
       success: true,
       message:
