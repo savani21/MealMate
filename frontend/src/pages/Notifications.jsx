@@ -106,6 +106,7 @@ export default function Notifications() {
       setNotifications((items) => items.map((item) =>
         item._id === id ? { ...item, read: true, readAt: new Date().toISOString() } : item
       ));
+      window.dispatchEvent(new Event("mealmate:notifications-updated"));
     } catch (actionError) {
       console.error(actionError);
       setError("Could not update the notification. Please try again.");
@@ -123,6 +124,7 @@ export default function Notifications() {
       if (!response.ok) throw new Error("Could not mark notifications as read.");
       const readAt = new Date().toISOString();
       setNotifications((items) => items.map((item) => ({ ...item, read: true, readAt })));
+      window.dispatchEvent(new Event("mealmate:notifications-updated"));
     } catch (actionError) {
       console.error(actionError);
       setError("Could not update notifications. Please try again.");
@@ -139,6 +141,7 @@ export default function Notifications() {
       });
       if (!response.ok) throw new Error("Could not delete notification.");
       setNotifications((items) => items.filter((item) => item._id !== id));
+      window.dispatchEvent(new Event("mealmate:notifications-updated"));
     } catch (actionError) {
       console.error(actionError);
       setError("Could not delete the notification. Please try again.");
@@ -154,6 +157,7 @@ export default function Notifications() {
       });
       if (!response.ok) throw new Error("Could not clear notifications.");
       setNotifications([]);
+      window.dispatchEvent(new Event("mealmate:notifications-updated"));
     } catch (actionError) {
       console.error(actionError);
       setError("Could not clear notifications. Please try again.");
