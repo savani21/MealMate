@@ -160,10 +160,6 @@ export default function AppNavbar({ children }) {
 
   const handleNotificationClick = (item) => {
     void markNotificationRead(item);
-    if (!isAdmin && item.type === "meal-plan-needed") {
-      setNotificationOpen(false);
-      navigate("/meal-planner");
-    }
   };
 
   const markNotificationRead = async (item) => {
