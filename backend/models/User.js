@@ -7,7 +7,6 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Recipe" }],
-    mealPlanPromptNotifiedAt: { type: Date, default: null },
     foodPreference: {
       type: String,
       enum: ["", "vegetarian", "vegan", "non-vegetarian", "eggetarian"],
