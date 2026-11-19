@@ -158,6 +158,14 @@ export default function AppNavbar({ children }) {
     };
   }, [userId, isAdmin]);
 
+  const handleNotificationClick = (item) => {
+    void markNotificationRead(item);
+    if (!isAdmin && item.type === "meal-plan-needed") {
+      setNotificationOpen(false);
+      navigate("/meal-planner");
+    }
+  };
+
   const markNotificationRead = async (item) => {
     if (item.read) return;
     const token = localStorage.getItem("token");
@@ -275,7 +283,7 @@ export default function AppNavbar({ children }) {
               </div>
               <div className="max-h-[min(65vh,420px)] overflow-y-auto">
                 {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 2).map((item) => (
-                  <button key={item._id || item.id} type="button" onClick={() => markNotificationRead(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left transition hover:bg-green-50/60 ${item.read ? "bg-white" : "bg-green-50/40"}`}>
+                  <button key={item._id || item.id} type="button" onClick={() => handleNotificationClick(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left transition hover:bg-green-50/60 ${item.read ? "bg-white" : "bg-green-50/40"}`}>
                     <span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs leading-5 text-gray-500">{item.message || item.source || "A platform update is available."}</span><span className="mt-1 block text-[11px] text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</span></span></span>
                   </button>
                 ))}
