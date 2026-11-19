@@ -150,7 +150,12 @@ export default function AppNavbar({ children }) {
 
     loadNotifications();
     const timer = setInterval(loadNotifications, 15000);
-    return () => { active = false; clearInterval(timer); };
+    window.addEventListener("mealmate:notifications-updated", loadNotifications);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("mealmate:notifications-updated", loadNotifications);
+    };
   }, [userId, isAdmin]);
 
   const markNotificationRead = async (item) => {
