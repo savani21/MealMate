@@ -2,6 +2,7 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useLocation } from "wouter";
 import {
   Bell,
   Check,
@@ -37,6 +38,7 @@ function formatCreatedAt(value) {
 
 export default function Notifications() {
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const userId = user?._id || user?.id;
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,6 +216,18 @@ export default function Notifications() {
                           {!notification.read && <span className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">{getNotificationMessage(notification)}</p>
+                        {notification.type === "meal-plan-needed" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!notification.read) void markAsRead(notification._id);
+                              setLocation("/meal-planner");
+                            }}
+                            className="mt-3 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                          >
+                            Generate Meal Plan
+                          </button>
+                        )}
                         <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> {formatCreatedAt(notification.createdAt)}</p>
                       </div>
                       <div className="flex items-center gap-1">

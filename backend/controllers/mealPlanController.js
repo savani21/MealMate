@@ -457,6 +457,17 @@ Rules:
       );
     }
 
+    // Resolve the one-time onboarding prompt as soon as a plan is saved.
+    try {
+      await require("../models/user/Notification").deleteOne({
+        user: req.user.id,
+        type: "meal-plan-needed",
+        referenceId: `meal-plan-needed:${req.user.id}`,
+      });
+    } catch (notificationError) {
+      console.error("Meal plan saved, but onboarding notification cleanup failed:", notificationError);
+    }
+
     res.status(201).json({
       success: true,
       message:
