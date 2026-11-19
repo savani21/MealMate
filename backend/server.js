@@ -102,7 +102,7 @@ async function startServer() {
   await checkPantryExpiries();
   await checkMealReminders();
   await monitorLowStock();
-  setInterval(checkPantryExpiries, 60 * 60 * 1000);
+  setInterval(checkPantryExpiries, 15 * 60 * 1000);
   setInterval(checkMealReminders, 60 * 1000);
   setInterval(monitorLowStock, 60 * 60 * 1000);
   setInterval(() => runScheduledTask("Order processing", processDueOrders), 15000);
