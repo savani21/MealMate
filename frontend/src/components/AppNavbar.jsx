@@ -291,7 +291,7 @@ export default function AppNavbar({ children }) {
         {user && <div className="relative lg:hidden" data-notification-root>
           <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700">
             <Bell className="h-5 w-5" />
-            {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+            {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
           </button>
           {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>{unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary">Mark all read</button>}</div>
