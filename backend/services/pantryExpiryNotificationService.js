@@ -39,7 +39,9 @@ async function createPantryExpiryNotifications(now = new Date()) {
 
     checked += items.length;
     for (const item of items) {
-      const referenceId = `pantry-expiry:${item._id}:${window.dateKey}:${window.daysRemaining}`;
+      const referenceId = window.daysRemaining === 2
+        ? `pantry-expiry:${item._id}:${window.dateKey}`
+        : `pantry-expiry:${item._id}:${window.dateKey}:${window.daysRemaining}`;
       const copy = getExpiryReminderCopy(item, window.daysRemaining, window.dateKey);
       const result = await Notification.updateOne(
         { user: item.user, type: "pantry-expiry", referenceId },
