@@ -78,7 +78,8 @@ export default function AppNavbar({ children }) {
   const [notificationItems, setNotificationItems] = useState([]);
   const [deliveryAlert, setDeliveryAlert] = useState(null);
   const previousUnreadCount = useRef(null);
-  const isAdmin = user?.role === "admin" || location.startsWith("/admin/");
+  const isAdmin = user?.role === "admin";
+  const userId = user?._id || user?.id;
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
 
   useEffect(() => {
@@ -102,7 +103,7 @@ export default function AppNavbar({ children }) {
   }, [notificationOpen]);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       previousUnreadCount.current = null;
       setDeliveryAlert(null);
       setUnreadNotifications(0);
@@ -115,13 +116,16 @@ export default function AppNavbar({ children }) {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const endpoint = isAdmin ? "/api/admin/alerts?limit=30" : "/api/notifications";
+        const endpoint = isAdmin ? "/api/admin/alerts?limit=2" : "/api/notifications?limit=2";
         const response = await fetch(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) return;
         const data = await response.json();
-        const items = isAdmin ? (data.alerts || []) : (data.notifications || []);
+        const items = (isAdmin ? (data.alerts || []) : (data.notifications || []))
+          .slice()
+          .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+          .slice(0, 2);
         if (!active) return;
 
         const nextUnreadCount = Number(data.unreadCount) || 0;
@@ -147,7 +151,7 @@ export default function AppNavbar({ children }) {
     loadNotifications();
     const timer = setInterval(loadNotifications, 15000);
     return () => { active = false; clearInterval(timer); };
-  }, [user, isAdmin, location]);
+  }, [userId, isAdmin]);
 
   const markNotificationRead = async (item) => {
     if (item.read) return;
@@ -257,7 +261,7 @@ export default function AppNavbar({ children }) {
           <div className="relative" data-notification-root>
             <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
               <Bell className="h-5 w-5" />
-              {unreadNotifications > 0 && <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-red-500 px-1 text-[10px] font-bold leading-5 text-white">{unreadNotifications > 99 ? "99+" : unreadNotifications}</span>}
+              {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
             </button>
             {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
@@ -265,7 +269,7 @@ export default function AppNavbar({ children }) {
                 {unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary hover:underline">Mark all read</button>}
               </div>
               <div className="max-h-[min(65vh,420px)] overflow-y-auto">
-                {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 30).map((item) => (
+                {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 2).map((item) => (
                   <button key={item._id || item.id} type="button" onClick={() => markNotificationRead(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left transition hover:bg-green-50/60 ${item.read ? "bg-white" : "bg-green-50/40"}`}>
                     <span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs leading-5 text-gray-500">{item.message || item.source || "A platform update is available."}</span><span className="mt-1 block text-[11px] text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</span></span></span>
                   </button>
@@ -287,7 +291,7 @@ export default function AppNavbar({ children }) {
           {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>{unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary">Mark all read</button>}</div>
             <div className="max-h-[min(65vh,420px)] overflow-y-auto">
-              {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.map((item) => <button key={item._id || item.id} type="button" onClick={() => markNotificationRead(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left ${item.read ? "bg-white" : "bg-green-50/40"}`}><span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs text-gray-500">{item.message || item.source || "A platform update is available."}</span></span></span></button>)}
+              {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 2).map((item) => <button key={item._id || item.id} type="button" onClick={() => markNotificationRead(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left ${item.read ? "bg-white" : "bg-green-50/40"}`}><span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs text-gray-500">{item.message || item.source || "A platform update is available."}</span></span></span></button>)}
             </div>
             {!isAdmin && <button type="button" onClick={() => { setNotificationOpen(false); navigate("/notifications"); }} className="w-full px-4 py-3 text-sm font-bold text-primary">View all notifications</button>}
           </div>}
