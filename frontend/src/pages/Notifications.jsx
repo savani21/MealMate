@@ -1,10 +1,8 @@
 import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
-import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import {
-  ArrowLeft,
   Bell,
   Check,
   Trash2,
@@ -14,15 +12,6 @@ import {
   Info,
   Clock,
 } from "lucide-react";
-
-const MEAL_TIMES = {
-  breakfast: { label: "Breakfast", time: "8:00 AM", minutes: 480 },
-  lunch: { label: "Lunch", time: "1:00 PM", minutes: 780 },
-  snack: { label: "Snack", time: "4:00 PM", minutes: 960 },
-  dinner: { label: "Dinner", time: "7:00 PM", minutes: 1140 },
-};
-
-const mealOrder = ["breakfast", "lunch", "snack", "dinner"];
 
 function getNotificationMessage(item) {
   if (item.type !== "order-delivered") return item.message;
@@ -40,271 +29,145 @@ function getNotificationMessage(item) {
   return `${outcomeText} Expected by ${expected}; delivered at ${actual}. Your purchased ingredients have been added to your pantry.`;
 }
 
-function localDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getPlanDayForToday(plan, now = new Date()) {
-  if (!plan?.createdAt || !Array.isArray(plan.meals)) return null;
-
-  const start = new Date(plan.createdAt);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const difference = Math.floor((today - startDay) / 86400000);
-
-  if (difference < 0 || difference >= Number(plan.duration)) return null;
-  return plan.meals[difference] || null;
-}
-
-function getPlanDayNumber(plan, now = new Date()) {
-  if (!plan?.createdAt) return null;
-  const start = new Date(plan.createdAt);
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const difference = Math.floor((today - startDay) / 86400000);
-  return difference >= 0 && difference < Number(plan.duration) ? difference + 1 : null;
-}
-
-function getMealStatus(mealKey, now = new Date()) {
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const start = MEAL_TIMES[mealKey].minutes;
-  const nextIndex = mealOrder.indexOf(mealKey) + 1;
-  const nextMeal = mealOrder[nextIndex];
-  const end = nextMeal ? MEAL_TIMES[nextMeal].minutes : 22 * 60;
-
-  if (currentMinutes >= start && currentMinutes < end) return "current";
-  if (currentMinutes < start) return "upcoming";
-  return "past";
+function formatCreatedAt(value) {
+  if (!value) return "Just now";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Just now" : date.toLocaleString();
 }
 
 export default function Notifications() {
-  const [, setLocation] = useLocation();
   const { user } = useAuth();
+  const userId = user?._id || user?.id;
   const [notifications, setNotifications] = useState([]);
-  const [mealPlans, setMealPlans] = useState([]);
-  const [orderNotifications, setOrderNotifications] = useState([]);
-  const [now, setNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const notificationStorageKey = `mealMateNotifications:${user?._id || user?.email || "guest"}`;
-  const deletedDynamicKey = `mealMateDeletedDynamicNotifications:${user?._id || user?.email || "guest"}`;
+  const loadNotifications = useCallback(async (isActive = () => true) => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(timer);
+    try {
+      const response = await fetch("/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Failed to load notifications.");
+      const data = await response.json();
+      if (!isActive()) return;
+      const items = (data.notifications || [])
+        .slice()
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+      setNotifications(items);
+      setError("");
+    } catch (loadError) {
+      if (isActive()) {
+        console.error("Notification loading error:", loadError);
+        setError("Unable to load notifications. Please try again.");
+      }
+    } finally {
+      if (isActive()) setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    const loadOrderNotifications = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+    let active = true;
+    let inFlight = false;
+    const isActive = () => active;
+    const refresh = async () => {
+      if (inFlight) return;
+      inFlight = true;
       try {
-        const response = await fetch("/api/notifications", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) return;
-        const data = await response.json();
-        setOrderNotifications((data.notifications || []).map((item) => ({
-          id: item._id,
-          type: item.type === "order-delivered" ? "grocery" : item.type,
-          title: item.title,
-          message: getNotificationMessage(item),
-          time: new Date(item.createdAt).toLocaleString(),
-          expectedDeliveryAt: item.expectedDeliveryAt,
-          deliveredAt: item.deliveredAt,
-          deliveryOutcome: item.deliveryOutcome,
-          read: item.read,
-          backend: true,
-        })));
-      } catch (error) {
-        console.error("Order notification error:", error);
-      }
-    };
-    loadOrderNotifications();
-    const timer = setInterval(loadOrderNotifications, 15000);
-    return () => clearInterval(timer);
-  }, [user]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const response = await fetch("/api/meal-plans", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) throw new Error("Failed to load meal plans");
-        const data = await response.json();
-        setMealPlans(data.mealPlans || []);
-      } catch (error) {
-        console.error("Notification data error:", error);
+        await loadNotifications(isActive);
       } finally {
-        setLoading(false);
+        inFlight = false;
       }
     };
 
-    loadData();
-  }, [user]);
-
-  const todayPlan = useMemo(() => {
-    return mealPlans
-      .filter((plan) => !plan.isArchived && getPlanDayForToday(plan, now))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
-  }, [mealPlans, now]);
-
-  const todayMeals = useMemo(() => getPlanDayForToday(todayPlan, now), [todayPlan, now]);
-
-  useEffect(() => {
-    if (loading) return;
-
-    let stored = [];
-    let deletedDynamic = [];
-
-    try {
-      const parsed = JSON.parse(localStorage.getItem(notificationStorageKey) || "[]");
-      stored = Array.isArray(parsed) ? parsed : [];
-      const deleted = JSON.parse(localStorage.getItem(deletedDynamicKey) || "[]");
-      deletedDynamic = Array.isArray(deleted) ? deleted : [];
-    } catch (error) {
-      console.error("Failed to read notifications:", error);
-    }
-
-    const todayKey = localDateKey(now);
-    const dynamic = [];
-
-    if (todayPlan && todayMeals) {
-      const currentOrUpcoming = mealOrder.find((mealKey) => {
-        const status = getMealStatus(mealKey, now);
-        return status === "current" || status === "upcoming";
-      });
-
-      if (currentOrUpcoming) {
-        const info = MEAL_TIMES[currentOrUpcoming];
-        const status = getMealStatus(currentOrUpcoming, now);
-        dynamic.push({
-          id: `today-${todayPlan._id}-${todayKey}-${currentOrUpcoming}`,
-          type: "meal",
-          title: status === "current" ? `${info.label} time` : `${info.label} is coming up`,
-          message: `${todayMeals[currentOrUpcoming] || "Your planned meal"} is scheduled for ${info.time}.`,
-          time: info.time,
-          read: false,
-          dynamic: true,
-        });
-      }
-
-      dynamic.push({
-        id: `plan-${todayPlan._id}-${todayKey}`,
-        type: "meal",
-        title: "Today's meal plan",
-        message: `Day ${getPlanDayNumber(todayPlan, now)} of your ${todayPlan.duration}-day plan is ready.`,
-        time: todayKey,
-        read: false,
-        dynamic: true,
-      });
-    } else {
-      dynamic.push({
-        id: `no-plan-${todayKey}`,
-        type: "meal",
-        title: "No meal planned for today",
-        message: "Generate a 1, 3 or 7-day meal plan to keep today's routine on track.",
-        time: todayKey,
-        read: false,
-        dynamic: true,
-        action: "generate",
-      });
-    }
-
-    const visibleDynamic = dynamic.filter((item) => !deletedDynamic.includes(item.id));
-    const dynamicIds = new Set(visibleDynamic.map((item) => item.id));
-    const retainedStored = stored.filter((item) => !item.backend && (!item.dynamic || dynamicIds.has(item.id)));
-    const merged = visibleDynamic.map((item) => {
-      const existing = retainedStored.find((storedItem) => storedItem.id === item.id);
-      return existing ? { ...item, read: existing.read } : item;
-    });
-
-    const otherStored = retainedStored.filter((item) => !dynamicIds.has(item.id));
-    setNotifications([...merged, ...otherStored, ...orderNotifications]);
-  }, [loading, todayPlan, todayMeals, now, notificationStorageKey, deletedDynamicKey, orderNotifications]);
-
-  useEffect(() => {
-    if (!loading) {
-      localStorage.setItem(notificationStorageKey, JSON.stringify(notifications));
-    }
-  }, [notifications, loading, notificationStorageKey]);
+    setLoading(true);
+    refresh();
+    const timer = setInterval(refresh, 15000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [userId, loadNotifications]);
 
   const markAsRead = async (id) => {
-    const notification = notifications.find((item) => item.id === id);
-    setNotifications((prev) => prev.map((item) => item.id === id ? { ...item, read: true } : item));
-    if (notification?.backend) {
-      const token = localStorage.getItem("token");
-      try {
-        await fetch(`/api/notifications/${id}/read`, {
-          method: "PATCH",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (error) {
-        console.error("Could not mark notification as read:", error);
-      }
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`/api/notifications/${id}/read`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Could not mark notification as read.");
+      setNotifications((items) => items.map((item) =>
+        item._id === id ? { ...item, read: true, readAt: new Date().toISOString() } : item
+      ));
+    } catch (actionError) {
+      console.error(actionError);
+      setError("Could not update the notification. Please try again.");
+      loadNotifications();
     }
   };
 
   const markAllAsRead = async () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
     const token = localStorage.getItem("token");
     try {
-      await fetch("/api/notifications/read-all", {
+      const response = await fetch("/api/notifications/read-all", {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
-    } catch (error) {
-      console.error("Could not mark all notifications as read:", error);
+      if (!response.ok) throw new Error("Could not mark notifications as read.");
+      const readAt = new Date().toISOString();
+      setNotifications((items) => items.map((item) => ({ ...item, read: true, readAt })));
+    } catch (actionError) {
+      console.error(actionError);
+      setError("Could not update notifications. Please try again.");
+      loadNotifications();
     }
   };
 
-  const deleteNotification = (id) => {
-    const notification = notifications.find((item) => item.id === id);
-    if (notification?.dynamic) {
-      const existing = JSON.parse(localStorage.getItem(deletedDynamicKey) || "[]");
-      if (!existing.includes(id)) {
-        localStorage.setItem(deletedDynamicKey, JSON.stringify([...existing, id]));
-      }
-    }
-    setNotifications((prev) => prev.filter((item) => item.id !== id));
-    if (notification?.backend) {
-      const token = localStorage.getItem("token");
-      fetch(`/api/notifications/${id}`, {
+  const deleteNotification = async (id) => {
+    const token = localStorage.getItem("token");
+    try {
+      const response = await fetch(`/api/notifications/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
-      }).catch((error) => console.error("Could not delete notification:", error));
+      });
+      if (!response.ok) throw new Error("Could not delete notification.");
+      setNotifications((items) => items.filter((item) => item._id !== id));
+    } catch (actionError) {
+      console.error(actionError);
+      setError("Could not delete the notification. Please try again.");
     }
   };
 
-  const clearAll = () => {
-    const dynamicIds = notifications.filter((item) => item.dynamic).map((item) => item.id);
-    const existing = JSON.parse(localStorage.getItem(deletedDynamicKey) || "[]");
-    const merged = [...new Set([...existing, ...dynamicIds])];
-    localStorage.setItem(deletedDynamicKey, JSON.stringify(merged));
-    setNotifications([]);
+  const clearAll = async () => {
     const token = localStorage.getItem("token");
-    fetch("/api/notifications", {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    }).catch((error) => console.error("Could not clear notifications:", error));
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Could not clear notifications.");
+      setNotifications([]);
+    } catch (actionError) {
+      console.error(actionError);
+      setError("Could not clear notifications. Please try again.");
+    }
   };
 
   const getIcon = (type) => {
     if (type === "meal") return <CalendarDays className="w-5 h-5 text-primary" />;
-    if (type === "grocery" || type === "pantry-expiry") return <ShoppingBasket className="w-5 h-5 text-primary" />;
+    if (type === "grocery" || type === "pantry-expiry" || type === "order-delivered" || type === "order-placed") {
+      return <ShoppingBasket className="w-5 h-5 text-primary" />;
+    }
     if (type === "recipe") return <ChefHat className="w-5 h-5 text-primary" />;
     return <Info className="w-5 h-5 text-primary" />;
   };
-
-  const unreadCount = notifications.filter((item) => !item.read).length;
 
   return (
     <div className="min-h-screen bg-[#f7faf7]">
@@ -312,18 +175,22 @@ export default function Notifications() {
       <PageHeroBanner title="Your Notifications" description="Stay up to date with your meal plans and kitchen activity." eyebrow="STAY UPDATED" icon={Bell} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          {notifications.length > 0 && (
-            <div className="flex gap-2">
-              <button onClick={markAllAsRead} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">
-                <Check className="w-4 h-4" /> Mark all read
-              </button>
-              <button onClick={clearAll} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
-                <Trash2 className="w-4 h-4" /> Clear
-              </button>
-            </div>
-          )}
+        {error && <p role="alert" className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
-        {notifications.length === 0 ? (
+        {notifications.length > 0 && (
+          <div className="mb-3 flex gap-2">
+            <button onClick={markAllAsRead} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+              <Check className="w-4 h-4" /> Mark all read
+            </button>
+            <button onClick={clearAll} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
+              <Trash2 className="w-4 h-4" /> Clear
+            </button>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="rounded-3xl border border-gray-100 bg-white p-12 text-center text-gray-500">Loading notifications...</div>
+        ) : notifications.length === 0 ? (
           <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-green-50 flex items-center justify-center"><Bell className="w-8 h-8 text-primary" /></div>
             <h2 className="text-xl font-bold text-gray-900 mt-5">No notifications</h2>
@@ -332,7 +199,7 @@ export default function Notifications() {
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => (
-              <div key={notification.id} className={`bg-white rounded-2xl border p-5 transition ${notification.read ? "border-gray-100" : "border-green-100 bg-green-50/30"}`}>
+              <div key={notification._id} className={`bg-white rounded-2xl border p-5 transition ${notification.read ? "border-gray-100" : "border-green-100 bg-green-50/30"}`}>
                 <div className="flex items-start gap-4">
                   <div className="w-11 h-11 shrink-0 rounded-xl bg-green-50 flex items-center justify-center">{getIcon(notification.type)}</div>
                   <div className="flex-1 min-w-0">
@@ -342,13 +209,12 @@ export default function Notifications() {
                           <h3 className="font-bold text-gray-900">{notification.title}</h3>
                           {!notification.read && <span className="w-2 h-2 rounded-full bg-primary" />}
                         </div>
-                        <p className="text-sm text-gray-500 mt-1">{notification.message}</p>
-                        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> {notification.time}</p>
-                        {notification.action === "generate" && <button onClick={() => setLocation("/meal-planner")} className="mt-3 text-sm font-semibold text-primary hover:underline">Generate Today's Meal</button>}
+                        <p className="text-sm text-gray-500 mt-1">{getNotificationMessage(notification)}</p>
+                        <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> {formatCreatedAt(notification.createdAt)}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        {!notification.read && <button onClick={() => markAsRead(notification.id)} className="p-2 rounded-lg hover:bg-green-50" title="Mark as read"><Check className="w-4 h-4 text-primary" /></button>}
-                        <button onClick={() => deleteNotification(notification.id)} className="p-2 rounded-lg hover:bg-red-50" title="Delete"><Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" /></button>
+                        {!notification.read && <button onClick={() => markAsRead(notification._id)} className="p-2 rounded-lg hover:bg-green-50" title="Mark as read" aria-label="Mark as read"><Check className="w-4 h-4 text-primary" /></button>}
+                        <button onClick={() => deleteNotification(notification._id)} className="p-2 rounded-lg hover:bg-red-50" title="Delete" aria-label="Delete notification"><Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" /></button>
                       </div>
                     </div>
                   </div>
