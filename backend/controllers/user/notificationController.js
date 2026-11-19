@@ -3,8 +3,8 @@ const Order = require("../../models/user/Order");
 
 exports.getMyNotifications = async (req, res) => {
   try {
-    // Recovery path: ensure every active order has a persisted placement
-    // notification, even if the checkout notification write previously failed.
+    // Repair missing order-placement notifications without creating page-specific
+    // synthetic records. All notification surfaces read this same collection.
     const activeOrders = await Order.find({
       user: req.user.id,
       status: { $ne: "delivered" },
@@ -29,15 +29,12 @@ exports.getMyNotifications = async (req, res) => {
       );
     }
 
-    const notifications = await Notification.find({ user: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .lean();
-
-    const unreadCount = await Notification.countDocuments({
-      user: req.user.id,
-      read: false,
-    });
+    const requestedLimit = Number(req.query.limit) || 100;
+    const limit = Math.min(Math.max(requestedLimit, 1), 100);
+    const [notifications, unreadCount] = await Promise.all([
+      Notification.find({ user: req.user.id }).sort({ createdAt: -1, _id: -1 }).limit(limit).lean(),
+      Notification.countDocuments({ user: req.user.id, read: false }),
+    ]);
 
     res.json({ success: true, notifications, unreadCount });
   } catch (error) {
@@ -53,11 +50,9 @@ exports.markAsRead = async (req, res) => {
       { $set: { read: true, readAt: new Date() } },
       { returnDocument: "after" }
     );
-
     if (!notification) {
       return res.status(404).json({ success: false, message: "Notification not found" });
     }
-
     res.json({ success: true, notification });
   } catch (error) {
     console.error("Mark notification read error:", error);
@@ -80,10 +75,7 @@ exports.markAllAsRead = async (req, res) => {
 
 exports.deleteNotification = async (req, res) => {
   try {
-    const result = await Notification.deleteOne({
-      _id: req.params.id,
-      user: req.user.id,
-    });
+    const result = await Notification.deleteOne({ _id: req.params.id, user: req.user.id });
     if (!result.deletedCount) {
       return res.status(404).json({ success: false, message: "Notification not found" });
     }
