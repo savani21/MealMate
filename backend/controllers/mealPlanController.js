@@ -1,5 +1,4 @@
 const MealPlan = require("../models/MealPlan");
-const { syncMealPlanPromptForUser } = require("../services/mealPlanPromptNotificationService");
 const { generateWithOpenRouter } = require("../services/mealPlan/aiProviderService");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
@@ -458,12 +457,6 @@ Rules:
       );
     }
 
-    // Immediately reconcile the prompt after a plan is saved.
-    try {
-      await syncMealPlanPromptForUser(req.user.id);
-    } catch (notificationError) {
-      console.error("Meal plan saved, but notification sync failed:", notificationError);
-    }
 
     res.status(201).json({
       success: true,
@@ -525,11 +518,6 @@ exports.archiveMyMealPlan = async (req, res) => {
         message: "Active meal plan not found",
       });
     }
-    try {
-      await syncMealPlanPromptForUser(req.user.id);
-    } catch (notificationError) {
-      console.error("Meal plan archived, but notification sync failed:", notificationError);
-    }
     res.status(200).json({
       success: true,
       message: "Meal plan archived successfully",
@@ -554,11 +542,6 @@ exports.restoreMyMealPlan = async (req, res) => {
         message: "Archived meal plan not found",
       });
     }
-    try {
-      await syncMealPlanPromptForUser(req.user.id);
-    } catch (notificationError) {
-      console.error("Meal plan restored, but notification sync failed:", notificationError);
-    }
     res.status(200).json({
       success: true,
       message: "Meal plan restored successfully",
@@ -581,11 +564,6 @@ exports.deleteMyMealPlan = async (req, res) => {
         success: false,
         message: "Meal plan not found",
       });
-    }
-    try {
-      await syncMealPlanPromptForUser(req.user.id);
-    } catch (notificationError) {
-      console.error("Meal plan deleted, but notification sync failed:", notificationError);
     }
     res.status(200).json({
       success: true,
