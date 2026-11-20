@@ -1,6 +1,7 @@
 const PantryItem = require("../../models/user/PantryItem");
 const { processDueOrders } = require("./orderController");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
+const { activePantryQuery, getLocalDayStartUtc } = require("../../utils/pantryExpiry");
 
 exports.listPantry = async (req, res) => {
   try {
@@ -119,7 +120,7 @@ exports.consumeRecipeIngredients = async (req, res) => {
   try {
     const [recipe, pantry] = await Promise.all([
       Recipe.findById(req.params.recipeId).lean(),
-      PantryItem.find({ user: req.user.id }),
+      PantryItem.find(activePantryQuery(req.user.id)),
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 
@@ -178,7 +179,7 @@ exports.consumeRecipeIngredients = async (req, res) => {
 
     for (const deduction of deductions) {
       const updated = await PantryItem.findOneAndUpdate(
-        { _id: deduction.item._id, user: req.user.id, quantity: { $gte: deduction.deductQuantity } },
+        { _id: deduction.item._id, user: req.user.id, quantity: { $gte: deduction.deductQuantity }, $or: [{ expiryDate: null }, { expiryDate: { $gte: getLocalDayStartUtc() } }] },
         { $inc: { quantity: -deduction.deductQuantity } },
         { returnDocument: "after" }
       );
