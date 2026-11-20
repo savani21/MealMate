@@ -241,8 +241,6 @@ export default function GroceryStore() {
     return requestedIngredientsFromUrl;
   }, [requestedItems, requestedIngredientsFromUrl.join(",")]);
 
-  const visibleRecipeIngredients = allRecipeIngredientsFromUrl.filter((item) => normalizeSearchIngredient(item.name) !== "water");
-
   const requestedGroups = useMemo(() => {
     const groups = new Map();
     requestedItems.forEach((item) => {
@@ -304,6 +302,8 @@ export default function GroceryStore() {
     };
     return aliases[normalizedName] || normalizedName;
   };
+
+  const visibleRecipeIngredients = allRecipeIngredientsFromUrl.filter((item) => normalizeSearchIngredient(item.name) !== "water");
 
   const productMatchesIngredient = (product, ingredient) => {
     const productName = normalizeSearchIngredient(product?.name);
