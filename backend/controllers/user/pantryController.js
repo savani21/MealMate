@@ -121,6 +121,13 @@ exports.consumeRecipeIngredients = async (req, res) => {
     };
     const skipped = [];
     const requirements = [];
+    const remainingByBatch = new Map(pantry.map((item) => [String(item._id), Number(item.quantity)]));
+    const batchExpiryOrder = (a, b) => {
+      if (!a.expiryDate && !b.expiryDate) return 0;
+      if (!a.expiryDate) return 1;
+      if (!b.expiryDate) return -1;
+      return new Date(a.expiryDate) - new Date(b.expiryDate);
+    };
     for (const raw of recipe.ingredients || []) {
       const required = parseRequiredIngredient(raw);
       if (isCommonHouseholdIngredient(required.name)) continue;
@@ -128,22 +135,28 @@ exports.consumeRecipeIngredients = async (req, res) => {
         skipped.push(raw);
         continue;
       }
-      const item = pantry.find((entry) => canonical(entry.name) === canonical(required.name) ||
-        canonical(required.name).includes(canonical(entry.name)) ||
-        canonical(entry.name).includes(canonical(required.name)));
-      if (!item) return res.status(409).json({ message: "Some recipe ingredients are not in your pantry.", unavailable: [raw], skipped });
       const need = normalizeAmount(required.quantity, required.unit);
-      const have = normalizeAmount(item.quantity, item.unit);
-      if (need.unit !== have.unit) return res.status(409).json({ message: `Cannot convert ${raw} to your pantry unit (${item.unit}).`, unavailable: [raw], skipped });
-      if (have.quantity + 0.000001 < need.quantity) {
-        return res.status(409).json({ message: "You do not have enough ingredients to cook this recipe.", unavailable: [raw], skipped });
+      const candidates = pantry
+        .filter((entry) => canonical(entry.name) === canonical(required.name) &&
+          remainingByBatch.get(String(entry._id)) > 0)
+        .sort(batchExpiryOrder);
+      if (!candidates.length) return res.status(409).json({ message: "Some recipe ingredients are not in your usable pantry stock.", unavailable: [raw], skipped });
+      const compatible = candidates.filter((entry) => normalizeAmount(remainingByBatch.get(String(entry._id)), entry.unit).unit === need.unit);
+      const totalAvailable = compatible.reduce((sum, entry) => sum + normalizeAmount(remainingByBatch.get(String(entry._id)), entry.unit).quantity, 0);
+      if (totalAvailable + 0.000001 < need.quantity) {
+        return res.status(409).json({ message: "You do not have enough usable ingredients across your pantry batches.", unavailable: [raw], skipped });
       }
-      const remainingBase = Math.max(0, have.quantity - need.quantity);
-      requirements.push({
-        item,
-        deductQuantity: toStoredUnit(need.quantity, need.unit, item.unit),
-        ingredient: raw,
-      });
+      let stillNeeded = need.quantity;
+      for (const item of compatible) {
+        if (stillNeeded <= 0.000001) break;
+        const batchId = String(item._id);
+        const have = normalizeAmount(remainingByBatch.get(batchId), item.unit);
+        const take = Math.min(have.quantity, stillNeeded);
+        const storedTake = toStoredUnit(take, need.unit, item.unit);
+        remainingByBatch.set(batchId, Math.max(0, remainingByBatch.get(batchId) - storedTake));
+        requirements.push({ item, deductQuantity: storedTake, ingredient: raw });
+        stillNeeded -= take;
+      }
     }
 
     const grouped = new Map();
