@@ -277,14 +277,22 @@ export default function GroceryStore() {
   const normalizeSearchIngredient = (value) => {
     const cleaned = String(value || "").toLowerCase()
       .replace(/\([^)]*\)/g, " ")
-      .replace(/^\s*(?:\d+\s*\/\s*\d+|\d+(?:\.\d+)?|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tblspoons?|tsp|tsps|teaspoons?|kilograms?|kgs?|grams?|gms?|grms?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|packs?|cans?)?\s*(?:of\s+)?/i, "")
-      .replace(/\s+(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+)\s*(?:kilograms?|kgs?|grams?|gms?|ml|l|pieces?|pcs?)?\s*$/i, "")
+      .replace(/^\s*(?:\d+\s*\/\s*\d+|\d+(?:\.\d+)?|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tblspoons?|tsp|tsps|teaspoons?|kilograms?|kgs?|grams?|gms?|grms?|g|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|packs?|cans?)?\s*(?:of\s+)?/i, "")
+      .replace(/\s+(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+)\s*(?:kilograms?|kgs?|grams?|gms?|grms?|g|ml|lit(?:er|re)s?|l|pieces?|pcs?)?\s*$/i, "")
       .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole|to taste)\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
       .trim()
-      .replace(/ies$/, "y")
-      .replace(/s$/, "");
+      .trim();
+    const words = cleaned.split(" ").filter(Boolean);
+    const irregularPlurals = { tomatoes: "tomato", potatoes: "potato", leaves: "leaf", chilies: "chili", chillies: "chilli", berries: "berry" };
+    if (words.length) {
+      const last = words[words.length - 1];
+      if (irregularPlurals[last]) words[words.length - 1] = irregularPlurals[last];
+      else if (/ies$/.test(last)) words[words.length - 1] = last.slice(0, -3) + "y";
+      else if (/s$/.test(last) && !/ss$/.test(last)) words[words.length - 1] = last.slice(0, -1);
+    }
+    const normalizedName = words.join(" ");
     const aliases = {
       "whole milk": "milk", "warm milk": "milk", "full cream milk": "milk", "toned milk": "milk",
       "basmati rice": "rice", "long grain rice": "rice",
@@ -293,7 +301,7 @@ export default function GroceryStore() {
       "sunflower oil": "oil", "vegetable oil": "oil",
       "tuver dal": "toor dal", "tuvar dal": "toor dal", "tur dal": "toor dal", "arhar dal": "toor dal",
     };
-    return aliases[cleaned] || cleaned;
+    return aliases[normalizedName] || normalizedName;
   };
 
   const productMatchesIngredient = (product, ingredient) => {
