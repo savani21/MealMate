@@ -54,6 +54,8 @@ export default function GroceryStore() {
   const recipeNameFromUrl = params.get("recipeName") || "Selected recipe";
   let allRecipeIngredientsFromUrl = [];
   try { const parsed = JSON.parse(params.get("allIngredients") || "[]"); if (Array.isArray(parsed)) allRecipeIngredientsFromUrl = parsed.filter((item) => item && item.name); } catch { allRecipeIngredientsFromUrl = []; }
+  // When coming from Recipe Needs, only missing/partial ingredients are purchase candidates.
+  if (allRecipeIngredientsFromUrl.length) requestedIngredientsFromUrl = allRecipeIngredientsFromUrl.filter((item) => item.status === "missing" || item.status === "partial").map((item) => item.name);
 
   const [requestedItems, setRequestedItems] = useState([]);
   const [neededItemsOpen, setNeededItemsOpen] = useState(false);
@@ -534,15 +536,21 @@ export default function GroceryStore() {
                   <section className="space-y-2">
                     {visibleRecipeIngredients.map((item, index) => {
                       const available = item.status === "available";
+                      const needsQuantityCheck = item.status === "check";
+                      const shouldPurchase = item.status === "missing" || item.status === "partial";
                       const matchingProducts = products.filter((product) => productMatchesIngredient(product, item.name));
                       const storeMatch = matchingProducts.length > 0;
                       const inCart = matchingProducts.some((product) => isProductInCart(product));
-                      const statusLabel = available ? "In pantry" : inCart ? "In cart" : storeMatch ? "Add failed" : "Not in store";
+                      const statusLabel = available ? "In pantry" : needsQuantityCheck ? "Available - Check Quantity" : item.status === "partial" ? "Short in Pantry" : inCart ? "In cart" : storeMatch ? "Add failed" : "Not in store";
                       return (
                         <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 px-3 py-3">
                           <span className="min-w-0 text-sm font-medium text-gray-800">{item.name}</span>
                           {available ? (
                             <span className="shrink-0 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-700">In pantry</span>
+                          ) : needsQuantityCheck ? (
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-700">Available - Check Quantity</span>
+                          ) : !shouldPurchase ? (
+                            <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-bold text-gray-600">{statusLabel}</span>
                           ) : inCart ? (
                             <span className="shrink-0 rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-700">In cart</span>
                           ) : storeMatch ? (
