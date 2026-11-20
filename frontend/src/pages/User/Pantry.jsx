@@ -61,6 +61,21 @@ const classify = (name = "") => {
   if (/spice|salt|sugar|turmeric|cumin|coriander|masala|chilli powder|pepper powder/.test(n)) return "spices";
   return "other";
 };
+const getLocalDateKey = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const isPantryItemExpired = (expiryDate) => {
+  if (!expiryDate) return false;
+  const expiryKey = new Date(expiryDate).toISOString().slice(0, 10);
+  return expiryKey < getLocalDateKey();
+};
+
+const formatPantryDate = (value) => new Date(value).toLocaleDateString();
+
 const readJson = async (response) => {
   const raw = await response.text();
   try { return raw ? JSON.parse(raw) : {}; }
@@ -216,7 +231,7 @@ export default function Pantry() {
                   <span className="rounded-full bg-[#edf6e8] px-2 py-1 text-[10px] font-bold capitalize text-[#426b48]">{group === "other" ? "Pantry staple" : group}</span>
                 </div>
                 <p className="text-xs font-semibold text-[#657568]">{item.quantity} {item.unit}</p>
-                {item.expiryDate ? <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#9a702b]"><CalendarClock className="h-3 w-3 shrink-0"/> Best before {new Date(item.expiryDate).toLocaleDateString()}</p> : <p className="mt-1.5 text-[10px] text-[#a2aca0]">No expiry date added</p>}
+                {item.expiryDate ? (isPantryItemExpired(item.expiryDate) ? <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-red-600"><AlertTriangle className="h-3 w-3 shrink-0"/> Expired on {formatPantryDate(item.expiryDate)}</p> : <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#9a702b]"><CalendarClock className="h-3 w-3 shrink-0"/> Best before {formatPantryDate(item.expiryDate)}</p>) : <p className="mt-1.5 text-[10px] text-[#a2aca0]">No expiry date added</p>}
                 <div className="mt-2 flex items-center gap-1">
                   <button onClick={() => startEdit(item)} aria-label={`Edit ${item.name}`} title="Edit ingredient" className="rounded-full p-2 text-[#536655] transition hover:bg-[#edf6e8] hover:text-[#267342]"><Pencil className="h-4 w-4"/></button>
                   <button onClick={() => remove(item._id)} aria-label={`Remove ${item.name}`} title="Remove ingredient" className="rounded-full p-2 text-[#8a7771] transition hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4"/></button>
