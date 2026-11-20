@@ -3,6 +3,7 @@ const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
 const PantryItem = require("../../models/user/PantryItem");
 const { calculateSmartGroceryItems } = require("../../utils/smartGroceryCalculator");
+const { isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 const DIET_FORBIDDEN = {
@@ -167,7 +168,7 @@ async function buildGroceryItems(mealPlan) {
         const rawName = typeof raw === "string" ? raw : raw?.name;
         const name = normalizeIngredient(rawName);
         const quantity = typeof raw === "string" ? "" : String(raw?.quantity || "").trim();
-        if (!name || isForbiddenForDiet(name, mealPlan.diet)) continue;
+        if (!name || isCommonHouseholdIngredient(name) || isForbiddenForDiet(name, mealPlan.diet)) continue;
         requiredItems.push({
           name,
           quantity,
