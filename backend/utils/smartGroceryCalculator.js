@@ -59,7 +59,7 @@ function calculateSmartGroceryItems({ requiredItems = [], pantryItems = [], avai
   // guess conversions between pieces, mass, and volume for grocery matching.
   const available = new Set([
     ...availableIngredients.map(normalizeIngredientName),
-    ...pantryItems.map((item) => normalizeIngredientName(item.name)),
+    ...pantryItems.filter((item) => Number(item.quantity) > 0).map((item) => normalizeIngredientName(item.name)),
   ].filter(Boolean));
 
   const groups = new Map();
