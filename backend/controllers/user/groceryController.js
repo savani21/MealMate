@@ -3,6 +3,7 @@ const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
 const PantryItem = require("../../models/user/PantryItem");
 const { calculateSmartGroceryItems } = require("../../utils/smartGroceryCalculator");
+const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 const DIET_FORBIDDEN = {
   vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
@@ -11,38 +12,11 @@ const DIET_FORBIDDEN = {
 };
 
 function normalizeIngredient(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/^[\s\d./-]+/, "")
-    .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
-    .replace(/^(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kg|kgs|g|gm|gms|grams?|ml|l|litres?|liters?|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|pack(?:s)?|cans?|can)\s+/i, "")
-    .replace(/^[\s\d./-]+/, "")
-    .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|to taste)\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/[.,;:]+$/, "")
-    .replace(/\b(\w+)s$/, "$1");
+  return normalizeIngredientName(value);
 }
 
 function canonicalIngredient(value) {
-  const name = normalizeIngredient(value);
-  const aliases = {
-    "tuver dal": "toor dal",
-    "tuvar dal": "toor dal",
-    "tur dal": "toor dal",
-    "arhar dal": "toor dal",
-    "basmati rice": "rice",
-    "long grain rice": "rice",
-    "atta": "wheat flour",
-    "whole wheat flour": "wheat flour",
-    "wheat atta": "wheat flour",
-    "vegetable oil": "oil",
-    "sunflower oil": "oil",
-    "green chilli": "green chili",
-    "green chillies": "green chili",
-    "green chilies": "green chili",
-  };
-  return aliases[name] || name;
+  return normalizeIngredientName(value);
 }
 
 function parseIngredients(value) {
@@ -313,15 +287,12 @@ exports.getMyGroceryLists = async (req, res) => {
         .map((list) => [String(list.mealPlan._id), list])
     );
 
-    // Only repair active meal plans that do not have a grocery list yet.
-    // Existing lists are returned as-is, avoiding a full AI/database rebuild
-    // every time the Grocery List page opens.
+    // Reconcile active grocery lists against the latest pantry contents.
+    // This removes stale "need to buy" rows after pantry items are added or edited.
     for (const mealPlan of mealPlans) {
-      if (existingByMealPlan.has(String(mealPlan._id))) continue;
-
-      const created = await upsertGroceryListForMealPlan(mealPlan);
-      await created.populate("mealPlan");
-      existingByMealPlan.set(String(mealPlan._id), created);
+      const refreshedList = await upsertGroceryListForMealPlan(mealPlan);
+      await refreshedList.populate("mealPlan");
+      existingByMealPlan.set(String(mealPlan._id), refreshedList);
     }
 
     const refreshed = mealPlans
