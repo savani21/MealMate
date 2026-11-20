@@ -91,7 +91,7 @@ export default function GroceryStore() {
       const data = await response.json();
       if (response.ok) {
         const list = (data.groceryLists || []).find((item) => item._id === listId);
-        const missingItems = (list?.items || []).filter((item) => !item.checked);
+        const missingItems = (list?.items || []).filter((item) => !item.checked && normalizeSearchIngredient(item.name) !== "water");
         setRequestedItems(missingItems);
         await loadStore([...new Set(missingItems.map((item) => String(item.name || "").trim().toLowerCase()).filter(Boolean))]);
       }
@@ -241,6 +241,8 @@ export default function GroceryStore() {
     return requestedIngredientsFromUrl;
   }, [requestedItems, requestedIngredientsFromUrl.join(",")]);
 
+  const visibleRecipeIngredients = allRecipeIngredientsFromUrl.filter((item) => normalizeSearchIngredient(item.name) !== "water");
+
   const requestedGroups = useMemo(() => {
     const groups = new Map();
     requestedItems.forEach((item) => {
@@ -278,7 +280,7 @@ export default function GroceryStore() {
     const cleaned = String(value || "").toLowerCase()
       .replace(/\([^)]*\)/g, " ")
       .replace(/^\s*(?:\d+\s*\/\s*\d+|\d+(?:\.\d+)?|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tblspoons?|tsp|tsps|teaspoons?|kilograms?|kgs?|grams?|gms?|grms?|g|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|packs?|cans?)?\s*(?:of\s+)?/i, "")
-      .replace(/\s+(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+)\s*(?:kilograms?|kgs?|grams?|gms?|grms?|g|ml|lit(?:er|re)s?|l|pieces?|pcs?)?\s*$/i, "")
+      .replace(/\s+(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kilograms?|kgs?|grams?|gms?|grms?|g|ml|millilit(?:er|re)s?|lit(?:er|re)s?|l|pieces?|pcs?|cloves?|slices?|bunch(?:es)?)?\s*$/i, "")
       .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole|to taste)\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
@@ -297,7 +299,7 @@ export default function GroceryStore() {
       "basmati rice": "rice", "long grain rice": "rice",
       atta: "wheat flour", "whole wheat flour": "wheat flour", "wheat atta": "wheat flour",
       "green chilli": "green chili", "green chillies": "green chili", "green chilies": "green chili",
-      "sunflower oil": "oil", "vegetable oil": "oil",
+      "sunflower oil": "oil", "vegetable oil": "oil", "cooking oil": "oil",
       "tuver dal": "toor dal", "tuvar dal": "toor dal", "tur dal": "toor dal", "arhar dal": "toor dal",
     };
     return aliases[normalizedName] || normalizedName;
@@ -378,7 +380,7 @@ export default function GroceryStore() {
         const cartResponse = await fetch(`${API}/api/store/cart`, { headers: authHeaders() });
         const cartData = await cartResponse.json();
         const existingIds = new Set((cartData.cart?.items || []).map((item) => String(item.product?._id || item.product || "")));
-        const requested = requestedIngredientsFromUrl;
+        const requested = requestedIngredientsFromUrl.filter((ingredient) => normalizeSearchIngredient(ingredient) !== "water");
         const matches = products.filter((product) =>
           requested.some((ingredient) => productMatchesIngredient(product, ingredient)) &&
           !existingIds.has(String(product._id))
@@ -430,7 +432,7 @@ export default function GroceryStore() {
       <PageHeroBanner title="Grocery Store" description="Find and purchase the ingredients your meal plan needs." eyebrow="GROCERY MARKET" icon={ShoppingBasket} />
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {(allRecipeIngredientsFromUrl.length > 0 || requestedIngredients.length > 0) && (
+        {(visibleRecipeIngredients.length > 0 || requestedIngredients.length > 0) && (
           <section className="mb-6 flex flex-col gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-50 text-primary">
@@ -440,7 +442,7 @@ export default function GroceryStore() {
                 <p className="font-bold text-gray-900">Recipe items needed</p>
                 <p className="text-sm text-gray-500">
                   {recipeNameFromUrl !== "Selected recipe" ? recipeNameFromUrl : "Review ingredients from your meal plan"}
-                  {" · "}{allRecipeIngredientsFromUrl.length || requestedIngredients.length} ingredients
+                  {" · "}{visibleRecipeIngredients.length || requestedIngredients.length} ingredients
                 </p>
               </div>
             </div>
@@ -452,7 +454,7 @@ export default function GroceryStore() {
               <ShoppingBasket className="h-4 w-4" />
               View Items Needed
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
-                {allRecipeIngredientsFromUrl.length || requestedIngredients.length}
+                {visibleRecipeIngredients.length || requestedIngredients.length}
               </span>
             </button>
           </section>
@@ -527,9 +529,9 @@ export default function GroceryStore() {
                       })}
                     </div>
                   </section>
-                )) : allRecipeIngredientsFromUrl.length > 0 ? (
+                )) : visibleRecipeIngredients.length > 0 ? (
                   <section className="space-y-2">
-                    {allRecipeIngredientsFromUrl.map((item, index) => {
+                    {visibleRecipeIngredients.map((item, index) => {
                       const available = item.status === "available";
                       const matchingProducts = products.filter((product) => productMatchesIngredient(product, item.name));
                       const storeMatch = matchingProducts.length > 0;

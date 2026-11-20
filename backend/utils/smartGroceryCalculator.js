@@ -1,4 +1,4 @@
-const { normalizeIngredientName } = require("./ingredientMatcher");
+const { normalizeIngredientName, isCommonHouseholdIngredient } = require("./ingredientMatcher");
 const { isPantryItemExpired } = require("./pantryExpiry");
 
 const UNIT_MAP = {

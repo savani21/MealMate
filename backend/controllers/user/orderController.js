@@ -6,7 +6,7 @@ const User = require("../../models/User");
 const GroceryList = require("../../models/user/GroceryList");
 const PantryItem = require("../../models/user/PantryItem");
 const Notification = require("../../models/user/Notification");
-const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
+const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { createAdminAlert } = require("../../services/adminAlertService");
 
 
@@ -63,7 +63,7 @@ function convertPantryQuantity(quantity, fromUnit, toUnit) {
 async function addDeliveredOrderItem(userId, orderId, item, index) {
   const originalName = String(item.name || "").trim().toLowerCase();
   const name = normalizeIngredientName(originalName);
-  if (!name) return;
+  if (!name || isCommonHouseholdIngredient(name)) return;
   const incoming = parseStorePack(item.unit, item.quantity);
   const receiptKey = `${orderId}:${index}`;
   let pantryItems = await PantryItem.find({ user: userId });

@@ -3,6 +3,7 @@ const MealPlan = require("../../models/MealPlan");
 const Recipe = require("../../models/user/Recipe");
 const PantryItem = require("../../models/user/PantryItem");
 const { calculateSmartGroceryItems } = require("../../utils/smartGroceryCalculator");
+const { isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
 const DIET_FORBIDDEN = {
@@ -167,7 +168,7 @@ async function buildGroceryItems(mealPlan) {
         const rawName = typeof raw === "string" ? raw : raw?.name;
         const name = normalizeIngredient(rawName);
         const quantity = typeof raw === "string" ? "" : String(raw?.quantity || "").trim();
-        if (!name || isForbiddenForDiet(name, mealPlan.diet)) continue;
+        if (!name || isCommonHouseholdIngredient(name) || isForbiddenForDiet(name, mealPlan.diet)) continue;
         requiredItems.push({
           name,
           quantity,
@@ -352,7 +353,7 @@ exports.addRecipeIngredientsToGroceryList = async (req, res) => {
     if (!recipe) return res.status(404).json({ success: false, message: "Recipe not found." });
 
     const recipeIngredients = new Set((recipe.ingredients || []).map((item) => canonicalIngredient(item)));
-    const selected = [...new Set(ingredients.map((item) => String(item).trim()).filter(Boolean))];
+    const selected = [...new Set(ingredients.map((item) => String(item).trim()).filter((item) => item && !isCommonHouseholdIngredient(item)))];
     const invalid = selected.filter((item) => !recipeIngredients.has(canonicalIngredient(item)));
     if (invalid.length) {
       return res.status(400).json({ success: false, message: "Some selected ingredients do not belong to this recipe." });

@@ -1,6 +1,7 @@
 const PantryItem = require("../../models/user/PantryItem");
 const { processDueOrders } = require("./orderController");
-const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
+const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
+const { toComparableQuantity } = require("../../utils/quantityConversion");
 const { activePantryQuery, getLocalDayStartUtc } = require("../../utils/pantryExpiry");
 
 exports.listPantry = async (req, res) => {
@@ -107,12 +108,6 @@ function normalizeAmount(quantity, unit) {
 }
 
 
-
-const COMMON_HOUSEHOLD_INGREDIENTS = new Set(["water"]);
-
-function isCommonHouseholdIngredient(name) {
-  return COMMON_HOUSEHOLD_INGREDIENTS.has(String(name || "").toLowerCase().trim());
-}
 
 
 exports.consumeRecipeIngredients = async (req, res) => {
@@ -274,31 +269,18 @@ exports.compareRecipeWithPantry = async (req, res) => {
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 
-    // Recipe availability is an identity check. Units such as pieces, grams,
-    // and cups are not converted or compared here because that needs
-    // ingredient-specific density/size data and can create false shortages.
-    const pantryByName = new Map(
-      pantry.map((item) => [normalizeIngredientName(item.name), item])
-    );
-
-    const rows = (recipe.ingredients || []).map((raw) => {
+    const pantryByName = new Map(pantry.map((item) => [normalizeIngredientName(item.name), item]));
+    const rows = (recipe.ingredients || []).filter((raw) => !isCommonHouseholdIngredient(parseRequiredIngredient(raw).name)).map((raw) => {
       const required = parseRequiredIngredient(raw);
-      const normalizedRequired = normalizeIngredientName(required.name);
-      const match = pantryByName.get(normalizedRequired);
-
-      if (!match) {
-        return { ingredient: raw, status: "missing", message: "Not in Pantry" };
-      }
-
-      return {
-        ingredient: raw,
-        status: "available",
-        message: "In Pantry",
-        pantryItemId: match._id,
-        pantryName: match.name,
-        pantryQuantity: match.quantity,
-        pantryUnit: match.unit,
-      };
+      const match = pantryByName.get(normalizeIngredientName(required.name));
+      if (!match) return { ingredient: raw, status: "missing", message: "Not in Pantry" };
+      if (required.quantity === null) return { ingredient: raw, status: "check", message: "In Pantry — check quantity", pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit };
+      const needed = toComparableQuantity(required.quantity, required.unit);
+      const available = toComparableQuantity(match.quantity, match.unit);
+      if (!needed || !available || needed.dimension !== available.dimension) return { ingredient: raw, status: "check", message: "Ingredient found — units need checking", pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit };
+      if (available.amount + 1e-6 >= needed.amount) return { ingredient: raw, status: "available", message: "In Pantry", pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit };
+      const deficit = needed.amount - available.amount;
+      return { ingredient: raw, status: "partial", message: `Short by ${Number(deficit.toFixed(2))} ${needed.unit}`, pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit, missingQuantity: deficit, missingUnit: needed.unit };
     });
 
     return res.json({ recipeId: recipe._id, comparison: rows });
