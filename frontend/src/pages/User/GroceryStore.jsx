@@ -299,7 +299,7 @@ export default function GroceryStore() {
       "basmati rice": "rice", "long grain rice": "rice",
       atta: "wheat flour", "whole wheat flour": "wheat flour", "wheat atta": "wheat flour",
       "green chilli": "green chili", "green chillies": "green chili", "green chilies": "green chili",
-      "sunflower oil": "oil", "vegetable oil": "oil",
+      "sunflower oil": "oil", "vegetable oil": "oil", "cooking oil": "oil",
       "tuver dal": "toor dal", "tuvar dal": "toor dal", "tur dal": "toor dal", "arhar dal": "toor dal",
     };
     return aliases[normalizedName] || normalizedName;
@@ -454,7 +454,7 @@ export default function GroceryStore() {
               <ShoppingBasket className="h-4 w-4" />
               View Items Needed
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs">
-                {allRecipeIngredientsFromUrl.length || requestedIngredients.length}
+                {visibleRecipeIngredients.length || requestedIngredients.length}
               </span>
             </button>
           </section>
@@ -529,7 +529,7 @@ export default function GroceryStore() {
                       })}
                     </div>
                   </section>
-                )) : allRecipeIngredientsFromUrl.length > 0 ? (
+                )) : visibleRecipeIngredients.length > 0 ? (
                   <section className="space-y-2">
                     {visibleRecipeIngredients.map((item, index) => {
                       const available = item.status === "available";
