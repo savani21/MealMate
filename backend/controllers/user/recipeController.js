@@ -1,4 +1,6 @@
 const Recipe = require("../../models/user/Recipe");
+const PantryItem = require("../../models/user/PantryItem");
+const { getLocalDayStartUtc } = require("../../utils/pantryExpiry");
 const User = require("../../models/User");
 const RecipeReview = require("../../models/user/RecipeReview");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
@@ -87,7 +89,12 @@ const getRecommendedRecipes = async (req, res) => {
       item._id.toString(),
       { ratingCount: item.ratingCount, averageRating: Number(item.averageRating.toFixed(1)) },
     ]));
-    const available = cleanIngredients(req.query.available);
+    const requestedAvailable = cleanIngredients(req.query.available);
+    const expiredPantryItems = req.user?.id
+      ? await PantryItem.find({ user: req.user.id, expiryDate: { $lt: getLocalDayStartUtc() } }).select("name").lean()
+      : [];
+    const expiredPantryNames = new Set(expiredPantryItems.map((item) => normalizeIngredient(item.name)));
+    const available = requestedAvailable.filter((name) => !expiredPantryNames.has(normalizeIngredient(name)));
     const recommended = cleanIngredients(req.query.recommended);
     const diet = ["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(req.query.diet) ? req.query.diet : "";
     const mode = req.query.mode === "recommended" ? "recommended" : "available";

@@ -66,3 +66,21 @@ test("matches pantry ingredients even when recipe and pantry units differ", () =
   });
   assert.deepEqual(items, []);
 });
+
+test("expired pantry stock is not treated as available", () => {
+  const items = calculateSmartGroceryItems({
+    requiredItems: [{ name: "onion", quantity: "2 pieces", mealName: "Sabzi" }],
+    pantryItems: [{ name: "onion", quantity: 5, unit: "piece", expiryDate: "2026-11-19" }],
+    availableIngredients: ["onion"],
+  });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].name, "onion");
+});
+
+test("pantry stock expiring today remains available for the day", () => {
+  const items = calculateSmartGroceryItems({
+    requiredItems: [{ name: "tomato", quantity: "2 pieces", mealName: "Sabzi" }],
+    pantryItems: [{ name: "tomato", quantity: 5, unit: "piece", expiryDate: new Date(Date.UTC(2026, 10, 20)) }],
+  });
+  assert.deepEqual(items, []);
+});

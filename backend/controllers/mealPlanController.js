@@ -2,6 +2,8 @@ const MealPlan = require("../models/MealPlan");
 const { generateWithOpenRouter } = require("../services/mealPlan/aiProviderService");
 const { normalizeIngredientName } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
+const PantryItem = require("../models/user/PantryItem");
+const { getLocalDayStartUtc } = require("../utils/pantryExpiry");
 const { parseIngredient } = require("../services/nutritionEstimator");
 const { attachMealNutrition } = require("../services/mealPlan/nutritionService");
 const { DIET_RULES, DIET_FORBIDDEN, mealViolatesDiet } = require("../services/mealPlan/validationService");
@@ -71,7 +73,10 @@ exports.createMealPlan = async (req, res) => {
       });
     }
 
-    const available = cleanList(availableIngredients || ingredients);
+    const requestedAvailable = cleanList(availableIngredients || ingredients);
+    const expiredPantryItems = await PantryItem.find({ user: req.user.id, expiryDate: { $lt: getLocalDayStartUtc() } }).select("name").lean();
+    const expiredPantryNames = new Set(expiredPantryItems.map((item) => normalizeIngredientName(item.name)));
+    const available = requestedAvailable.filter((name) => !expiredPantryNames.has(normalizeIngredientName(name)));
     // Pantry ingredients are user-confirmed; recommended ingredients are filtered
     // to the selected diet so stale or unfiltered suggestions cannot block planning.
     const recommended = cleanList(recommendedIngredients).filter(
