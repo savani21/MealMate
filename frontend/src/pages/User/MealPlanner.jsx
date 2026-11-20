@@ -42,7 +42,7 @@ export default function MealPlanner() {
         if (!response.ok) throw new Error(data.message || "Unable to load pantry items");
         const items = Array.isArray(data.items) ? data.items : [];
         setPantryItems(items);
-        setSelectedPantryNames(items.map((item) => item.name).filter(Boolean));
+        setSelectedPantryNames(items.filter((item) => Number(item.quantity) > 0).map((item) => item.name).filter(Boolean));
       })
       .catch((error) => console.error("Pantry loading error:", error))
       .finally(() => setPantryLoading(false));
