@@ -1,6 +1,6 @@
 const MealPlan = require("../models/MealPlan");
 const { generateWithOpenRouter } = require("../services/mealPlan/aiProviderService");
-const { normalizeIngredientName } = require("../utils/ingredientMatcher");
+const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../utils/ingredientMatcher");
 const Recipe = require("../models/user/Recipe");
 const PantryItem = require("../models/user/PantryItem");
 const { getLocalDayStartUtc } = require("../utils/pantryExpiry");
@@ -73,13 +73,13 @@ exports.createMealPlan = async (req, res) => {
       });
     }
 
-    const requestedAvailable = cleanList(availableIngredients || ingredients);
+    const requestedAvailable = cleanList(availableIngredients || ingredients).filter((item) => !isCommonHouseholdIngredient(item));
     const expiredPantryItems = await PantryItem.find({ user: req.user.id, expiryDate: { $lt: getLocalDayStartUtc() } }).select("name").lean();
     const expiredPantryNames = new Set(expiredPantryItems.map((item) => normalizeIngredientName(item.name)));
     const available = requestedAvailable.filter((name) => !expiredPantryNames.has(normalizeIngredientName(name)));
     // Pantry ingredients are user-confirmed; recommended ingredients are filtered
     // to the selected diet so stale or unfiltered suggestions cannot block planning.
-    const recommended = cleanList(recommendedIngredients).filter(
+    const recommended = cleanList(recommendedIngredients).filter((item) => !isCommonHouseholdIngredient(item)).filter(
       (ingredient) => !DIET_FORBIDDEN[diet]?.test(ingredient)
     );
     const allowedPool = ingredientMode === "recommended"
