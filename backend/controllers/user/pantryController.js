@@ -275,18 +275,27 @@ exports.compareRecipeWithPantry = async (req, res) => {
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 
-    const pantryByName = new Map(pantry.map((item) => [normalizeIngredientName(item.name), item]));
+    const pantryByName = new Map();
+    for (const item of pantry) {
+      const key = normalizeIngredientName(item.name);
+      if (!pantryByName.has(key)) pantryByName.set(key, []);
+      pantryByName.get(key).push(item);
+    }
     const rows = (recipe.ingredients || []).filter((raw) => !isCommonHouseholdIngredient(parseRequiredIngredient(raw).name)).map((raw) => {
       const required = parseRequiredIngredient(raw);
-      const match = pantryByName.get(normalizeIngredientName(required.name));
-      if (!match) return { ingredient: raw, status: "missing", message: "Not in Pantry" };
-      if (required.quantity === null) return { ingredient: raw, status: "check", message: "In Pantry — check quantity", pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit };
+      const batches = pantryByName.get(normalizeIngredientName(required.name)) || [];
+      if (!batches.length) return { ingredient: raw, status: "missing", message: "Not in Pantry" };
+      const first = batches[0];
+      if (required.quantity === null) return { ingredient: raw, status: "check", message: "In Pantry — check quantity", pantryItemId: first._id, pantryName: first.name, pantryQuantity: batches.reduce((sum, item) => sum + Number(item.quantity || 0), 0), pantryUnit: first.unit, batchCount: batches.length };
       const needed = toComparableQuantity(required.quantity, required.unit);
-      const available = toComparableQuantity(match.quantity, match.unit);
-      if (!needed || !available || needed.dimension !== available.dimension) return { ingredient: raw, status: "check", message: "Ingredient found — units need checking", pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit };
-      if (available.amount + 1e-6 >= needed.amount) return { ingredient: raw, status: "available", message: "In Pantry", pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit };
-      const deficit = needed.amount - available.amount;
-      return { ingredient: raw, status: "partial", message: `Short by ${Number(deficit.toFixed(2))} ${needed.unit}`, pantryItemId: match._id, pantryName: match.name, pantryQuantity: match.quantity, pantryUnit: match.unit, missingQuantity: deficit, missingUnit: needed.unit };
+      if (!needed) return { ingredient: raw, status: "check", message: "Ingredient found — units need checking", pantryItemId: first._id, pantryName: first.name, batchCount: batches.length };
+      const compatible = batches.map((item) => ({ item, amount: toComparableQuantity(item.quantity, item.unit) }))
+        .filter((entry) => entry.amount && entry.amount.dimension === needed.dimension);
+      if (!compatible.length) return { ingredient: raw, status: "check", message: "Ingredient found — units need checking", pantryItemId: first._id, pantryName: first.name, batchCount: batches.length };
+      const availableAmount = compatible.reduce((sum, entry) => sum + entry.amount.amount, 0);
+      if (availableAmount + 1e-6 >= needed.amount) return { ingredient: raw, status: "available", message: "In Pantry", pantryItemId: first._id, pantryName: first.name, pantryQuantity: availableAmount, pantryUnit: needed.unit, batchCount: compatible.length };
+      const deficit = needed.amount - availableAmount;
+      return { ingredient: raw, status: "partial", message: `Short by ${Number(deficit.toFixed(2))} ${needed.unit}`, pantryItemId: first._id, pantryName: first.name, pantryQuantity: availableAmount, pantryUnit: needed.unit, batchCount: compatible.length, missingQuantity: deficit, missingUnit: needed.unit };
     });
 
     return res.json({ recipeId: recipe._id, comparison: rows });
