@@ -1,4 +1,5 @@
 const { normalizeIngredientName } = require("./ingredientMatcher");
+const { isPantryItemExpired } = require("./pantryExpiry");
 
 const UNIT_MAP = {
   kg: { unit: "g", factor: 1000, dimension: "weight" },
@@ -57,9 +58,10 @@ function pantryAmount(item) {
 function calculateSmartGroceryItems({ requiredItems = [], pantryItems = [], availableIngredients = [] }) {
   // Pantry availability is based on canonical ingredient identity. Do not
   // guess conversions between pieces, mass, and volume for grocery matching.
+  const expiredPantryNames = new Set(pantryItems.filter((item) => isPantryItemExpired(item)).map((item) => normalizeIngredientName(item.name)));
   const available = new Set([
-    ...availableIngredients.map(normalizeIngredientName),
-    ...pantryItems.filter((item) => Number(item.quantity) > 0).map((item) => normalizeIngredientName(item.name)),
+    ...availableIngredients.map(normalizeIngredientName).filter((name) => !expiredPantryNames.has(name)),
+    ...pantryItems.filter((item) => Number(item.quantity) > 0 && !isPantryItemExpired(item)).map((item) => normalizeIngredientName(item.name)),
   ].filter(Boolean));
 
   const groups = new Map();
