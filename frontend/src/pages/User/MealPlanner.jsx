@@ -5,6 +5,14 @@ import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, Chev
 
 const API = "/api/meal-plans";
 
+const isExpiredPantryItem = (item, now = new Date()) => {
+  if (!item?.expiryDate) return false;
+  const expiryDate = new Date(item.expiryDate);
+  const expiryKey = expiryDate.toISOString().slice(0, 10);
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return expiryKey < todayKey;
+};
+
 export default function MealPlanner() {
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
@@ -42,7 +50,7 @@ export default function MealPlanner() {
         if (!response.ok) throw new Error(data.message || "Unable to load pantry items");
         const items = Array.isArray(data.items) ? data.items : [];
         setPantryItems(items);
-        setSelectedPantryNames(items.filter((item) => Number(item.quantity) > 0).map((item) => item.name).filter(Boolean));
+        setSelectedPantryNames(items.filter((item) => Number(item.quantity) > 0 && !isExpiredPantryItem(item)).map((item) => item.name).filter(Boolean));
       })
       .catch((error) => console.error("Pantry loading error:", error))
       .finally(() => setPantryLoading(false));
@@ -95,6 +103,8 @@ export default function MealPlanner() {
       return [];
     } finally { setRecommendationLoading(false); }
   };
+
+  const availablePantryItems = pantryItems.filter((item) => Number(item.quantity) > 0 && !isExpiredPantryItem(item));
 
   const getAvailableIngredients = () => [...new Set([...selectedPantryNames, ...ingredients.split(",").map((item) => item.trim()).filter(Boolean)])];
 
@@ -381,13 +391,13 @@ export default function MealPlanner() {
               <div className="overflow-y-auto p-5">
                 {pantryLoading ? <p className="text-sm text-gray-500">Loading your pantry...</p> : pantryItems.length ? (
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {pantryItems.map((item) => <label key={item._id || item.name} className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-3 text-sm text-gray-700 hover:border-green-200">
+                    {availablePantryItems.map((item) => <label key={item._id || item.name} className="flex cursor-pointer items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 px-3 py-3 text-sm text-gray-700 hover:border-green-200">
                       <input type="checkbox" checked={selectedPantryNames.some((name) => name.toLowerCase() === item.name.toLowerCase())} onChange={() => togglePantryIngredient(item.name)} className="h-4 w-4 accent-green-700" />
                       <span className="min-w-0 flex-1 capitalize">{item.name}</span>
                       <span className="shrink-0 text-xs text-gray-400">{item.quantity} {item.unit}</span>
                     </label>)}
                   </div>
-                ) : (getAvailableIngredients().length === 0 ? <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">Your pantry is empty. You can still add ingredients below, or add pantry items in My Kitchen → Pantry.</p> : null)}
+                ) : (getAvailableIngredients().length === 0 ? <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-800">No non-expired pantry ingredients are available. You can add another ingredient or update your pantry.</p> : null)}
                 <div className="mt-5">
                   <label className="mb-2 block text-sm font-semibold text-gray-700">Add another ingredient</label>
                   <div className="flex flex-col gap-2 sm:flex-row">

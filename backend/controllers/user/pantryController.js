@@ -269,7 +269,7 @@ exports.compareRecipeWithPantry = async (req, res) => {
   try {
     const [recipe, pantry] = await Promise.all([
       Recipe.findById(req.params.recipeId).lean(),
-      PantryItem.find({ user: req.user.id, quantity: { $gt: 0 } }).lean(),
+      PantryItem.find({ user: req.user.id, quantity: { $gt: 0 }, $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }] }).lean(),
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 

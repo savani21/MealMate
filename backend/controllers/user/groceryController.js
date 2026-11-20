@@ -129,7 +129,7 @@ async function buildGroceryItems(mealPlan) {
   const uniqueMealNames = [...new Set(mealNames)];
   const [recipes, pantryItems] = await Promise.all([
     Recipe.find({ name: { $in: uniqueMealNames } }).lean(),
-    PantryItem.find({ user: mealPlan.user }).lean(),
+    PantryItem.find({ user: mealPlan.user, $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }] }).lean(),
   ]);
   const recipeMap = new Map(recipes.map((recipe) => [recipe.name.trim().toLowerCase(), recipe]));
 
