@@ -353,7 +353,7 @@ exports.addRecipeIngredientsToGroceryList = async (req, res) => {
     if (!recipe) return res.status(404).json({ success: false, message: "Recipe not found." });
 
     const recipeIngredients = new Set((recipe.ingredients || []).map((item) => canonicalIngredient(item)));
-    const selected = [...new Set(ingredients.map((item) => String(item).trim()).filter(Boolean))];
+    const selected = [...new Set(ingredients.map((item) => String(item).trim()).filter((item) => item && !isCommonHouseholdIngredient(item)))];
     const invalid = selected.filter((item) => !recipeIngredients.has(canonicalIngredient(item)));
     if (invalid.length) {
       return res.status(400).json({ success: false, message: "Some selected ingredients do not belong to this recipe." });
