@@ -282,7 +282,6 @@ export default function GroceryStore() {
       .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole|to taste)\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
-      .trim()
       .trim();
     const words = cleaned.split(" ").filter(Boolean);
     const irregularPlurals = { tomatoes: "tomato", potatoes: "potato", leaves: "leaf", chilies: "chili", chillies: "chilli", berries: "berry" };
