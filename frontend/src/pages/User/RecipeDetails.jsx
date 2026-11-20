@@ -5,7 +5,7 @@ import { useLocation, useRoute } from "wouter";
 import { ChefHat, Clock, Utensils, Share2, Download, FileText, Trash2, ShoppingCart, Check, ChevronLeft, ChevronRight, X, ClipboardList, Play, Pause, RotateCcw } from "lucide-react";
 import RecipeRating from "../../components/RecipeRating";
 
-const isCommonHouseholdIngredient = (value) => String(value || "").toLowerCase().replace(/^[0-9./½⅓⅔¼¾ ]+\s*(?:cups?|ml|l|g|kg)?\s*(?:of\s+)?/i, "").replace(/[^a-z ]/g, " ").trim().replace(/\s+/g, " ") === "water";
+const isCommonHouseholdIngredient = (value) => String(value || "").toLowerCase().replace(/\([^)]*\)/g, " ").replace(/^[0-9./½⅓⅔¼¾ ]+\s*(?:cups?|tbsp|tsp|ml|l|g|kg)?\s*(?:of\s+)?/i, "").replace(/\s+[0-9./½⅓⅔¼¾ ]+\s*(?:cups?|tbsp|tsp|ml|l|g|kg)?$/i, "").replace(/[^a-z ]/g, " ").trim().replace(/\s+/g, " ") === "water";
 
 export default function RecipeDetails() {
   const [, setLocation] = useLocation();
