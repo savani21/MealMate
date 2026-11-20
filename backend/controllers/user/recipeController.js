@@ -105,8 +105,8 @@ const getRecommendedRecipes = async (req, res) => {
       if (violates) return null;
       const matchedAvailableIngredients = recipeIngredients.filter((item) => available.some((allowedItem) =>
         item === allowedItem));
-      const matchedIngredients = recipeIngredients.filter((item) => [...allowed].some((allowedItem) =>
-        item === allowedItem || item.includes(allowedItem) || allowedItem.includes(item)));
+      // Ingredient availability is based on canonical identity, not recipe quantity/unit text.
+      const matchedIngredients = recipeIngredients.filter((item) => allowed.has(item));
       const missingIngredients = recipeIngredients.filter((item) => !matchedAvailableIngredients.includes(item));
       const matchPercentage = recipeIngredients.length ? matchedIngredients.length / recipeIngredients.length : 0;
       const ratingCount = ratingStats[recipe._id.toString()]?.ratingCount || 0;
