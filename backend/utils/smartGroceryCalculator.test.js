@@ -44,6 +44,15 @@ test("omits ingredients fully covered by pantry or available ingredient selectio
   assert.deepEqual(items, []);
 });
 
+test("does not treat zero-quantity pantry items as available", () => {
+  const items = calculateSmartGroceryItems({
+    requiredItems: [{ name: "onion", quantity: "2 pieces", mealName: "Sabzi" }],
+    pantryItems: [{ name: "onion", quantity: 0, unit: "piece" }],
+  });
+  assert.equal(items.length, 1);
+  assert.equal(items[0].name, "onion");
+});
+
 test("matches pantry ingredients even when recipe and pantry units differ", () => {
   const items = calculateSmartGroceryItems({
     requiredItems: [
