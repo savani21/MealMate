@@ -31,6 +31,14 @@ test("matches recipe quantities and units by ingredient identity", () => {
   assert.equal(normalizeIngredientName("Tomato 500 g"), "tomato");
 });
 
+test("normalizes tablespoon and teaspoon ingredient quantities", () => {
+  assert.equal(normalizeIngredientName("2 tbsp oil"), "oil");
+  assert.equal(normalizeIngredientName("1 tablespoon butter"), "butter");
+  assert.equal(normalizeIngredientName("½ tbsp ginger paste"), "ginger paste");
+  assert.equal(normalizeIngredientName("1 tsp salt"), "salt");
+  assert.equal(normalizeIngredientName("2 teaspoons cumin"), "cumin");
+});
+
 test("does not collapse different ingredients into the same name", () => {
   assert.notEqual(normalizeIngredientName("green chili"), normalizeIngredientName("green peas"));
   assert.notEqual(normalizeIngredientName("coriander leaf"), normalizeIngredientName("curry leaf"));
