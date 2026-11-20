@@ -275,30 +275,23 @@ export default function GroceryStore() {
   }, [products, searchText, requestedIngredients.join(",")]);
 
   const normalizeSearchIngredient = (value) => {
-    const cleaned = String(value || "")
-      .toLowerCase()
-      .replace(/^as\s+needed\s*[:,-]?\s*/i, "")
-      .replace(/^\s*\d+(?:\s*\/\s*\d+)?\s*/, "")
-      .replace(/\b(?:cups?|tbsp|tblspoons?|tablespoons?|tsp|teaspoons?|kg|g|gm|gms|grm|grms|grams?|ml|litres?|liters?|pieces?|pcs?|cloves?|slices?)\b/gi, " ")
-      .replace(/\b(?:large|medium|small|chopped|diced|minced|sliced|grated|finely|roughly|cooked|boiled|fresh|warm|whole|to taste)\b/gi, " ")
+    const cleaned = String(value || "").toLowerCase()
+      .replace(/\([^)]*\)/g, " ")
+      .replace(/^\s*(?:\d+\s*\/\s*\d+|\d+(?:\.\d+)?|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tblspoons?|tsp|tsps|teaspoons?|kg|kgs|kilograms?|g|gm|gms|grm|grms|grams?|ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|packs?|cans?)?\s*(?:of\s+)?/i, "")
+      .replace(/\s+(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+)\s*(?:kg|kgs|g|gm|gms|grams?|ml|l|pieces?|pcs?)?\s*$/i, "")
+      .replace(/\b(?:large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole|to taste)\b/gi, " ")
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
       .trim()
       .replace(/ies$/, "y")
       .replace(/s$/, "");
     const aliases = {
-      "whole milk": "milk",
-      "warm milk": "milk",
-      "full cream milk": "milk",
-      "toned milk": "milk",
-      "basmati rice": "rice",
-      "long grain rice": "rice",
-      "atta": "wheat flour",
-      "whole wheat flour": "wheat flour",
-      "wheat atta": "wheat flour",
-      "green chilli": "green chili",
-      "sunflower oil": "oil",
-      "vegetable oil": "oil"
+      "whole milk": "milk", "warm milk": "milk", "full cream milk": "milk", "toned milk": "milk",
+      "basmati rice": "rice", "long grain rice": "rice",
+      atta: "wheat flour", "whole wheat flour": "wheat flour", "wheat atta": "wheat flour",
+      "green chilli": "green chili", "green chillies": "green chili", "green chilies": "green chili",
+      "sunflower oil": "oil", "vegetable oil": "oil",
+      "tuver dal": "toor dal", "tuvar dal": "toor dal", "tur dal": "toor dal", "arhar dal": "toor dal",
     };
     return aliases[cleaned] || cleaned;
   };
@@ -309,9 +302,7 @@ export default function GroceryStore() {
     if (!productName || !ingredientName) return false;
     // Match complete ingredient names, not shared words such as "green".
     // A green vegetable must never be mistaken for green chili.
-    return productName === ingredientName ||
-      productName.includes(ingredientName + " ") ||
-      ingredientName.includes(productName + " ");
+    return productName === ingredientName;
   };
 
   const isRequestedProduct = (product) =>
