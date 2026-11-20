@@ -283,6 +283,7 @@ export default function GroceryStore() {
       .replace(/[^a-z0-9 ]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
+    if (cleaned === "water" || /^water\\s+(?:for|as needed|to|if needed)\\b/.test(cleaned)) return "water";
     const words = cleaned.split(" ").filter(Boolean);
     const irregularPlurals = { tomatoes: "tomato", potatoes: "potato", leaves: "leaf", chilies: "chili", chillies: "chilli", berries: "berry" };
     if (words.length) {

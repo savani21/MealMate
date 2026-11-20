@@ -54,5 +54,8 @@ test("water is a common household ingredient, not a grocery item", () => {
   const { isCommonHouseholdIngredient } = require("./ingredientMatcher");
   assert.equal(isCommonHouseholdIngredient("water"), true);
   assert.equal(isCommonHouseholdIngredient("2 cups water"), true);
+  assert.equal(isCommonHouseholdIngredient("Water for dough"), true);
+  assert.equal(isCommonHouseholdIngredient("water as needed"), true);
+  assert.equal(isCommonHouseholdIngredient("water chestnut"), false);
   assert.equal(isCommonHouseholdIngredient("tomato"), false);
 });
