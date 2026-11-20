@@ -1,3 +1,5 @@
+function isCommonHouseholdIngredient(value) { return normalizeIngredientName(value) === "water"; }
+
 function normalizeIngredientName(value) {
   const cleaned = String(value || "").toLowerCase()
     .replace(/\([^)]*\)/g, " ")
@@ -35,4 +37,4 @@ function normalizeIngredientName(value) {
   };
   return aliases[name] || name;
 }
-module.exports = { normalizeIngredientName };
+module.exports = { normalizeIngredientName, isCommonHouseholdIngredient };
