@@ -16,21 +16,20 @@ test("combines duplicate ingredient quantities across meals", () => {
     ],
   });
   assert.equal(items.length, 1);
-  assert.equal(items[0].name, "tomatoes");
+  assert.equal(items[0].name, "tomato");
   assert.equal(items[0].quantity, "300 g");
   assert.equal(items[0].mealType, "Combined");
 });
 
-test("subtracts compatible pantry stock from combined requirements", () => {
+test("omits pantry ingredients by identity without estimating remaining stock", () => {
   const items = calculateSmartGroceryItems({
     requiredItems: [
       { name: "rice", quantity: "1 kg", mealName: "Pulao" },
       { name: "rice", quantity: "500 g", mealName: "Khichdi" },
     ],
-    pantryItems: [{ name: "basmati rice", quantity: 750, unit: "g" }],
+    pantryItems: [{ name: "basmati rice", quantity: 1, unit: "kg" }],
   });
-  assert.equal(items.length, 1);
-  assert.equal(items[0].quantity, "750 g");
+  assert.deepEqual(items, []);
 });
 
 test("omits ingredients fully covered by pantry or available ingredient selection", () => {
@@ -45,11 +44,16 @@ test("omits ingredients fully covered by pantry or available ingredient selectio
   assert.deepEqual(items, []);
 });
 
-test("does not subtract pantry stock across incompatible units", () => {
+test("matches pantry ingredients even when recipe and pantry units differ", () => {
   const items = calculateSmartGroceryItems({
-    requiredItems: [{ name: "milk", quantity: "2 cups", mealName: "Oats" }],
-    pantryItems: [{ name: "milk", quantity: 500, unit: "ml" }],
+    requiredItems: [
+      { name: "1 onion", quantity: "2 pieces", mealName: "Sabzi" },
+      { name: "tomatoes", quantity: "200 g", mealName: "Sabzi" },
+    ],
+    pantryItems: [
+      { name: "onion", quantity: 500, unit: "g" },
+      { name: "tomato", quantity: 2, unit: "piece" },
+    ],
   });
-  assert.equal(items.length, 1);
-  assert.equal(items[0].quantity, "2 cups");
+  assert.deepEqual(items, []);
 });
