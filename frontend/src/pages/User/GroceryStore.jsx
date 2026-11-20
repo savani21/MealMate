@@ -91,7 +91,7 @@ export default function GroceryStore() {
       const data = await response.json();
       if (response.ok) {
         const list = (data.groceryLists || []).find((item) => item._id === listId);
-        const missingItems = (list?.items || []).filter((item) => !item.checked);
+        const missingItems = (list?.items || []).filter((item) => !item.checked && normalizeSearchIngredient(item.name) !== "water");
         setRequestedItems(missingItems);
         await loadStore([...new Set(missingItems.map((item) => String(item.name || "").trim().toLowerCase()).filter(Boolean))]);
       }
