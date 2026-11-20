@@ -24,19 +24,12 @@ exports.addPantryItem = async (req, res) => {
     if (!name || !unit || !Number.isFinite(quantity) || quantity <= 0) {
       return res.status(400).json({ message: "Ingredient name, positive quantity and unit are required." });
     }
-    const pantryItems = await PantryItem.find({ user: req.user.id });
-    const existing = pantryItems.find((item) => normalizeIngredientName(item.name) === normalizeIngredientName(name));
-    if (existing) {
-      if (existing.unit !== unit) return res.status(409).json({ message: "This ingredient already exists with a different unit. Edit the existing item instead." });
-      existing.quantity += quantity;
-      if (expiryDate && (!existing.expiryDate || expiryDate < existing.expiryDate)) existing.expiryDate = expiryDate;
-      await existing.save();
-      return res.status(200).json({ message: "Pantry quantity updated", item: existing });
-    }
+    // Each addition is a distinct stock batch. This preserves the expiry date
+    // of older stock and prevents fresh stock inheriting an expired date.
     const item = await PantryItem.create({ user: req.user.id, name, quantity, unit, expiryDate });
-    res.status(201).json({ message: "Ingredient added to pantry", item });
+    res.status(201).json({ message: "New pantry batch added", item });
   } catch (error) {
-    if (error.code === 11000) return res.status(409).json({ message: "Ingredient already exists in your pantry." });
+    if (error.code === 11000) return res.status(409).json({ message: "Could not create a separate pantry batch. Please retry." });
     res.status(500).json({ message: "Failed to add ingredient", error: error.message });
   }
 };
