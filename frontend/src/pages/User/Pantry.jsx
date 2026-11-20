@@ -214,7 +214,7 @@ export default function Pantry() {
             <div><label className="mb-1.5 block text-xs font-semibold text-[#59665b]">Best before <span className="font-normal text-[#9aa49a]">(optional)</span></label><input type="date" min={new Date().toISOString().slice(0,10)} value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} className="w-full rounded-xl border border-[#e3e9df] bg-[#fbfcf9] px-4 py-3 text-sm outline-none focus:border-[#72a66b]"/></div>
           </div>
           <div className="mt-5 flex gap-2"><button disabled={saving} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#267342] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#1b5e35] disabled:opacity-60">{editing ? <Check className="h-4 w-4"/> : <Plus className="h-4 w-4"/>}{saving ? "Saving..." : editing ? "Save changes" : "Add to pantry"}</button>{editing && <button type="button" onClick={cancelEdit} className="rounded-xl border border-[#e3e9df] px-4 text-[#68766a] hover:bg-[#f7faf4]"><X className="h-4 w-4"/></button>}</div>
-          <p className="mt-3 text-[11px] leading-5 text-[#9aa49a]">Adding an existing ingredient with the same unit increases its current quantity.</p>
+          <p className="mt-3 text-[11px] leading-5 text-[#9aa49a]">Each addition is saved as a separate batch so its expiry date stays accurate.</p>
           {message && <p role="status" className="mt-3 rounded-xl bg-[#f1f7ed] px-3 py-2 text-xs font-medium text-[#39734a]">{message}</p>}
         </form>
 
