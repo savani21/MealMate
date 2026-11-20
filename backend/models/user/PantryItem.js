@@ -9,6 +9,8 @@ const pantryItemSchema = new mongoose.Schema({
   receivedOrderItems: { type: [String], default: [] },
 }, { timestamps: true });
 
-pantryItemSchema.index({ user: 1, name: 1 }, { unique: true });
+// Multiple records per ingredient are intentional: each record represents a stock batch
+// with its own expiry date. Never enforce uniqueness on ingredient name.
+pantryItemSchema.index({ user: 1, name: 1, expiryDate: 1 });
 
 module.exports = mongoose.model("PantryItem", pantryItemSchema);

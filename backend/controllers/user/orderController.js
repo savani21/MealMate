@@ -66,35 +66,18 @@ async function addDeliveredOrderItem(userId, orderId, item, index) {
   if (!name || isCommonHouseholdIngredient(name)) return;
   const incoming = parseStorePack(item.unit, item.quantity);
   const receiptKey = `${orderId}:${index}`;
-  let pantryItems = await PantryItem.find({ user: userId });
-  let existing = pantryItems.find((entry) => normalizeIngredientName(entry.name) === name);
-  if (existing) {
-    if ((existing.receivedOrderItems || []).includes(receiptKey)) return;
-    const amount = convertPantryQuantity(incoming.quantity, incoming.unit, existing.unit);
-    if (amount === null) throw new Error(`Cannot combine delivered ${name} units (${incoming.unit} and ${existing.unit}). Please standardize the pantry unit.`);
-    await PantryItem.updateOne(
-      { _id: existing._id, receivedOrderItems: { $ne: receiptKey } },
-      { $inc: { quantity: amount }, $addToSet: { receivedOrderItems: receiptKey } }
-    );
-    return;
-  }
-  try {
-    await PantryItem.create({
-      user: userId, name, quantity: incoming.quantity, unit: incoming.unit,
-      receivedOrderItems: [receiptKey],
-    });
-  } catch (error) {
-    if (error.code !== 11000) throw error;
-    pantryItems = await PantryItem.find({ user: userId });
-    existing = pantryItems.find((entry) => normalizeIngredientName(entry.name) === name);
-    if (!existing || (existing.receivedOrderItems || []).includes(receiptKey)) return;
-    const amount = convertPantryQuantity(incoming.quantity, incoming.unit, existing.unit);
-    if (amount === null) throw new Error(`Cannot combine delivered ${name} units (${incoming.unit} and ${existing.unit}).`);
-    await PantryItem.updateOne(
-      { _id: existing._id, receivedOrderItems: { $ne: receiptKey } },
-      { $inc: { quantity: amount }, $addToSet: { receivedOrderItems: receiptKey } }
-    );
-  }
+  // Keep delivered stock as its own batch (expiry unknown => null). Receipt key
+  // makes retries idempotent without merging it into an older/expired batch.
+  const alreadyReceived = await PantryItem.exists({ user: userId, receivedOrderItems: receiptKey });
+  if (alreadyReceived) return;
+  await PantryItem.create({
+    user: userId,
+    name,
+    quantity: incoming.quantity,
+    unit: incoming.unit,
+    expiryDate: null,
+    receivedOrderItems: [receiptKey],
+  });
 }
 
 let deliveryProcessorRunning = false;
