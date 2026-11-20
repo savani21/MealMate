@@ -49,3 +49,10 @@ test("handles empty and non-string input safely", () => {
   assert.equal(normalizeIngredientName(null), "");
   assert.equal(normalizeIngredientName(undefined), "");
 });
+
+test("water is a common household ingredient, not a grocery item", () => {
+  const { isCommonHouseholdIngredient } = require("./ingredientMatcher");
+  assert.equal(isCommonHouseholdIngredient("water"), true);
+  assert.equal(isCommonHouseholdIngredient("2 cups water"), true);
+  assert.equal(isCommonHouseholdIngredient("tomato"), false);
+});
