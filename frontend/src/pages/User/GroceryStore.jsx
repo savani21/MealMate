@@ -380,7 +380,7 @@ export default function GroceryStore() {
         const cartResponse = await fetch(`${API}/api/store/cart`, { headers: authHeaders() });
         const cartData = await cartResponse.json();
         const existingIds = new Set((cartData.cart?.items || []).map((item) => String(item.product?._id || item.product || "")));
-        const requested = requestedIngredientsFromUrl;
+        const requested = requestedIngredientsFromUrl.filter((ingredient) => normalizeSearchIngredient(ingredient) !== "water");
         const matches = products.filter((product) =>
           requested.some((ingredient) => productMatchesIngredient(product, ingredient)) &&
           !existingIds.has(String(product._id))
