@@ -55,68 +55,44 @@ function pantryAmount(item) {
 }
 
 function calculateSmartGroceryItems({ requiredItems = [], pantryItems = [], availableIngredients = [] }) {
-  const available = new Set(availableIngredients.map(normalizeIngredientName).filter(Boolean));
-  const pantryByName = new Map();
-
-  for (const item of pantryItems) {
-    const name = normalizeIngredientName(item.name);
-    if (!name) continue;
-    const amount = pantryAmount(item);
-    if (!pantryByName.has(name)) pantryByName.set(name, []);
-    if (amount) pantryByName.get(name).push(amount);
-  }
+  // Pantry availability is based on canonical ingredient identity. Do not
+  // guess conversions between pieces, mass, and volume for grocery matching.
+  const available = new Set([
+    ...availableIngredients.map(normalizeIngredientName),
+    ...pantryItems.map((item) => normalizeIngredientName(item.name)),
+  ].filter(Boolean));
 
   const groups = new Map();
   for (const item of requiredItems) {
     const name = normalizeIngredientName(item.name);
     if (!name || available.has(name)) continue;
+
     const parsed = parseQuantity(item.quantity);
     const groupKey = parsed
-      ? `${name}| ${parsed.dimension}|${parsed.unit}`
+      ? `${name}|${parsed.dimension}|${parsed.unit}`
       : `${name}|unknown|${String(item.quantity || "").trim()}`;
+
     if (!groups.has(groupKey)) {
       groups.set(groupKey, {
-        name: String(item.name).trim(),
-        canonicalName: name,
+        name,
         quantity: parsed ? parsed.baseAmount : null,
         unit: parsed?.unit || "",
-        dimension: parsed?.dimension || "unknown",
         originalQuantity: parsed ? "" : String(item.quantity || "").trim(),
         meals: [],
       });
     } else if (parsed && groups.get(groupKey).quantity !== null) {
       groups.get(groupKey).quantity += parsed.baseAmount;
     }
-    const group = groups.get(groupKey);
-    group.meals.push(item);
+    groups.get(groupKey).meals.push(item);
   }
 
   const output = [];
-  const remainingPantry = new Map();
-  for (const [name, amounts] of pantryByName) {
-    remainingPantry.set(name, amounts.map((amount) => ({ ...amount })));
-  }
-
   for (const group of groups.values()) {
-    if (group.quantity !== null && group.dimension !== "unknown") {
-      const stocks = remainingPantry.get(group.canonicalName) || [];
-      let needed = group.quantity;
-      for (const stock of stocks) {
-        if (stock.dimension !== group.dimension || needed <= 0) continue;
-        const used = Math.min(stock.baseAmount, needed);
-        stock.baseAmount -= used;
-        needed -= used;
-      }
-      if (needed <= 0.000001) continue;
-      group.quantity = needed;
-    }
-
     const uniqueMeals = [...new Set(group.meals.map((meal) => meal.mealName).filter(Boolean))];
     const first = group.meals[0] || {};
-    let quantity = group.originalQuantity;
-    if (group.quantity !== null) {
-      quantity = `${formatAmount(group.quantity)} ${group.unit}`.trim();
-    }
+    const quantity = group.quantity !== null
+      ? `${formatAmount(group.quantity)} ${group.unit}`.trim()
+      : group.originalQuantity;
 
     output.push({
       name: group.name,
@@ -127,7 +103,6 @@ function calculateSmartGroceryItems({ requiredItems = [], pantryItems = [], avai
       mealName: uniqueMeals.length === 1 ? uniqueMeals[0] : `Used in ${uniqueMeals.length} meals`,
     });
   }
-
   return output.sort((a, b) => a.name.localeCompare(b.name));
 }
 
