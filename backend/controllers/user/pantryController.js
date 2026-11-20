@@ -269,75 +269,34 @@ exports.compareRecipeWithPantry = async (req, res) => {
   try {
     const [recipe, pantry] = await Promise.all([
       Recipe.findById(req.params.recipeId).lean(),
-      PantryItem.find({ user: req.user.id }).lean(),
+      PantryItem.find({ user: req.user.id, quantity: { $gt: 0 } }).lean(),
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
+
+    // Recipe availability is an identity check. Units such as pieces, grams,
+    // and cups are not converted or compared here because that needs
+    // ingredient-specific density/size data and can create false shortages.
+    const pantryByName = new Map(
+      pantry.map((item) => [normalizeIngredientName(item.name), item])
+    );
 
     const rows = (recipe.ingredients || []).map((raw) => {
       const required = parseRequiredIngredient(raw);
       const normalizedRequired = normalizeIngredientName(required.name);
-      const match = pantry.find((item) =>
-        normalizeIngredientName(item.name) === normalizedRequired
-      );
+      const match = pantryByName.get(normalizedRequired);
 
-      if (!match || Number(match.quantity) <= 0) {
-        return {
-          ingredient: raw,
-          status: "missing",
-          message: "Not in Pantry",
-        };
+      if (!match) {
+        return { ingredient: raw, status: "missing", message: "Not in Pantry" };
       }
 
-      // Ingredients without a measurable recipe quantity can only be matched
-      // by name; do not pretend that their available quantity was verified.
-      if (required.quantity === null) {
-        return {
-          ingredient: raw,
-          status: "available",
-          message: "In Pantry (quantity not specified)",
-          pantryItemId: match._id,
-          pantryName: match.name,
-          pantryQuantity: match.quantity,
-          pantryUnit: match.unit,
-        };
-      }
-
-      const need = normalizeAmount(required.quantity, required.unit);
-      const have = normalizeAmount(Number(match.quantity), match.unit);
-
-      // Only compare compatible dimensions. For example, ml and tsp can be
-      // compared after conversion, but grams cannot be converted to cups
-      // without ingredient-specific density data.
-      if (need.unit !== have.unit) {
-        return {
-          ingredient: raw,
-          status: "check",
-          message: "Check pantry unit",
-          pantryItemId: match._id,
-          pantryName: match.name,
-          pantryQuantity: match.quantity,
-          pantryUnit: match.unit,
-          requiredQuantity: required.quantity,
-          requiredUnit: required.unit,
-        };
-      }
-
-      const remaining = Math.max(0, need.quantity - have.quantity);
-      const enough = remaining <= 0.000001;
       return {
         ingredient: raw,
-        status: enough ? "available" : "partial",
-        message: enough
-          ? "Available in Pantry"
-          : `Need ${Number(remaining.toFixed(2))} more ${need.unit}`,
+        status: "available",
+        message: "In Pantry",
         pantryItemId: match._id,
         pantryName: match.name,
         pantryQuantity: match.quantity,
         pantryUnit: match.unit,
-        requiredQuantity: required.quantity,
-        requiredUnit: required.unit,
-        remainingQuantity: remaining,
-        normalizedUnit: need.unit,
       };
     });
 
