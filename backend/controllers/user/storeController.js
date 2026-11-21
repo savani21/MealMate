@@ -88,13 +88,21 @@ exports.addToCart = async (req, res) => {
 
     const product = await StoreProduct.findOne({ _id: productId, isActive: true });
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
-    if (product.stock < amount) return res.status(400).json({ success: false, message: "Insufficient stock" });
-
     let cart = await Cart.findOne({ user: req.user.id });
     if (!cart) cart = await Cart.create({ user: req.user.id, items: [] });
 
     const existing = cart.items.find((item) => item.product.toString() === productId);
-    if (existing) existing.quantity += amount;
+    const requestedTotal = (existing?.quantity || 0) + amount;
+    if (requestedTotal > product.stock) {
+      return res.status(409).json({
+        success: false,
+        message: `Only ${product.stock} unit(s) of ${product.name} are currently in stock.`,
+        availableStock: product.stock,
+        cartQuantity: existing?.quantity || 0,
+      });
+    }
+
+    if (existing) existing.quantity = requestedTotal;
     else cart.items.push({ product: productId, quantity: amount });
 
     await cart.save();
@@ -119,6 +127,16 @@ exports.updateCartItem = async (req, res) => {
 
     const item = cart.items.find((entry) => entry.product.toString() === req.params.productId);
     if (!item) return res.status(404).json({ success: false, message: "Cart item not found" });
+
+    const product = await StoreProduct.findOne({ _id: req.params.productId, isActive: true });
+    if (!product) return res.status(404).json({ success: false, message: "Product is no longer available" });
+    if (amount > product.stock) {
+      return res.status(409).json({
+        success: false,
+        message: `Only ${product.stock} unit(s) of ${product.name} are currently in stock.`,
+        availableStock: product.stock,
+      });
+    }
 
     item.quantity = amount;
     await cart.save();
