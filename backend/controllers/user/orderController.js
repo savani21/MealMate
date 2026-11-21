@@ -10,6 +10,7 @@ const PantryItem = require("../../models/user/PantryItem");
 const Notification = require("../../models/user/Notification");
 const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { createAdminAlert } = require("../../services/adminAlertService");
+const { sendDeliveryReceiptEmail } = require("../../services/emailService");
 
 
 
@@ -164,6 +165,13 @@ exports.processDueOrders = async () => {
             $unset: { inventorySyncingAt: 1 },
           }
         );
+        try {
+          const receiptUser=await User.findById(order.user).select("name email");
+          if(receiptUser?.email){await sendDeliveryReceiptEmail({user:receiptUser,order:{...order.toObject(),status:"delivered",deliveredAt:deliveryNotification.deliveredAt||deliveredAt}});await Order.updateOne({_id:order._id},{$set:{receiptEmailSentAt:new Date(),receiptEmailLastAttemptAt:new Date()}});}
+        } catch(mailError) {
+          await Order.updateOne({_id:order._id},{$set:{receiptEmailLastAttemptAt:new Date()}});
+          console.error(`Delivery receipt email failed for ${order.orderId}:`,mailError.message);
+        }
       } catch (error) {
         await Order.updateOne(
           { _id: order._id },
