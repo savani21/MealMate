@@ -59,3 +59,15 @@ test("water is a common household ingredient, not a grocery item", () => {
   assert.equal(isCommonHouseholdIngredient("water chestnut"), false);
   assert.equal(isCommonHouseholdIngredient("tomato"), false);
 });
+
+test("matches common Indian names while keeping misspellings distinct", () => {
+  assert.equal(normalizeIngredientName("aloo"), "potato");
+  assert.equal(normalizeIngredientName("batata"), "potato");
+  assert.equal(normalizeIngredientName("potato"), "potato");
+  assert.notEqual(normalizeIngredientName("potato"), normalizeIngredientName("potatto"));
+});
+
+test("removes multiple preparation words but preserves recipe wording elsewhere", () => {
+  assert.equal(normalizeIngredientName("boiled mashed potatoes"), "potato");
+  assert.equal(normalizeIngredientName("finely chopped boiled potato"), "potato");
+});
