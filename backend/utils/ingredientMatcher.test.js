@@ -60,9 +60,21 @@ test("water is a common household ingredient, not a grocery item", () => {
   assert.equal(isCommonHouseholdIngredient("tomato"), false);
 });
 
-test("normalizes quantity, size, peeling and cubing into a plain potato name", () => {
-  assert.equal(normalizeIngredientName("2 medium potatoes, peeled and cubed"), "potato");
-  assert.equal(normalizeIngredientName("1 large potato, peeled and cubed"), "potato");
+test("normalizes quantities, sizes and preparation words for every ingredient", () => {
+  const examples = [
+    ["2 medium potatoes, peeled and cubed", "potato"],
+    ["1 large potato, peeled and cubed", "potato"],
+    ["3 medium onions, finely chopped", "onion"],
+    ["2 ripe tomatoes, roughly chopped", "tomato"],
+    ["1 cup carrots, peeled and grated", "carrot"],
+    ["½ cup capsicum, deseeded and diced", "capsicum"],
+    ["200 g mushrooms, washed and sliced", "mushroom"],
+    ["1 tbsp fresh coriander leaves, finely chopped", "coriander leaf"],
+    ["2 cloves garlic, crushed and minced", "garlic"],
+  ];
+  for (const [input, expected] of examples) {
+    assert.equal(normalizeIngredientName(input), expected, `normalizing: ${input}`);
+  }
 });
 
 test("matches common Indian names while keeping misspellings distinct", () => {
