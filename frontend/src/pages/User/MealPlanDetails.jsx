@@ -114,9 +114,22 @@ export default function MealPlanDetails() {
       setLocation(`/recipes/${existing._id}?return=meal-plan&planId=${plan._id}&day=${dayPlan.day}&mealType=${mealType}`);
       return;
     }
-    setSelectedDay(String(dayPlan.day));
-    setSelectedMealType(mealType);
-    setShowRecipeSelector(true);
+    const selectedIngredients = dayPlan[`${mealType}Ingredients`] || [];
+    const ingredientNames = selectedIngredients
+      .map((item) => String(typeof item === "string" ? item : item?.name || "").replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "").trim())
+      .filter(Boolean);
+    const ingredientText = [...new Map(ingredientNames.map((name) => [name.toLowerCase(), name])).values()].join(", ");
+    if (!ingredientText) { alert("No ingredients were saved for this selected meal."); return; }
+    const query = new URLSearchParams({
+      generate: "1",
+      meal: mealName,
+      ingredients: ingredientText,
+      return: "meal-plan",
+      planId: plan._id,
+      day: String(dayPlan.day),
+      mealType,
+    });
+    setLocation(`/recipes?${query.toString()}`);
   };
 
   const generateRecipe = () => {
@@ -199,6 +212,21 @@ export default function MealPlanDetails() {
                 return <div key={type} className="min-w-0 border border-gray-100 rounded-2xl p-4 sm:p-5">
                   <p className="text-xs uppercase tracking-wide font-bold text-primary">{type}</p>
                   <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
+                  {(() => {
+                    const selectedOption = options.find((option) => option.name === day[type]);
+                    const nutrition = selectedOption?.nutrition;
+                    if (!nutrition) return <p className="mt-2 text-xs text-gray-400">Nutrition details unavailable</p>;
+                    const values = [
+                      ["Calories", nutrition.calories, "kcal"],
+                      ["Protein", nutrition.protein, "g"],
+                      ["Carbs", nutrition.carbohydrates, "g"],
+                      ["Fat", nutrition.fat, "g"],
+                    ].filter(([, value]) => Number.isFinite(Number(value)));
+                    return <div className="mt-3 rounded-xl bg-green-50/70 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2"><span className="text-[11px] font-bold uppercase tracking-wide text-gray-600">Nutrition per serving</span><span className="text-[10px] font-semibold text-gray-500">{nutrition.status === "verified" ? "Verified" : "Estimated"}</span></div>
+                      {values.length ? <div className="grid grid-cols-2 gap-2">{values.map(([label, value, unit]) => <div key={label}><span className="text-[10px] text-gray-500">{label}</span><p className="text-sm font-bold text-gray-800">{Number(value)} {unit}</p></div>)}</div> : <p className="text-xs text-gray-500">Nutrition values are not available for this meal.</p>}
+                    </div>;
+                  })()}
                   <div className="flex flex-wrap gap-2 mt-4">
                     {getIsFutureOrTodayPlanDay(day.day) && <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>}
                     <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
@@ -235,7 +263,6 @@ export default function MealPlanDetails() {
         </section>
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-8">
-          <button onClick={() => setShowRecipeSelector(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
           <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Preparing Cart..." : "Open Grocery Cart"}</button>
         </div>
 

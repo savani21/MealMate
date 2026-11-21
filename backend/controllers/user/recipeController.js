@@ -128,7 +128,7 @@ const getRecommendedRecipes = async (req, res) => {
     }).filter(Boolean)
       .filter((recipe) => mode !== "available" || recipe.canCookWithAvailable)
       .filter((recipe) => allowed.size === 0 || recipe.matchCount > 0)
-      .sort((a,b) => b.ratingCount-a.ratingCount || b.averageRating-a.averageRating || b.recommendationScore-a.recommendationScore || b.matchPercentage-a.matchPercentage);
+      .sort((a,b) => b.recommendationScore-a.recommendationScore || b.matchPercentage-a.matchPercentage || b.averageRating-a.averageRating || b.ratingCount-a.ratingCount);
     const topRecipes = ranked.slice(0,3);
     const ingredients = [...new Set(ranked.slice(0,10).flatMap((recipe) => recipe.ingredients || []).map((item) => String(item).trim()).filter(Boolean))].slice(0,15);
     res.status(200).json({ recipes: topRecipes, ingredients, mode, diet, availableIngredients: available, recommendedIngredients: recommended });
