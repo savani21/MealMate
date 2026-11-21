@@ -26,7 +26,7 @@ function makeIngredient(name, quantity) {
   return { name, quantity };
 }
 
-function isPlanDayEditable(mealPlan, dayNumber, now = new Date()) {
+function isPlanMealEditable(mealPlan, dayNumber, mealType, now = new Date()) {
   if (!mealPlan || mealPlan.isArchived || !mealPlan.createdAt) return false;
   const start = new Date(mealPlan.createdAt);
   if (Number.isNaN(start.getTime())) return false;
@@ -34,7 +34,12 @@ function isPlanDayEditable(mealPlan, dayNumber, now = new Date()) {
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const elapsedDays = Math.floor((todayDate - startDate) / 86400000);
   const day = Number(dayNumber);
-  return Number.isInteger(day) && day >= Math.max(1, elapsedDays + 1) && day <= Number(mealPlan.duration);
+  if (!Number.isInteger(day) || day < 1 || day > Number(mealPlan.duration)) return false;
+  if (day > elapsedDays + 1) return true;
+  if (day < elapsedDays + 1) return false;
+  const mealStartHours = { breakfast: 8, lunch: 13, dinner: 20 };
+  const startHour = mealStartHours[mealType];
+  return startHour !== undefined && now.getHours() < startHour;
 }
 
 const { buildLocalOptions, generateLocalMealPlan } = require("../services/mealPlan/localFallbackService");
@@ -595,10 +600,10 @@ exports.updateMealSelection = async (req, res) => {
     if (!mealPlan) return res.status(404).json({ success: false, message: "Meal plan not found." });
     const dayPlan = mealPlan.meals.find((item) => Number(item.day) === Number(day));
     if (!dayPlan) return res.status(404).json({ success: false, message: "Meal-plan day not found." });
-    if (!isPlanDayEditable(mealPlan, day)) {
+    if (!isPlanMealEditable(mealPlan, day, mealType)) {
       return res.status(403).json({
         success: false,
-        message: "Only today's and upcoming meals in an active plan can be changed.",
+        message: "Only future meals in an active plan can be changed. Meals whose scheduled time has passed are locked.",
       });
     }
     let selected;
