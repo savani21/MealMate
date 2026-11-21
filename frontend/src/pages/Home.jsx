@@ -10,6 +10,7 @@ import { CTASection } from '@/components/sections/CTASection';
 import { Footer } from '@/components/sections/Footer';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
+import { useAuth } from '@/context/AuthContext';
 import { Clock, Star, ArrowRight } from 'lucide-react';
 export default function Home() {
     return (<div className="min-h-screen bg-background font-sans">
@@ -32,6 +33,7 @@ export default function Home() {
 
 function RecipeDiscoverySection() {
   const [, setLocation] = useLocation();
+  const { user, loading: authLoading } = useAuth();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +50,11 @@ function RecipeDiscoverySection() {
   const popularRecipes = [...recipes]
     .sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0) || (b.averageRating || 0) - (a.averageRating || 0))
     .slice(0, 4);
-  const openRecipes = () => setLocation("/recipes");
+  const openRecipes = () => {
+    if (authLoading) return;
+    const canBrowseAllRecipes = user && ["user", "admin"].includes(user.role);
+    setLocation(canBrowseAllRecipes ? "/recipes" : "/login");
+  };
   return (
     <section id="recipes" className="bg-[#faf9f6] py-8 sm:py-10">
       <div className="mx-auto w-full max-w-screen-2xl px-5 sm:px-8 lg:px-10">
