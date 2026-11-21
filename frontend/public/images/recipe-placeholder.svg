@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">Recipe image unavailable</title>
+  <desc id="desc">A simple plate and fork illustration on a warm background.</desc>
+  <rect width="800" height="500" fill="#f3f1e9"/>
+  <circle cx="400" cy="250" r="142" fill="#fff" stroke="#d8d3c5" stroke-width="12"/>
+  <circle cx="400" cy="250" r="105" fill="#f8f7f1" stroke="#e5e0d4" stroke-width="5"/>
+  <path d="M355 285c24-66 63-96 91-78 22 14 22 45-1 78-22 31-57 45-90 0Z" fill="#b7c99b"/>
+  <circle cx="370" cy="224" r="18" fill="#d98c63"/>
+  <circle cx="430" cy="292" r="14" fill="#d9b45c"/>
+  <path d="M188 115v270m-24-270v80m48-80v80m-24-80v80m428-80v270m-20-270v90m40-90v90" fill="none" stroke="#9aa58a" stroke-linecap="round" stroke-width="9"/>
+  <text x="400" y="445" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#73796c">Recipe photo coming soon</text>
+</svg>
