@@ -5,6 +5,8 @@ const { createRateLimiter } = require("../middleware/rateLimiter");
 const {
   register,
   login,
+  requestPasswordReset,
+  resetPassword,
   updateProfile,
   getProfile,
   updateThemePreference,
@@ -18,6 +20,8 @@ const authAttemptLimiter = createRateLimiter({
 
 router.post("/register", authAttemptLimiter, register);
 router.post("/login", authAttemptLimiter, login);
+router.post("/forgot-password", authAttemptLimiter, requestPasswordReset);
+router.post("/reset-password", authAttemptLimiter, resetPassword);
 router.get("/profile", auth, getProfile);
 router.patch("/profile", auth, updateProfile);
 router.patch("/preferences/theme", auth, updateThemePreference);
