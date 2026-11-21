@@ -1,5 +1,17 @@
 const nodemailer=require("nodemailer");let transporter;
-function getTransporter(){if(!process.env.EMAIL_USER||!process.env.EMAIL_PASS)throw new Error("Email is not configured. Set EMAIL_USER and EMAIL_PASS in backend/.env.");if(!transporter){const port=Number(process.env.EMAIL_PORT||465);transporter=nodemailer.createTransport({host:process.env.EMAIL_HOST||"smtp.gmail.com",port,secure:String(process.env.EMAIL_SECURE??(port===465)).toLowerCase()==="true",auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS}});}return transporter;}
+function getTransporter(){
+ const host=String(process.env.EMAIL_HOST||"smtp.gmail.com").trim();
+ const user=String(process.env.EMAIL_USER||"").trim();
+ let pass=String(process.env.EMAIL_PASS||"").trim();
+ if(!user||!pass)throw new Error("Email is not configured. Set EMAIL_USER and EMAIL_PASS in backend/.env.");
+ // Google displays App Passwords in groups; remove copied whitespace before SMTP AUTH.
+ if(host.toLowerCase()==="smtp.gmail.com")pass=pass.replace(/\\s+/g,"");
+ if(!transporter){
+  const port=Number(process.env.EMAIL_PORT||465);
+  transporter=nodemailer.createTransport({host,port,secure:String(process.env.EMAIL_SECURE??(port===465)).trim().toLowerCase()==="true",auth:{user,pass}});
+ }
+ return transporter;
+}
 const sender=()=>process.env.EMAIL_FROM||process.env.EMAIL_USER;const esc=v=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function sendPasswordResetEmail({to,name,resetUrl}){await getTransporter().sendMail({from:sender(),to,subject:"Reset your MealMate password",text:`Hi ${name||"there"},\nUse this link within 30 minutes to reset your password:\n${resetUrl}\nIf you did not request this, ignore this email.`,html:`<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h2>Reset your MealMate password</h2><p>Hi ${esc(name||"there")},</p><p>This secure link expires in 30 minutes and can only be used once.</p><p><a href="${resetUrl}">Reset password</a></p><p>If you did not request this, ignore this email.</p></div>`});}
 async function sendDeliveryReceiptEmail({user,order}){if(!user?.email)throw new Error("Customer email is unavailable.");const money=n=>`₹${Number(n||0).toFixed(2)}`;const items=(order.items||[]).map(i=>({...i,amount:Number(i.price||0)*Number(i.quantity||0)}));const date=order.deliveredAt?new Date(order.deliveredAt).toLocaleString("en-IN",{dateStyle:"medium",timeStyle:"short"}):new Date().toLocaleString("en-IN");const lines=items.map(i=>`- ${i.name}: ${i.quantity} ${i.unit||""} — ${money(i.amount)}`).join("\n");const rows=items.map(i=>`<tr><td>${esc(i.name)}</td><td>${i.quantity} ${esc(i.unit||"")}</td><td>${money(i.amount)}</td></tr>`).join("");await getTransporter().sendMail({from:sender(),to:user.email,subject:`Your MealMate delivery receipt — ${order.orderId}`,text:`Hi ${user.name||"there"}, your order is delivered.\nOrder: ${order.orderId}\nDelivered: ${date}\n${lines}\nTotal: ${money(order.totalAmount)}`,html:`<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto"><h2>Your order has been delivered!</h2><p>Hi ${esc(user.name||"there")},</p><p>Order: <b>${esc(order.orderId)}</b><br/>Delivered: ${esc(date)}<br/>Status: Delivered</p><table style="width:100%;border-collapse:collapse"><thead><tr><th align="left">Item</th><th>Qty</th><th align="right">Amount</th></tr></thead><tbody>${rows}</tbody></table><h3 style="text-align:right">Total: ${money(order.totalAmount)}</h3><p>Thank you for choosing MealMate!</p></div>`});}
