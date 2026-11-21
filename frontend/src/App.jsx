@@ -78,7 +78,7 @@ function Router() {
           <ProtectedRoute path="/admin/security" component={AdminSecurity} allowedRoles={["admin"]} />
 
           <ProtectedRoute path="/profile" component={Profile} allowedRoles={["user", "admin"]} />
-          <ProtectedRoute path="/notifications" component={Notifications} allowedRoles={["user"]} />
+          <ProtectedRoute path="/notifications" component={Notifications} allowedRoles={["user", "admin"]} />
           <ProtectedRoute path="/settings" component={Settings} allowedRoles={["user", "admin"]} />
           <ProtectedRoute path="/favorites" component={Favorites} allowedRoles={["user"]} />
           <ProtectedRoute path="/recipes" component={Recipes} allowedRoles={["user", "admin"]} />

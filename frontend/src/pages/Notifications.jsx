@@ -38,6 +38,8 @@ function formatCreatedAt(value) {
 
 export default function Notifications() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const alertsEndpoint = isAdmin ? "/api/admin/alerts" : "/api/notifications";
   const [, setLocation] = useLocation();
   const userId = user?._id || user?.id;
   const [notifications, setNotifications] = useState([]);
@@ -53,13 +55,13 @@ export default function Notifications() {
     }
 
     try {
-      const response = await fetch("/api/notifications", {
+      const response = await fetch(alertsEndpoint, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error("Failed to load notifications.");
       const data = await response.json();
       if (!isActive()) return;
-      const items = (data.notifications || [])
+      const items = (isAdmin ? (data.alerts || []) : (data.notifications || []))
         .slice()
         .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
       setNotifications(items);
@@ -72,7 +74,7 @@ export default function Notifications() {
     } finally {
       if (isActive()) setLoading(false);
     }
-  }, []);
+  }, [alertsEndpoint, isAdmin]);
 
   useEffect(() => {
     let active = true;
@@ -100,7 +102,7 @@ export default function Notifications() {
   const markAsRead = async (id) => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`/api/notifications/${id}/read`, {
+      const response = await fetch(`${alertsEndpoint}/${id}/read`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -119,7 +121,7 @@ export default function Notifications() {
   const markAllAsRead = async () => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch("/api/notifications/read-all", {
+      const response = await fetch(`${alertsEndpoint}/read-all`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -137,7 +139,7 @@ export default function Notifications() {
   const deleteNotification = async (id) => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch(`/api/notifications/${id}`, {
+      const response = await fetch(`${alertsEndpoint}/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -153,7 +155,7 @@ export default function Notifications() {
   const clearAll = async () => {
     const token = localStorage.getItem("token");
     try {
-      const response = await fetch("/api/notifications", {
+      const response = await fetch(alertsEndpoint, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -178,7 +180,7 @@ export default function Notifications() {
   return (
     <div className="min-h-screen bg-[#f7faf7]">
       <AppNavbar />
-      <PageHeroBanner title="Your Notifications" description="Stay up to date with your meal plans and kitchen activity." eyebrow="STAY UPDATED" icon={Bell} />
+      <PageHeroBanner title={isAdmin ? "Platform Notifications" : "Your Notifications"} description={isAdmin ? "Review important platform alerts and administrative updates." : "Stay up to date with your meal plans and kitchen activity."} eyebrow="STAY UPDATED" icon={Bell} />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {error && <p role="alert" className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
