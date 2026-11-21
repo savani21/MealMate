@@ -6,6 +6,8 @@ const pantryItemSchema = new mongoose.Schema({
   quantity: { type: Number, required: true, min: 0 },
   unit: { type: String, required: true, trim: true, lowercase: true },
   expiryDate: { type: Date, default: null },
+  // Updated only when ingredients are actually consumed, not when stock is edited.
+  lastUsedAt: { type: Date, default: null },
   receivedOrderItems: { type: [String], default: [] },
 }, { timestamps: true });
 
