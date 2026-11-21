@@ -44,9 +44,18 @@ function getRecipeImageSource(recipe) {
   return "";
 }
 
-function getRecipeNameBasedImage(recipe) {
-  const name = encodeURIComponent(recipe?.name || "Indian food");
-  return `https://loremflickr.com/900/600/${name},food`;
+// Fixed image choices for the four recipes currently featured on the visitor homepage.
+// Database images still take priority; these are used when a recipe has no saved image.
+const popularRecipeImages = {
+  "paneer rice bowl": "https://saviourbites.com/Images/PaneerVeggieRice.jpg",
+  "gram flour potato patties with curd": "https://i2.wp.com/www.vegrecipesofindia.com/wp-content/uploads/2017/10/dahi-ke-kabab-recipe.jpg",
+  "onion tomato wheat paratha": "https://media-assets.swiggy.com/swiggy/image/upload/fl_lossy%2Cf_auto%2Cq_auto%2Cw_300%2Ch_300%2Cc_fit/FOOD_CATALOG/IMAGES/CMS/2025/4/17/f74e4ee5-196f-4956-9bd6-8859ad292bce_a5d74647-6d3b-4740-8ff6-33f3e5b8cbe0.jpg",
+  "banana milk egg bowl": "https://www.arise-app.com/images/dishes/en/oatmeal-with-banana-and-milk-iogx1l.webp",
+};
+
+function getPopularRecipeImage(recipe) {
+  const name = String(recipe?.name || "").trim().toLowerCase();
+  return popularRecipeImages[name] || "";
 }
 
 function RecipeDiscoverySection() {
@@ -93,16 +102,10 @@ function RecipeDiscoverySection() {
               <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="group min-w-0 text-left">
                 <div className="relative aspect-[16/10] overflow-hidden bg-[#eeeae3]">
                   <img
-                    src={getRecipeImageSource(recipe) || getRecipeNameBasedImage(recipe)}
+                    src={getRecipeImageSource(recipe) || getPopularRecipeImage(recipe) || "/images/recipe-placeholder.svg"}
                     alt={`Photo of ${recipe.name || "recipe"}`}
                     loading="lazy"
-                    data-fallback-tried={getRecipeImageSource(recipe) ? "false" : "true"}
                     onError={(event) => {
-                      if (event.currentTarget.dataset.fallbackTried !== "true") {
-                        event.currentTarget.dataset.fallbackTried = "true";
-                        event.currentTarget.src = getRecipeNameBasedImage(recipe);
-                        return;
-                      }
                       event.currentTarget.onerror = null;
                       event.currentTarget.src = "/images/recipe-placeholder.svg";
                     }}
