@@ -1,7 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
+// Always load backend/.env, regardless of the directory used to start Node.
+require("dotenv").config({ path: require("path").join(__dirname, ".env") });
 
 const app = express();
 const recipeRoutes = require("./routes/user/recipeRoutes");
