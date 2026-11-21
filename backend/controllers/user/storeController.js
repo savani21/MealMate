@@ -39,26 +39,8 @@ async function ensureCatalog() {
 }
 
 function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\async function ensureCatalog() {
-  for (const [name, category, unit, price] of DEFAULT_PRODUCTS) {
-    await StoreProduct.updateOne(
-      { name },
-      {
-        $setOnInsert: {
-          name,
-          category,
-          unit,
-          price,
-          stock: 100,
-          isActive: true,
-        },
-      },
-      { upsert: true }
-    );
-  }
-}");
+  return value.split("").map((character) => "\\^$.*+?()[]{}|".includes(character) ? `\\${character}` : character).join("");
 }
-
 exports.getProducts = async (req, res) => {
   try {
     await ensureCatalog();
