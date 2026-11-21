@@ -85,3 +85,13 @@ test("retains unmeasured requirements when no usable Pantry batch exists", () =>
   assert.equal(result.length, 1);
   assert.equal(result[0].name, "coriander");
 });
+
+test("uses Pantry quantities even when the ingredient was selected as available", () => {
+  const result = calculateSmartGroceryItems({
+    requiredItems: [required("onion", "500 g")],
+    availableIngredients: ["onion"],
+    pantryItems: [{ name: "onion", quantity: 200, unit: "g", expiryDate: null }],
+  });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].quantity, "300 g");
+});
