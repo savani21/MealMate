@@ -5,6 +5,35 @@ import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, Chev
 
 const API = "/api/meal-plans";
 
+const VEGETARIAN_IMAGES = [
+  "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1515003197210-e0cd7184f8b5?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1505576399279-565b52d4ac71?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=900&q=85",
+];
+const NON_VEGETARIAN_IMAGES = [
+  "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=900&q=85",
+  "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=900&q=85",
+];
+function getOptionImage(option, index, diet) {
+  const ingredients = (option.ingredients || []).map((item) => typeof item === "string" ? item : item?.name || "").join(" ");
+  const animalTerms = /\b(chicken|turkey|duck|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|crab|lobster|bacon|ham|sausage|meat)\b/i;
+  const nonVegetarian = String(diet || "").toLowerCase().includes("non-vegetarian") || animalTerms.test(`${option.name || ""} ${ingredients}`);
+  const images = nonVegetarian ? NON_VEGETARIAN_IMAGES : VEGETARIAN_IMAGES;
+  const key = String(option.name || index);
+  const hash = key.split("").reduce((value, char) => (value * 31 + char.charCodeAt(0)) >>> 0, 7);
+  return images[hash % images.length];
+}
+
+
 const isExpiredPantryItem = (item, now = new Date()) => {
   if (!item?.expiryDate) return false;
   const expiryDate = new Date(item.expiryDate);
@@ -426,6 +455,12 @@ export default function MealPlanner() {
                 <button type="button" onClick={() => setRecipeDetails(null)} aria-label="Close recipe details" className="rounded-lg px-2 py-1 text-2xl leading-none text-gray-400 hover:bg-gray-100">×</button>
               </div>
               <div className="overflow-y-auto p-5">
+                {recipeDetails.nutrition && <section className="mb-5 rounded-xl bg-green-50/70 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2"><h3 className="text-sm font-bold text-gray-900">Nutrition per serving</h3><span className="text-[10px] font-semibold text-gray-500">{recipeDetails.nutrition.status === "verified" ? "Verified" : "Estimated"}</span></div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[[ "Calories", recipeDetails.nutrition.calories, "kcal" ], [ "Protein", recipeDetails.nutrition.protein, "g" ], [ "Carbs", recipeDetails.nutrition.carbohydrates, "g" ], [ "Fat", recipeDetails.nutrition.fat, "g" ]].filter(([, value]) => Number.isFinite(Number(value))).map(([label, value, unit]) => <div key={label}><span className="text-[10px] text-gray-500">{label}</span><p className="text-sm font-bold text-gray-800">{Number(value)} {unit}</p></div>)}
+                  </div>
+                </section>}
                 <h3 className="mb-3 text-sm font-bold text-gray-900">Ingredients required</h3>
                 {Array.isArray(recipeDetails.ingredients) && recipeDetails.ingredients.length > 0 ? (
                   <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -445,7 +480,7 @@ export default function MealPlanner() {
         )}
         {previewReady && <section ref={recipeChoicesRef} className="mt-10 space-y-6 scroll-mt-24">
           <div className="text-center"><div className="inline-flex items-center gap-2 text-primary text-sm font-semibold"><CheckCircle2 className="w-4 h-4"/> Your preferences are applied</div><h2 className="text-2xl font-black text-gray-900 mt-2">Choose Your Recipes</h2><p className="text-sm text-gray-500 mt-2">Select one recipe for breakfast, lunch and dinner. Your chosen ingredients are already included.</p></div>
-          {draftDays.map((day, dayIndex) => <div key={day.day || dayIndex} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-7"><div className="flex items-center gap-2 mb-5"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary"/></div><h3 className="text-lg font-black text-gray-900">Day {day.day || dayIndex + 1}</h3></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-5">{["breakfast","lunch","dinner"].map((type) => <div key={type} className="rounded-2xl border border-gray-100 p-4"><div className="text-xs font-bold uppercase tracking-wide text-primary mb-3">{type}</div><div className="space-y-2">{(day[type + "Options"] || []).map((option, optionIndex) => <button type="button" key={option.name + optionIndex} onClick={() => { selectOption(dayIndex, type, option); setRecipeDetails({ ...option, mealType: type, day: day.day || dayIndex + 1 }); }} className={`block w-full rounded-xl border p-3 text-left transition ${day[type] === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}><span className="flex items-start gap-2.5"><input type="radio" tabIndex={-1} aria-label={`Select ${option.name}`} name={`day-${dayIndex}-${type}`} checked={day[type] === option.name} onChange={() => selectOption(dayIndex, type, option)} className="mt-1 accent-green-700 pointer-events-none"/><span className="min-w-0"><span className="block font-bold text-sm text-gray-900">{option.name}</span><span className="mt-1 block text-xs font-medium text-primary">{option.prepTime ? `Time: ${option.prepTime}` : "Preparation time not available"}</span><span className="mt-1 block text-[11px] text-gray-400">Click to view recipe details</span></span></span></button>)}</div>{(day[type + "Options"] || []).length === 0 && <p className="text-sm text-red-500">No options returned for this meal. Please regenerate.</p>}</div>)}</div></div>)}
+          {draftDays.map((day, dayIndex) => <div key={day.day || dayIndex} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 md:p-7"><div className="flex items-center gap-2 mb-5"><div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center"><ChefHat className="w-5 h-5 text-primary"/></div><h3 className="text-lg font-black text-gray-900">Day {day.day || dayIndex + 1}</h3></div><div className="grid grid-cols-1 lg:grid-cols-3 gap-5">{["breakfast","lunch","dinner"].map((type) => <div key={type} className="rounded-2xl border border-gray-100 p-4"><div className="text-xs font-bold uppercase tracking-wide text-primary mb-3">{type}</div><div className="space-y-2">{(day[type + "Options"] || []).map((option, optionIndex) => <button type="button" key={option.name + optionIndex} onClick={() => { selectOption(dayIndex, type, option); setRecipeDetails({ ...option, mealType: type, day: day.day || dayIndex + 1 }); }} className={`block w-full rounded-xl border p-3 text-left transition ${day[type] === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}><span className="flex items-start gap-3"><img src={getOptionImage(option, optionIndex, diet)} alt={option.name} loading="lazy" className="h-16 w-16 shrink-0 rounded-lg object-cover" onError={(event) => { event.currentTarget.src = VEGETARIAN_IMAGES[0]; }}/><span className="min-w-0 flex-1"><span className="flex items-start gap-2"><input type="radio" tabIndex={-1} aria-label={`Select ${option.name}`} name={`day-${dayIndex}-${type}`} checked={day[type] === option.name} onChange={() => selectOption(dayIndex, type, option)} className="mt-1 accent-green-700 pointer-events-none"/><span className="min-w-0"><span className="block font-bold text-sm text-gray-900">{option.name}</span><span className="mt-1 block text-xs font-medium text-primary">{option.prepTime ? `Time: ${option.prepTime}` : "Preparation time not available"}</span><span className="mt-1 block text-[11px] text-gray-400">Click to view recipe details</span></span></span></span></span></button>)}</div>{(day[type + "Options"] || []).length === 0 && <p className="text-sm text-red-500">No options returned for this meal. Please regenerate.</p>}</div>)}</div></div>)}
           <div ref={savePlanRef} className="flex flex-col sm:flex-row justify-center gap-3 scroll-mt-24"><button onClick={() => {setPreviewReady(false);setDraftDays([]);}} className="px-6 py-3 rounded-xl border border-gray-200 font-semibold text-gray-600">Change Preferences</button><button onClick={saveSelectedPlan} disabled={loading} className="px-7 py-3 rounded-xl bg-primary text-white font-bold disabled:opacity-60">{loading ? "Saving Your Choices..." : "Save Selected Meal Plan"}</button></div>
         </section>}
       </main>
