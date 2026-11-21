@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const StoreProduct = require("../../models/store/StoreProduct");
 const Cart = require("../../models/user/Cart");
 
@@ -23,24 +24,23 @@ const DEFAULT_PRODUCTS = [
 ];
 
 async function ensureCatalog() {
-  for (const [name, category, unit, price] of DEFAULT_PRODUCTS) {
-    await StoreProduct.updateOne(
-      { name },
-      {
-        $setOnInsert: {
-          name,
-          category,
-          unit,
-          price,
-          stock: 100,
-          isActive: true,
+  await StoreProduct.bulkWrite(
+    DEFAULT_PRODUCTS.map(([name, category, unit, price]) => ({
+      updateOne: {
+        filter: { name },
+        update: {
+          $setOnInsert: { name, category, unit, price, stock: 100, isActive: true },
         },
+        upsert: true,
       },
-      { upsert: true }
-    );
-  }
+    })),
+    { ordered: false }
+  );
 }
 
+function escapeRegex(value) {
+  return value.split("").map((character) => "\\^$.*+?()[]{}|".includes(character) ? "\\" + character : character).join("");
+}
 exports.getProducts = async (req, res) => {
   try {
     await ensureCatalog();
@@ -55,7 +55,7 @@ exports.getProducts = async (req, res) => {
         .filter(Boolean);
 
       filter.$or = names.map((name) => ({
-        name: { $regex: name, $options: "i" },
+        name: { $regex: escapeRegex(name), $options: "i" },
       }));
     }
 
@@ -82,19 +82,30 @@ exports.addToCart = async (req, res) => {
     const { productId, quantity = 1 } = req.body;
     const amount = Number(quantity);
 
-    if (!productId || !Number.isInteger(amount) || amount < 1) {
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "A valid product is required." });
+    }
+    if (!Number.isInteger(amount) || amount < 1) {
       return res.status(400).json({ success: false, message: "Valid product and quantity are required" });
     }
 
     const product = await StoreProduct.findOne({ _id: productId, isActive: true });
     if (!product) return res.status(404).json({ success: false, message: "Product not found" });
-    if (product.stock < amount) return res.status(400).json({ success: false, message: "Insufficient stock" });
-
     let cart = await Cart.findOne({ user: req.user.id });
     if (!cart) cart = await Cart.create({ user: req.user.id, items: [] });
 
     const existing = cart.items.find((item) => item.product.toString() === productId);
-    if (existing) existing.quantity += amount;
+    const requestedTotal = (existing?.quantity || 0) + amount;
+    if (requestedTotal > product.stock) {
+      return res.status(409).json({
+        success: false,
+        message: `Only ${product.stock} unit(s) of ${product.name} are currently in stock.`,
+        availableStock: product.stock,
+        cartQuantity: existing?.quantity || 0,
+      });
+    }
+
+    if (existing) existing.quantity = requestedTotal;
     else cart.items.push({ product: productId, quantity: amount });
 
     await cart.save();
@@ -110,6 +121,9 @@ exports.addToCart = async (req, res) => {
 exports.updateCartItem = async (req, res) => {
   try {
     const amount = Number(req.body.quantity);
+    if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
+      return res.status(400).json({ success: false, message: "A valid product is required." });
+    }
     if (!Number.isInteger(amount) || amount < 1) {
       return res.status(400).json({ success: false, message: "Quantity must be at least 1" });
     }
@@ -119,6 +133,16 @@ exports.updateCartItem = async (req, res) => {
 
     const item = cart.items.find((entry) => entry.product.toString() === req.params.productId);
     if (!item) return res.status(404).json({ success: false, message: "Cart item not found" });
+
+    const product = await StoreProduct.findOne({ _id: req.params.productId, isActive: true });
+    if (!product) return res.status(404).json({ success: false, message: "Product is no longer available" });
+    if (amount > product.stock) {
+      return res.status(409).json({
+        success: false,
+        message: `Only ${product.stock} unit(s) of ${product.name} are currently in stock.`,
+        availableStock: product.stock,
+      });
+    }
 
     item.quantity = amount;
     await cart.save();
@@ -132,6 +156,9 @@ exports.updateCartItem = async (req, res) => {
 
 exports.removeFromCart = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
+      return res.status(400).json({ success: false, message: "A valid product is required." });
+    }
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) return res.status(404).json({ success: false, message: "Cart not found" });
 

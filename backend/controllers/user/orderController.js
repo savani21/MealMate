@@ -1,6 +1,8 @@
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 const Cart = require("../../models/user/Cart");
+const StoreProduct = require("../../models/store/StoreProduct");
 const Order = require("../../models/user/Order");
 const User = require("../../models/User");
 const GroceryList = require("../../models/user/GroceryList");
@@ -188,44 +190,77 @@ function generateOrderId() {
 // Checkout the current cart: creates an Order, clears the cart, returns
 // everything the receipt needs (order id, date/time, user, delivery time).
 exports.checkout = async (req, res) => {
+  let session;
+  let order;
+  let user;
+
   try {
-    const cart = await Cart.findOne({ user: req.user.id }).populate(
-      "items.product"
-    );
+    session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      const cart = await Cart.findOne({ user: req.user.id }).session(session).populate("items.product");
+      if (!cart || cart.items.length === 0) {
+        const error = new Error("Your cart is empty");
+        error.status = 400;
+        throw error;
+      }
 
-    if (!cart || cart.items.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Your cart is empty",
-      });
-    }
+      const items = [];
+      for (const entry of cart.items) {
+        const product = entry.product;
+        if (!product || !product.isActive) {
+          const error = new Error("A product in your cart is no longer available. Please refresh your cart.");
+          error.status = 409;
+          throw error;
+        }
+        const quantity = Number(entry.quantity);
+        if (!Number.isInteger(quantity) || quantity < 1) {
+          const error = new Error("Your cart contains an invalid quantity. Please update it and try again.");
+          error.status = 400;
+          throw error;
+        }
 
-    const items = cart.items.map((entry) => ({
-      name: entry.product.name,
-      price: entry.product.price,
-      quantity: entry.quantity,
-      unit: entry.product.unit,
-    }));
+        // Reserve stock atomically inside the order transaction. Concurrent
+        // checkouts cannot both purchase the same final units.
+        const reserved = await StoreProduct.findOneAndUpdate(
+          { _id: product._id, isActive: true, stock: { $gte: quantity } },
+          { $inc: { stock: -quantity } },
+          { new: true, session }
+        );
+        if (!reserved) {
+          const error = new Error(`Insufficient stock for ${product.name}. Available stock has changed; please review your cart.`);
+          error.status = 409;
+          throw error;
+        }
 
-    const totalAmount = items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+        items.push({
+          name: product.name,
+          price: product.price,
+          quantity,
+          unit: product.unit,
+        });
+      }
 
-    // Simple delivery estimate: 30-60 minutes from now
-    const deliveryMinutes = 30 + Math.floor(Math.random() * 31);
-    const deliveryTime = new Date(Date.now() + deliveryMinutes * 60 * 1000);
+      const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const deliveryMinutes = 30 + Math.floor(Math.random() * 31);
+      const deliveryTime = new Date(Date.now() + deliveryMinutes * 60 * 1000);
+      const [createdOrder] = await Order.create([{
+        user: req.user.id,
+        orderId: generateOrderId(),
+        items,
+        totalAmount,
+        deliveryTime,
+      }], { session });
+      order = createdOrder;
 
-    const order = await Order.create({
-      user: req.user.id,
-      orderId: generateOrderId(),
-      items,
-      totalAmount,
-      deliveryTime,
+      // Clear the cart in the same transaction as stock reservation and order
+      // creation, preventing duplicate checkout after a partial failure.
+      cart.items = [];
+      await cart.save({ session });
+      user = await User.findById(req.user.id).select("name email").session(session);
     });
 
-    // Persist an immediate in-app confirmation after successful checkout.
-    // A notification failure must not invalidate an order that was already created.
+    // Side effects that must not roll back a confirmed order are handled after
+    // the inventory/order/cart transaction has committed.
     try {
       await Notification.create({
         user: req.user.id,
@@ -240,23 +275,13 @@ exports.checkout = async (req, res) => {
       console.error("Order placed notification could not be created:", notificationError);
     }
 
-    // A completed purchase satisfies matching ingredients in every meal-plan
-    // grocery list, so they are not offered for purchase again.
     try {
-      await markPurchasedGroceryItems(req.user.id, items);
+      await markPurchasedGroceryItems(req.user.id, order.items);
     } catch (groceryError) {
-      // The order is already created; do not turn a successful payment/order
-      // into a failed checkout because a grocery-list sync needs retrying.
       console.error("Could not sync purchased ingredients to grocery lists:", groceryError);
     }
 
-    // Empty the cart now that the order has been placed
-    cart.items = [];
-    await cart.save();
-
-    const user = await User.findById(req.user.id).select("name email");
-
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: "Order placed successfully",
       order,
@@ -264,10 +289,12 @@ exports.checkout = async (req, res) => {
     });
   } catch (err) {
     console.error("Checkout error:", err);
-    res.status(500).json({
+    return res.status(err.status || 500).json({
       success: false,
-      message: "Failed to place order",
+      message: err.status ? err.message : "Failed to place order. No stock or cart changes were committed.",
     });
+  } finally {
+    if (session) await session.endSession();
   }
 };
 

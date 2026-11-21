@@ -129,48 +129,56 @@ export default function GroceryStore() {
   };
 
   const addToCart = async (productId) => {
-    const response = await fetch(`${API}/api/store/cart`, {
-      method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, quantity: 1 }),
-    });
-    const data = await response.json();
-    if (response.ok) {
+    try {
+      const response = await fetch(`${API}/api/store/cart`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, quantity: 1 }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to add item");
       setCart(data.cart);
-      const added = data.cart?.items?.find(
-        (item) => item.product?._id === productId
-      );
+      const added = data.cart?.items?.find((item) => item.product?._id === productId);
       setLastAddedProduct(added?.product?.name || "Item");
       setCartNotice("Added to cart");
       window.clearTimeout(window.__mealMateCartNoticeTimer);
-      window.__mealMateCartNoticeTimer = window.setTimeout(
-        () => setCartNotice(""),
-        2200
-      );
-    } else {
-      alert(data.message || "Unable to add item");
+      window.__mealMateCartNoticeTimer = window.setTimeout(() => setCartNotice(""), 2200);
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      alert(error.message || "Unable to connect to the store. Please try again.");
     }
   };
 
   const updateQuantity = async (productId, quantity) => {
     if (quantity < 1) return removeFromCart(productId);
-
-    const response = await fetch(`${API}/api/store/cart/${productId}`, {
-      method: "PATCH",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
-      body: JSON.stringify({ quantity }),
-    });
-    const data = await response.json();
-    if (response.ok) setCart(data.cart);
+    try {
+      const response = await fetch(`${API}/api/store/cart/${productId}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ quantity }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to update quantity");
+      setCart(data.cart);
+    } catch (error) {
+      console.error("Update cart quantity error:", error);
+      alert(error.message || "Unable to update cart quantity.");
+    }
   };
 
   const removeFromCart = async (productId) => {
-    const response = await fetch(`${API}/api/store/cart/${productId}`, {
-      method: "DELETE",
-      headers: authHeaders(),
-    });
-    const data = await response.json();
-    if (response.ok) setCart(data.cart);
+    try {
+      const response = await fetch(`${API}/api/store/cart/${productId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to remove item");
+      setCart(data.cart);
+    } catch (error) {
+      console.error("Remove cart item error:", error);
+      alert(error.message || "Unable to remove item from cart.");
+    }
   };
 
   const placeOrder = async () => {
