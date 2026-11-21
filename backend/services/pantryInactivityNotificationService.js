@@ -23,7 +23,6 @@ async function createPantryInactivityNotifications(now = new Date()) {
 
   let created = 0;
   for (const item of items) {
-    const lastUsed = item.lastUsedAt || item.createdAt;
     const referenceId = `pantry-inactive:${item._id}`;
     const result = await Notification.updateOne(
       { user: item.user, type: "pantry-inactive", referenceId },
