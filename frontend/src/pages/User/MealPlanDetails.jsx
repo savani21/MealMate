@@ -116,7 +116,7 @@ export default function MealPlanDetails() {
     }
     const selectedIngredients = dayPlan[`${mealType}Ingredients`] || [];
     const ingredientNames = selectedIngredients
-      .map((item) => String(typeof item === "string" ? item : item?.name || "").replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "").trim())
+      .map((item) => String(typeof item === "string" ? item : item?.name || "").replace(/^\s*as\s+needed\s*[:,-]?\s*/i, "").trim())
       .filter(Boolean);
     const ingredientText = [...new Map(ingredientNames.map((name) => [name.toLowerCase(), name])).values()].join(", ");
     if (!ingredientText) { alert("No ingredients were saved for this selected meal."); return; }
