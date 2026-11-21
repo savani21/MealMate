@@ -76,17 +76,23 @@ export default function MealPlanDetails() {
 
   const selectedRecipe = findRecipe(selectedMealName);
 
-  // A generated plan starts on its creation date. Day 1 is editable on that
-  // date; on later dates, only today and upcoming plan days remain editable.
-  const getIsFutureOrTodayPlanDay = (dayNumber) => {
+  // Meal slots use local time. Once a meal's scheduled start has passed,
+  // that meal is locked even if other meals later today are still editable.
+  const getIsFutureMeal = (dayNumber, mealType) => {
     if (plan?.isArchived || !plan?.createdAt) return false;
     const start = new Date(plan.createdAt);
     if (Number.isNaN(start.getTime())) return false;
-    const today = new Date();
+    const now = new Date();
     const startDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const elapsedDays = Math.floor((todayDate - startDate) / 86400000);
-    return Number(dayNumber) >= elapsedDays + 1;
+    const planDay = Number(dayNumber);
+    if (!Number.isInteger(planDay) || planDay < 1 || planDay > Number(plan.duration)) return false;
+    if (planDay > elapsedDays + 1) return true;
+    if (planDay < elapsedDays + 1) return false;
+    const mealStartHours = { breakfast: 8, lunch: 13, dinner: 20 };
+    const startHour = mealStartHours[mealType];
+    return startHour !== undefined && now.getHours() < startHour;
   };
 
   const selectMealOption = async (day, mealType, option, recipeId = "") => {
@@ -212,26 +218,11 @@ export default function MealPlanDetails() {
                 return <div key={type} className="min-w-0 border border-gray-100 rounded-2xl p-4 sm:p-5">
                   <p className="text-xs uppercase tracking-wide font-bold text-primary">{type}</p>
                   <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
-                  {(() => {
-                    const selectedOption = options.find((option) => option.name === day[type]);
-                    const nutrition = selectedOption?.nutrition;
-                    if (!nutrition) return <p className="mt-2 text-xs text-gray-400">Nutrition details unavailable</p>;
-                    const values = [
-                      ["Calories", nutrition.calories, "kcal"],
-                      ["Protein", nutrition.protein, "g"],
-                      ["Carbs", nutrition.carbohydrates, "g"],
-                      ["Fat", nutrition.fat, "g"],
-                    ].filter(([, value]) => Number.isFinite(Number(value)));
-                    return <div className="mt-3 rounded-xl bg-green-50/70 p-3">
-                      <div className="mb-2 flex items-center justify-between gap-2"><span className="text-[11px] font-bold uppercase tracking-wide text-gray-600">Nutrition per serving</span><span className="text-[10px] font-semibold text-gray-500">{nutrition.status === "verified" ? "Verified" : "Estimated"}</span></div>
-                      {values.length ? <div className="grid grid-cols-2 gap-2">{values.map(([label, value, unit]) => <div key={label}><span className="text-[10px] text-gray-500">{label}</span><p className="text-sm font-bold text-gray-800">{Number(value)} {unit}</p></div>)}</div> : <p className="text-xs text-gray-500">Nutrition values are not available for this meal.</p>}
-                    </div>;
-                  })()}
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {getIsFutureOrTodayPlanDay(day.day) && <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>}
+                    {getIsFutureMeal(day.day, type) && <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>}
                     <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
                   </div>
-                  {getIsFutureOrTodayPlanDay(day.day) && activeMealEditor === mealKey && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveMealEditor(""); }}>
+                  {getIsFutureMeal(day.day, type) && activeMealEditor === mealKey && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setActiveMealEditor(""); }}>
                     <section role="dialog" aria-modal="true" aria-labelledby={`change-meal-title-${mealKey}`} className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
                       <div className="flex items-start justify-between gap-4 border-b border-gray-100 px-5 py-4">
                         <div><p className="text-xs font-bold uppercase tracking-wide text-primary">Day {day.day} · {type}</p><h2 id={`change-meal-title-${mealKey}`} className="mt-1 text-xl font-black text-gray-900">Choose an alternative meal</h2><p className="mt-1 text-xs text-gray-500">Only this meal will change. Your other meals will stay the same.</p></div>
