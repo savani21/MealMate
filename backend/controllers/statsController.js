@@ -5,7 +5,7 @@ const RecipeReview = require("../models/user/RecipeReview");
 
 exports.getPublicStats = async (req, res) => {
   try {
-    const [recipeCount, userCount, groceryProductCount, ratingStats] = await Promise.all([
+    const [recipeCount, userCount, groceryProductCount, ratingStats, recentReviews] = await Promise.all([
       Recipe.countDocuments(),
       User.countDocuments({ role: "user" }),
       StoreProduct.countDocuments({ isActive: true }),
@@ -18,6 +18,12 @@ exports.getPublicStats = async (req, res) => {
           },
         },
       ]),
+      RecipeReview.find({ feedback: { $exists: true, $ne: "" } })
+        .populate("user", "name")
+        .populate("recipe", "name")
+        .sort({ createdAt: -1 })
+        .limit(3)
+        .lean(),
     ]);
 
     const rating = ratingStats[0] || { averageRating: null, ratingCount: 0 };
@@ -30,6 +36,13 @@ exports.getPublicStats = async (req, res) => {
         ? null
         : Number(rating.averageRating.toFixed(1)),
       recipeRatingCount: rating.ratingCount,
+      recentReviews: recentReviews.map((review) => ({
+        rating: review.rating,
+        feedback: review.feedback,
+        reviewer: review.user?.name || "MealMate member",
+        recipe: review.recipe?.name || "MealMate recipe",
+        createdAt: review.createdAt,
+      })),
     });
   } catch (error) {
     console.error("PUBLIC STATS ERROR:", error);
