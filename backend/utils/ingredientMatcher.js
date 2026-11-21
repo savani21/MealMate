@@ -1,4 +1,4 @@
-function isCommonHouseholdIngredient(value) { const name = normalizeIngredientName(value); return name === "water" || /^water\\s+(?:for|as needed|to|if needed)\\b/.test(name); }
+function isCommonHouseholdIngredient(value) { const name = normalizeIngredientName(value); return name === "water" || /^water\s+(?:for|as needed|to|if needed)\b/.test(name); }
 
 function normalizeIngredientName(value) {
   const cleaned = String(value || "").toLowerCase()
