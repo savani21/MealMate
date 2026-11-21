@@ -2,6 +2,8 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { createAdminAlert } = require("../services/adminAlertService");
+const crypto = require("crypto");
+const { sendPasswordResetEmail } = require("../services/emailService");
 
 // Used for unknown accounts so login attempts perform a password hash comparison
 // before returning the same response as an incorrect password.
@@ -105,6 +107,34 @@ exports.login = async (req, res) => {
   }
 };
 
+exports.requestPasswordReset = async (req, res) => {
+ const message="If an account exists for that email, a password reset link has been sent.";
+ try {
+  const email=typeof req.body?.email==="string"?req.body.email.trim().toLowerCase():"";
+  if(!EMAIL_PATTERN.test(email)||email.length>254)return res.json({success:true,message});
+  const user=await User.findOne({email});
+  if(user){
+   const token=crypto.randomBytes(32).toString("hex");
+   user.resetPasswordTokenHash=crypto.createHash("sha256").update(token).digest("hex");
+   user.resetPasswordExpires=new Date(Date.now()+30*60*1000); await user.save();
+   const resetUrl=`${(process.env.CLIENT_URL||"http://localhost:5173").replace(/\/$/,"")}/reset-password/${token}`;
+   try{await sendPasswordResetEmail({to:user.email,name:user.name,resetUrl});}
+   catch(e){user.resetPasswordTokenHash=undefined;user.resetPasswordExpires=undefined;await user.save();console.error("Password reset email failed:",e.message);return res.json({success:true,message});}
+  }
+  return res.json({success:true,message});
+ }catch(e){console.error("Password reset request failed:",e);return res.status(500).json({success:false,message:"Unable to process the request. Please try again."});}
+};
+exports.resetPassword = async (req,res) => {
+ try{
+  const {token,password}=req.body||{};
+  if(typeof token!=="string"||!/^[a-f0-9]{64}$/i.test(token)||!validPassword(password))return res.status(400).json({success:false,message:"The reset link is invalid or expired."});
+  const tokenHash=crypto.createHash("sha256").update(token).digest("hex");
+  const user=await User.findOne({resetPasswordTokenHash:tokenHash,resetPasswordExpires:{$gt:new Date()}}).select("+resetPasswordTokenHash +resetPasswordExpires");
+  if(!user)return res.status(400).json({success:false,message:"The reset link is invalid or expired."});
+  user.password=await bcrypt.hash(password,12);user.resetPasswordTokenHash=undefined;user.resetPasswordExpires=undefined;await user.save();
+  return res.json({success:true,message:"Password updated successfully. You can now log in."});
+ }catch(e){console.error("Password reset failed:",e);return res.status(500).json({success:false,message:"Unable to reset the password. Please try again."});}
+};
 exports.updateProfile = async (req, res) => {
   try {
     const { foodPreference } = req.body;

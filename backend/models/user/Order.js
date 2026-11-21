@@ -50,6 +50,8 @@ const orderSchema = new mongoose.Schema(
     inventorySyncing: { type: Boolean, default: false },
     inventorySyncingAt: { type: Date, default: null },
     inventoryAppliedAt: { type: Date, default: null },
+    receiptEmailSentAt: { type: Date, default: null },
+    receiptEmailLastAttemptAt: { type: Date, default: null },
   },
   {
     timestamps: true,

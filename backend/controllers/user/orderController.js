@@ -10,6 +10,7 @@ const PantryItem = require("../../models/user/PantryItem");
 const Notification = require("../../models/user/Notification");
 const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { createAdminAlert } = require("../../services/adminAlertService");
+const { sendDeliveryReceiptEmail } = require("../../services/emailService");
 
 
 
@@ -87,6 +88,30 @@ exports.processDueOrders = async () => {
   if (deliveryProcessorRunning) return;
   deliveryProcessorRunning = true;
   try {
+    // Retry receipts for completed deliveries if SMTP was temporarily unavailable.
+    const retryBefore = new Date(Date.now() - 5 * 60 * 1000);
+    const pendingReceipts = await Order.find({
+      status: "delivered",
+      receiptEmailSentAt: null,
+      $or: [
+        { receiptEmailLastAttemptAt: null },
+        { receiptEmailLastAttemptAt: { $lte: retryBefore } },
+      ],
+    }).limit(10);
+    for (const pending of pendingReceipts) {
+      try {
+        const receiptUser = await User.findById(pending.user).select("name email");
+        if (!receiptUser?.email) continue;
+        await Order.updateOne({ _id: pending._id }, { $set: { receiptEmailLastAttemptAt: new Date() } });
+        await sendDeliveryReceiptEmail({ user: receiptUser, order: pending });
+        await Order.updateOne(
+          { _id: pending._id, receiptEmailSentAt: null },
+          { $set: { receiptEmailSentAt: new Date() } }
+        );
+      } catch (mailError) {
+        console.error(`Delivery receipt retry failed for ${pending.orderId}:`, mailError.message);
+      }
+    }
     while (true) {
       const now = new Date();
       const staleLock = new Date(now.getTime() - 2 * 60 * 1000);
@@ -164,6 +189,13 @@ exports.processDueOrders = async () => {
             $unset: { inventorySyncingAt: 1 },
           }
         );
+        try {
+          const receiptUser=await User.findById(order.user).select("name email");
+          if(receiptUser?.email){await sendDeliveryReceiptEmail({user:receiptUser,order:{...order.toObject(),status:"delivered",deliveredAt:deliveryNotification.deliveredAt||deliveredAt}});await Order.updateOne({_id:order._id},{$set:{receiptEmailSentAt:new Date(),receiptEmailLastAttemptAt:new Date()}});}
+        } catch(mailError) {
+          await Order.updateOne({_id:order._id},{$set:{receiptEmailLastAttemptAt:new Date()}});
+          console.error(`Delivery receipt email failed for ${order.orderId}:`,mailError.message);
+        }
       } catch (error) {
         await Order.updateOne(
           { _id: order._id },
