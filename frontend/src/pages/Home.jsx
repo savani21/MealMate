@@ -49,17 +49,6 @@ function RecipeDiscoverySection() {
     .sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0) || (b.averageRating || 0) - (a.averageRating || 0))
     .slice(0, 4);
   const openRecipes = () => setLocation("/recipes");
-  const images = [
-    "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=700&q=85",
-    "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=85",
-  ];
-
   return (
     <section id="recipes" className="bg-[#faf9f6] py-8 sm:py-10">
       <div className="mx-auto w-full max-w-screen-2xl px-5 sm:px-8 lg:px-10">
@@ -78,7 +67,7 @@ function RecipeDiscoverySection() {
             {popularRecipes.map((recipe, index) => (
               <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="group min-w-0 text-left">
                 <div className="relative aspect-[16/10] overflow-hidden bg-[#eeeae3]">
-                  <img src={images[index % images.length]} alt={recipe.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={recipe.imageUrl || recipe.image || recipe.imageURL || "/images/recipe-placeholder.jpg"} alt={recipe.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/recipe-placeholder.jpg"; }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                 </div>
                 <h3 className="mt-2 line-clamp-2 text-xs font-bold leading-[1.35] text-[#292722] group-hover:text-primary sm:text-sm">{recipe.name}</h3>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] text-gray-500">
