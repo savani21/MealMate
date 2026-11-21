@@ -190,9 +190,9 @@ export default function Notifications() {
             <button onClick={markAllAsRead} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">
               <Check className="w-4 h-4" /> Mark all read
             </button>
-            <button onClick={clearAll} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
+            {!isAdmin && <button onClick={clearAll} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-gray-800">
               <Trash2 className="w-4 h-4" /> Clear
-            </button>
+            </button>}
           </div>
         )}
 
