@@ -60,6 +60,11 @@ test("water is a common household ingredient, not a grocery item", () => {
   assert.equal(isCommonHouseholdIngredient("tomato"), false);
 });
 
+test("normalizes quantity, size, peeling and cubing into a plain potato name", () => {
+  assert.equal(normalizeIngredientName("2 medium potatoes, peeled and cubed"), "potato");
+  assert.equal(normalizeIngredientName("1 large potato, peeled and cubed"), "potato");
+});
+
 test("matches common Indian names while keeping misspellings distinct", () => {
   assert.equal(normalizeIngredientName("aloo"), "potato");
   assert.equal(normalizeIngredientName("batata"), "potato");
