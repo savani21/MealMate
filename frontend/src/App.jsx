@@ -10,6 +10,7 @@ import "@/navbar-layout.css";
 const NotFound = lazy(() => import("@/pages/not-found"));
 const Home = lazy(() => import("@/pages/Home"));
 const Login = lazy(() => import("@/pages/Login"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const Signup = lazy(() => import("@/pages/Signup"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const MealPlanner = lazy(() => import("@/pages/User/MealPlanner"));
@@ -59,6 +60,7 @@ function Router() {
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/login" component={Login} />
+          <Route path="/reset-password/:token" component={ResetPassword} />
           <Route path="/signup" component={Signup} />
           <ProtectedRoute path="/dashboard" component={Dashboard} allowedRoles={["admin", "user"]} />
           <ProtectedRoute path="/meal-planner" component={MealPlanner} allowedRoles={["user"]} />
