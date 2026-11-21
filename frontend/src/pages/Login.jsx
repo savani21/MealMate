@@ -20,9 +20,20 @@ export default function Login() {
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgot,setShowForgot]=useState(false);
+  const [forgotEmail,setForgotEmail]=useState('');
+  const [forgotMessage,setForgotMessage]=useState('');
+  const [forgotLoading,setForgotLoading]=useState(false);
   const [, setLocation] = useLocation();
 const { login } = useAuth();
 
+ async function handleForgotPassword(e){
+  e.preventDefault();setForgotMessage("");
+  if(!forgotEmail.trim())return setForgotMessage("Please enter your email address.");
+  try{setForgotLoading(true);const r=await axios.post("/api/auth/forgot-password",{email:forgotEmail.trim()});setForgotMessage(r.data.message||"If an account exists for that email, a reset link has been sent.");}
+  catch(err){setForgotMessage(err.response?.data?.message||"Unable to send the reset email. Please try again.");}
+  finally{setForgotLoading(false);}
+ }
  async function handleSubmit(e) {
   e.preventDefault();
   setError("");
@@ -80,6 +91,7 @@ const { login } = useAuth();
             <p className="text-gray-500">Login to continue your healthy journey.</p>
           </div>
 
+          {showForgot&&<div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-4"><div className="flex justify-between mb-2"><h2 className="font-bold text-gray-900">Reset your password</h2><button type="button" onClick={()=>setShowForgot(false)} className="text-sm text-gray-500">Close</button></div><p className="text-sm text-gray-600 mb-3">Enter your registered email and we’ll send a secure reset link.</p><form onSubmit={handleForgotPassword} className="space-y-3"><input type="email" required value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="you@example.com" className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-900"/><button type="submit" disabled={forgotLoading} className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60">{forgotLoading?"Sending...":"Send reset link"}</button></form>{forgotMessage&&<p role="status" className="mt-3 text-sm text-gray-700">{forgotMessage}</p>}</div>}
           {/* Google SSO Button */ }
           <button
             type="button"
