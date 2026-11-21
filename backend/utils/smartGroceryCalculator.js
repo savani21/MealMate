@@ -86,7 +86,7 @@ function calculateSmartGroceryItems({ requiredItems = [], pantryItems = [], avai
   const groupedRequirements = new Map();
   for (const item of requiredItems) {
     const name = normalizeIngredientName(item.name);
-    if (!name || isCommonHouseholdIngredient(name) || explicitlyAvailable.has(name)) continue;
+    if (!name || isCommonHouseholdIngredient(name)) continue;
 
     const parsed = parseQuantity(item.quantity);
     const key = parsed && parsed.dimension !== "unknown"
@@ -112,6 +112,7 @@ function calculateSmartGroceryItems({ requiredItems = [], pantryItems = [], avai
   const output = [];
   for (const group of groupedRequirements.values()) {
     const batches = pantryByName.get(group.name) || [];
+    if (explicitlyAvailable.has(group.name) && batches.length === 0) continue;
     if (group.requiredAmount === null) {
       // An unmeasured recipe ingredient is considered available only when a
       // positive Pantry batch exists; otherwise retain it in the shopping list.
