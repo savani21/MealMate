@@ -181,7 +181,7 @@ exports.consumeRecipeIngredients = async (req, res) => {
     for (const deduction of deductions) {
       const updated = await PantryItem.findOneAndUpdate(
         { _id: deduction.item._id, user: req.user.id, quantity: { $gte: deduction.deductQuantity }, $or: [{ expiryDate: null }, { expiryDate: { $gte: getLocalDayStartUtc() } }] },
-        { $inc: { quantity: -deduction.deductQuantity } },
+        { $inc: { quantity: -deduction.deductQuantity }, $set: { lastUsedAt: new Date() } },
         { returnDocument: "after" }
       );
       if (!updated) {
