@@ -190,11 +190,12 @@ function generateOrderId() {
 // Checkout the current cart: creates an Order, clears the cart, returns
 // everything the receipt needs (order id, date/time, user, delivery time).
 exports.checkout = async (req, res) => {
-  const session = await mongoose.startSession();
+  let session;
   let order;
   let user;
 
   try {
+    session = await mongoose.startSession();
     await session.withTransaction(async () => {
       const cart = await Cart.findOne({ user: req.user.id }).session(session).populate("items.product");
       if (!cart || cart.items.length === 0) {
@@ -293,7 +294,7 @@ exports.checkout = async (req, res) => {
       message: err.status ? err.message : "Failed to place order. No stock or cart changes were committed.",
     });
   } finally {
-    await session.endSession();
+    if (session) await session.endSession();
   }
 };
 
