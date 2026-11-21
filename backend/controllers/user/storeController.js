@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const StoreProduct = require("../../models/store/StoreProduct");
 const Cart = require("../../models/user/Cart");
 
@@ -23,6 +24,22 @@ const DEFAULT_PRODUCTS = [
 ];
 
 async function ensureCatalog() {
+  await StoreProduct.bulkWrite(
+    DEFAULT_PRODUCTS.map(([name, category, unit, price]) => ({
+      updateOne: {
+        filter: { name },
+        update: {
+          $setOnInsert: { name, category, unit, price, stock: 100, isActive: true },
+        },
+        upsert: true,
+      },
+    })),
+    { ordered: false }
+  );
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\async function ensureCatalog() {
   for (const [name, category, unit, price] of DEFAULT_PRODUCTS) {
     await StoreProduct.updateOne(
       { name },
@@ -39,6 +56,7 @@ async function ensureCatalog() {
       { upsert: true }
     );
   }
+}");
 }
 
 exports.getProducts = async (req, res) => {
@@ -55,7 +73,7 @@ exports.getProducts = async (req, res) => {
         .filter(Boolean);
 
       filter.$or = names.map((name) => ({
-        name: { $regex: name, $options: "i" },
+        name: { $regex: escapeRegex(name), $options: "i" },
       }));
     }
 
@@ -82,7 +100,10 @@ exports.addToCart = async (req, res) => {
     const { productId, quantity = 1 } = req.body;
     const amount = Number(quantity);
 
-    if (!productId || !Number.isInteger(amount) || amount < 1) {
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ success: false, message: "A valid product is required." });
+    }
+    if (!Number.isInteger(amount) || amount < 1) {
       return res.status(400).json({ success: false, message: "Valid product and quantity are required" });
     }
 
@@ -118,6 +139,9 @@ exports.addToCart = async (req, res) => {
 exports.updateCartItem = async (req, res) => {
   try {
     const amount = Number(req.body.quantity);
+    if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
+      return res.status(400).json({ success: false, message: "A valid product is required." });
+    }
     if (!Number.isInteger(amount) || amount < 1) {
       return res.status(400).json({ success: false, message: "Quantity must be at least 1" });
     }
@@ -150,6 +174,9 @@ exports.updateCartItem = async (req, res) => {
 
 exports.removeFromCart = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.productId)) {
+      return res.status(400).json({ success: false, message: "A valid product is required." });
+    }
     const cart = await Cart.findOne({ user: req.user.id });
     if (!cart) return res.status(404).json({ success: false, message: "Cart not found" });
 
