@@ -1,61 +1,60 @@
-import { Star } from 'lucide-react';
-import { AnimatedSection } from '../AnimatedSection';
-const TESTIMONIALS = [
-    {
-        initials: "SJ",
-        quote: "MealMate AI completely transformed how I plan meals for my family. We waste 60% less food now and actually enjoy cooking again!",
-        name: "Sarah Johnson",
-        role: "Home Chef & Mom",
-        bg: "from-green-400 to-emerald-600"
-    },
-    {
-        initials: "MC",
-        quote: "As a fitness coach, I recommend MealMate AI to all my clients. The nutrition tracking and AI meal plans are incredibly accurate.",
-        name: "Michael Chen",
-        role: "Fitness Coach",
-        bg: "from-blue-400 to-indigo-600"
-    },
-    {
-        initials: "EP",
-        quote: "I've tried every meal planning app out there. MealMate AI is in a league of its own — intuitive, smart, and actually fun to use.",
-        name: "Emma Parker",
-        role: "Nutritionist",
-        bg: "from-rose-400 to-orange-500"
-    }
-];
-export function TestimonialsSection() {
-    return (<section className="py-20 md:py-28 bg-gray-50" id="testimonials">
-      <div className="container mx-auto px-4 md:px-6">
-        
-        <AnimatedSection className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black text-gray-900">
-            Loved by thousands
-          </h2>
-        </AnimatedSection>
+import { useEffect, useState } from "react";
+import { Star } from "lucide-react";
+import { AnimatedSection } from "../AnimatedSection";
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {TESTIMONIALS.map((t, i) => (<AnimatedSection key={i} delay={i * 0.15}>
-              <div className="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition-shadow border border-gray-100 h-full flex flex-col" data-testid={`testimonial-${i}`}>
-                <div className="flex items-center gap-1 mb-6">
-                  {[1, 2, 3, 4, 5].map((star) => (<Star key={star} className="w-5 h-5 fill-amber-400 text-amber-400"/>))}
-                </div>
-                
-                <p className="text-gray-700 italic text-lg leading-relaxed mb-8 flex-1">
-                  "{t.quote}"
-                </p>
-                
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${t.bg} flex items-center justify-center text-white font-bold text-lg shadow-sm`}>
-                    {t.initials}
-                  </div>
-                  <div>
-                    <h5 className="font-semibold text-gray-900">{t.name}</h5>
-                    <p className="text-sm text-muted-foreground">{t.role}</p>
-                  </div>
-                </div>
+export function TestimonialsSection() {
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/stats")
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load public MealMate statistics");
+        return response.json();
+      })
+      .then((data) => { if (active) setStats(data); })
+      .catch((error) => console.error("Public statistics:", error));
+    return () => { active = false; };
+  }, []);
+
+  const average = Number(stats?.averageRecipeRating || 0);
+  const reviewCount = Number(stats?.recipeRatingCount || 0);
+  const ratingLabel = reviewCount
+    ? `${average.toFixed(1)} out of 5 from ${reviewCount} recipe ratings`
+    : "Be the first to rate a MealMate recipe";
+
+  return (
+    <section className="bg-gray-50 py-20 md:py-28" id="testimonials">
+      <div className="container mx-auto px-4 md:px-6">
+        <AnimatedSection className="mb-12 text-center">
+          <h2 className="text-4xl font-black text-gray-900 md:text-5xl">Real MealMate community activity</h2>
+          <p className="mt-3 text-sm text-gray-500">Live figures from recipes and ratings submitted on MealMate.</p>
+        </AnimatedSection>
+        <div className="mx-auto grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+          <AnimatedSection>
+            <div className="h-full rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+              <p className="text-4xl font-black text-gray-900">{stats ? Number(stats.recipes || 0).toLocaleString() : "—"}</p>
+              <p className="mt-2 text-sm font-semibold text-gray-500">Recipes available</p>
+            </div>
+          </AnimatedSection>
+          <AnimatedSection delay={0.1}>
+            <div className="h-full rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+              <p className="text-4xl font-black text-gray-900">{stats ? Number(stats.registeredUsers || 0).toLocaleString() : "—"}</p>
+              <p className="mt-2 text-sm font-semibold text-gray-500">Registered members</p>
+            </div>
+          </AnimatedSection>
+          <AnimatedSection delay={0.2}>
+            <div className="h-full rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-4xl font-black text-gray-900">{reviewCount ? average.toFixed(1) : "—"}</p>
+                <Star className="h-7 w-7 fill-amber-400 text-amber-400" />
               </div>
-            </AnimatedSection>))}
+              <p className="mt-2 text-sm font-semibold text-gray-500">Average recipe rating</p>
+              <p className="mt-1 text-xs text-gray-400">{ratingLabel}</p>
+            </div>
+          </AnimatedSection>
         </div>
       </div>
-    </section>);
+    </section>
+  );
 }
