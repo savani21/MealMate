@@ -241,7 +241,7 @@ exports.checkout = async (req, res) => {
       }
 
       const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const deliveryMinutes = 30 + Math.floor(Math.random() * 31);
+      const deliveryMinutes = 10;
       const deliveryTime = new Date(Date.now() + deliveryMinutes * 60 * 1000);
       const [createdOrder] = await Order.create([{
         user: req.user.id,
