@@ -35,6 +35,7 @@ export default function Recipes() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [generatingImageId, setGeneratingImageId] = useState(null);
 
   useEffect(() => {
     fetchRecipes();
@@ -160,6 +161,20 @@ export default function Recipes() {
   };
 
 
+  const generateRecipeImage = async (recipe) => {
+    try {
+      setGeneratingImageId(recipe._id);
+      const response = await fetch(`/api/admin/recipes/${recipe._id}/generate-image`, { method: "POST", headers: authHeaders() });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Unable to generate recipe image.");
+      setRecipes((previous) => previous.map((item) => item._id === recipe._id ? data.recipe : item));
+    } catch (error) {
+      alert(error.message || "Unable to generate recipe image.");
+    } finally {
+      setGeneratingImageId(null);
+    }
+  };
+
   const removeRecipe = async (recipe) => {
     if (!confirm(`Delete "${recipe.name}"? This cannot be undone.`)) {
       return;
@@ -244,6 +259,15 @@ export default function Recipes() {
                 </div>
 
                 <div className="flex items-center gap-2 mt-2">
+                  <button
+                    onClick={() => generateRecipeImage(recipe)}
+                    disabled={generatingImageId === recipe._id}
+                    title="Generate or replace recipe image"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-primary border border-green-200 rounded-lg px-3 py-2.5 hover:bg-green-50 transition disabled:opacity-50"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {generatingImageId === recipe._id ? "Generating..." : "Generate Image"}
+                  </button>
                   <button
                     onClick={() => openEditForm(recipe)}
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg px-3 py-2.5 hover:bg-gray-50 transition"
