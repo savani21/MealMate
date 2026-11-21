@@ -12,6 +12,7 @@ const storeRoutes = require("./routes/user/storeRoutes");
 const nutritionRoutes = require("./routes/user/nutritionRoutes");
 const { processDueOrders } = require("./controllers/user/orderController");
 const { createPantryExpiryNotifications } = require("./services/pantryExpiryNotificationService");
+const { createPantryInactivityNotifications } = require("./services/pantryInactivityNotificationService");
 const { processMealReminders } = require("./services/mealReminderService");
 const { checkLowStockAlerts } = require("./services/lowStockAlertService");
 
@@ -93,6 +94,10 @@ async function startServer() {
     const result = await createPantryExpiryNotifications();
     if (result.created) console.log(`Created ${result.created} pantry expiry reminder(s).`);
   });
+  const checkPantryInactivity = () => runScheduledTask("Pantry inactivity reminder check", async () => {
+    const result = await createPantryInactivityNotifications();
+    if (result.created) console.log(`Created ${result.created} pantry inactivity reminder(s).`);
+  });
   const checkMealReminders = () => runScheduledTask("Meal reminder check", async () => {
     const result = await processMealReminders();
     if (result.created) console.log(`Created ${result.created} meal reminder(s).`);
@@ -103,9 +108,11 @@ async function startServer() {
   });
 
   await checkPantryExpiries();
+  await checkPantryInactivity();
   await checkMealReminders();
   await monitorLowStock();
   setInterval(checkPantryExpiries, 15 * 60 * 1000);
+  setInterval(checkPantryInactivity, 24 * 60 * 60 * 1000);
   setInterval(checkMealReminders, 60 * 1000);
   setInterval(monitorLowStock, 60 * 60 * 1000);
   setInterval(() => runScheduledTask("Order processing", processDueOrders), 15000);
