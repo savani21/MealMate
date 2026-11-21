@@ -67,7 +67,7 @@ function RecipeDiscoverySection() {
             {popularRecipes.map((recipe, index) => (
               <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="group min-w-0 text-left">
                 <div className="relative aspect-[16/10] overflow-hidden bg-[#eeeae3]">
-                  <img src={recipe.imageUrl || recipe.image || recipe.imageURL || "/images/recipe-placeholder.jpg"} alt={recipe.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/recipe-placeholder.jpg"; }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={recipe.imageUrl || recipe.image || recipe.imageURL || "/images/recipe-placeholder.svg"} alt={recipe.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/recipe-placeholder.svg"; }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                 </div>
                 <h3 className="mt-2 line-clamp-2 text-xs font-bold leading-[1.35] text-[#292722] group-hover:text-primary sm:text-sm">{recipe.name}</h3>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] text-gray-500">
