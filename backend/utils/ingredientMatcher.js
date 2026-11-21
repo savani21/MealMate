@@ -29,7 +29,7 @@ function normalizeIngredientName(value) {
   }
   const name = words.join(" ");
   const aliases = {
-    "basmati rice": "rice", "long grain rice": "rice",
+    "basmati rice": "rice", "long grain rice": "rice", aloo: "potato", batata: "potato", "sweet potato": "sweet potato",
     atta: "wheat flour", "whole wheat flour": "wheat flour", "wheat atta": "wheat flour",
     "tuver dal": "toor dal", "tuvar dal": "toor dal", "tur dal": "toor dal", "arhar dal": "toor dal",
     "green chilli": "green chili", "sunflower oil": "oil", "vegetable oil": "oil",
