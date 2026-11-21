@@ -16,7 +16,6 @@ export default function Signup() {
   const [, navigate] = useLocation();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -266,25 +265,6 @@ const handleSignup = async (e) => {
                   </span>
                 </div>
               )}
-            </div>
-
-            {/* Terms */}
-            <div className="flex items-start gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={() => setAgreed(!agreed)}
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                  agreed ? 'bg-primary border-primary' : 'border-gray-300 bg-white hover:border-primary/50'
-                }`}
-              >
-                {agreed && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12"><path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M2 6l3 3 5-5"/></svg>}
-              </button>
-              <span className="text-sm text-gray-600">
-                I agree to the{' '}
-                <a href="#" className="text-primary font-semibold hover:underline">Terms of Service</a>
-                {' '}and{' '}
-                <a href="#" className="text-primary font-semibold hover:underline">Privacy Policy</a>
-              </span>
             </div>
 
             {/* Error */}
