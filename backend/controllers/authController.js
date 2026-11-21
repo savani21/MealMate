@@ -119,7 +119,7 @@ exports.requestPasswordReset = async (req, res) => {
    user.resetPasswordExpires=new Date(Date.now()+30*60*1000); await user.save();
    const resetUrl=`${(process.env.CLIENT_URL||"http://localhost:5173").replace(/\/$/,"")}/reset-password/${token}`;
    try{await sendPasswordResetEmail({to:user.email,name:user.name,resetUrl});}
-   catch(e){user.resetPasswordTokenHash=undefined;user.resetPasswordExpires=undefined;await user.save();console.error("Password reset email failed:",e.message);return res.status(503).json({success:false,message:"Unable to send the reset email right now. Please try again later."});}
+   catch(e){user.resetPasswordTokenHash=undefined;user.resetPasswordExpires=undefined;await user.save();console.error("Password reset email failed:",e.message);return res.json({success:true,message});}
   }
   return res.json({success:true,message});
  }catch(e){console.error("Password reset request failed:",e);return res.status(500).json({success:false,message:"Unable to process the request. Please try again."});}
