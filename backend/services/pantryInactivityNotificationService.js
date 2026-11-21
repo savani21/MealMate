@@ -3,8 +3,16 @@ const Notification = require("../models/user/Notification");
 
 const INACTIVITY_DAYS = Math.max(1, Number(process.env.PANTRY_INACTIVITY_DAYS) || 15);
 
+function getInactivityCutoff(now = new Date(), days = INACTIVITY_DAYS) {
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+}
+
+function getLastUsedAt(item) {
+  return item.lastUsedAt || item.createdAt || null;
+}
+
 async function createPantryInactivityNotifications(now = new Date()) {
-  const cutoff = new Date(now.getTime() - INACTIVITY_DAYS * 24 * 60 * 60 * 1000);
+  const cutoff = getInactivityCutoff(now);
   const items = await PantryItem.find({
     quantity: { $gt: 0 },
     $or: [
@@ -38,4 +46,4 @@ async function createPantryInactivityNotifications(now = new Date()) {
   return { checked: items.length, created, inactivityDays: INACTIVITY_DAYS };
 }
 
-module.exports = { createPantryInactivityNotifications, INACTIVITY_DAYS };
+module.exports = { createPantryInactivityNotifications, getInactivityCutoff, getLastUsedAt, INACTIVITY_DAYS };
