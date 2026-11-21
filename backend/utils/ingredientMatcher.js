@@ -6,7 +6,7 @@ function normalizeIngredientName(value) {
     // Strip recipe quantities and units before comparing ingredient identity.
     .replace(/^\s*(?:\d+\s*\/\s*\d+|\d+(?:\.\d+)?|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tblspoons?|tsp|tsps|teaspoons?|kilograms?|kgs?|grams?|gms?|grms?|g|millilit(?:er|re)s?|ml|lit(?:er|re)s?|l|pieces?|pcs?|cloves?|slices?|bunch(?:es)?|packs?|cans?)?\s*(?:of\s+)?/i, "")
     .replace(/\s+(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+|[½⅓⅔¼¾])\s*(?:cups?|tbsp|tbsps|tablespoons?|tsp|tsps|teaspoons?|kilograms?|kgs?|grams?|gms?|grms?|g|ml|millilit(?:er|re)s?|lit(?:er|re)s?|l|pieces?|pcs?|cloves?|slices?|bunch(?:es)?)?\s*$/i, "")
-    .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole|to taste)\b/g, " ")
+    .replace(/\b(large|medium|small|finely|roughly|thinly|thickly|chopped|diced|minced|sliced|grated|crushed|mashed|peeled|shredded|julienned|halved|quartered|fresh|freshly|cooked|boiled|raw|roasted|optional|warm|whole|to taste)\b/g, " ")
     .replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
   const words = cleaned.split(" ").filter(Boolean);
   const irregularPlurals = {
