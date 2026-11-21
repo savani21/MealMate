@@ -114,9 +114,22 @@ export default function MealPlanDetails() {
       setLocation(`/recipes/${existing._id}?return=meal-plan&planId=${plan._id}&day=${dayPlan.day}&mealType=${mealType}`);
       return;
     }
-    setSelectedDay(String(dayPlan.day));
-    setSelectedMealType(mealType);
-    setShowRecipeSelector(true);
+    const selectedIngredients = dayPlan[`${mealType}Ingredients`] || [];
+    const ingredientNames = selectedIngredients
+      .map((item) => String(typeof item === "string" ? item : item?.name || "").replace(/^\\s*as\\s+needed\\s*[:,-]?\\s*/i, "").trim())
+      .filter(Boolean);
+    const ingredientText = [...new Map(ingredientNames.map((name) => [name.toLowerCase(), name])).values()].join(", ");
+    if (!ingredientText) { alert("No ingredients were saved for this selected meal."); return; }
+    const query = new URLSearchParams({
+      generate: "1",
+      meal: mealName,
+      ingredients: ingredientText,
+      return: "meal-plan",
+      planId: plan._id,
+      day: String(dayPlan.day),
+      mealType,
+    });
+    setLocation(`/recipes?${query.toString()}`);
   };
 
   const generateRecipe = () => {
@@ -235,7 +248,6 @@ export default function MealPlanDetails() {
         </section>
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-8">
-          <button onClick={() => setShowRecipeSelector(true)} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-bold hover:opacity-90 transition"><Sparkles className="w-5 h-5" />Generate Recipe</button>
           <button onClick={generateGroceryList} disabled={groceryLoading} className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-gray-200 text-gray-700 font-bold hover:border-primary hover:text-primary transition disabled:opacity-50 disabled:cursor-not-allowed"><ShoppingBasket className="w-5 h-5" />{groceryLoading ? "Preparing Cart..." : "Open Grocery Cart"}</button>
         </div>
 
