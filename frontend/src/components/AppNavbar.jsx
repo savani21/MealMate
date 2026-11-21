@@ -272,7 +272,7 @@ export default function AppNavbar({ children }) {
               <Bell className="h-5 w-5" />
               {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
             </button>
-            {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+            {notificationOpen && <div className="fixed right-3 top-20 z-[100] flex max-h-[min(75vh,560px)] w-[min(calc(100vw-1.5rem),380px)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                 <div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>
                 {unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary hover:underline">Mark all read</button>}
@@ -297,7 +297,7 @@ export default function AppNavbar({ children }) {
             <Bell className="h-5 w-5" />
             {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
           </button>
-          {notificationOpen && <div className="absolute right-0 top-full z-[70] mt-3 w-[min(90vw,380px)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
+          {notificationOpen && <div className="fixed right-3 top-20 z-[100] flex max-h-[min(75vh,560px)] w-[min(calc(100vw-1.5rem),380px)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>{unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary">Mark all read</button>}</div>
             <div className="max-h-[min(65vh,420px)] overflow-y-auto">
               {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 2).map((item) => <button key={item._id || item.id} type="button" onClick={() => handleNotificationClick(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left ${item.read ? "bg-white" : "bg-green-50/40"}`}><span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs text-gray-500">{item.message || item.source || "A platform update is available."}</span></span></span></button>)}
