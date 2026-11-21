@@ -35,6 +35,20 @@ export default function Home() {
   );
 }
 
+function getRecipeImageSource(recipe) {
+  const image = recipe?.imageUrl || recipe?.imageURL || recipe?.image;
+  if (typeof image === "string") return image.trim();
+  if (image && typeof image === "object") {
+    return String(image.url || image.secure_url || image.src || "").trim();
+  }
+  return "";
+}
+
+function getRecipeNameBasedImage(recipe) {
+  const name = encodeURIComponent(recipe?.name || "Indian food");
+  return `https://loremflickr.com/900/600/${name},food`;
+}
+
 function RecipeDiscoverySection() {
   const [, setLocation] = useLocation();
   const { user, loading: authLoading } = useAuth();
@@ -78,7 +92,22 @@ function RecipeDiscoverySection() {
             {popularRecipes.map((recipe) => (
               <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="group min-w-0 text-left">
                 <div className="relative aspect-[16/10] overflow-hidden bg-[#eeeae3]">
-                  <img src={recipe.imageUrl || recipe.image || recipe.imageURL || "/images/recipe-placeholder.svg"} alt={recipe.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/recipe-placeholder.svg"; }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img
+                    src={getRecipeImageSource(recipe) || getRecipeNameBasedImage(recipe)}
+                    alt={`Photo of ${recipe.name || "recipe"}`}
+                    loading="lazy"
+                    data-fallback-tried={getRecipeImageSource(recipe) ? "false" : "true"}
+                    onError={(event) => {
+                      if (event.currentTarget.dataset.fallbackTried !== "true") {
+                        event.currentTarget.dataset.fallbackTried = "true";
+                        event.currentTarget.src = getRecipeNameBasedImage(recipe);
+                        return;
+                      }
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = "/images/recipe-placeholder.svg";
+                    }}
+                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  />
                 </div>
                 <h3 className="mt-2 line-clamp-2 text-xs font-bold leading-[1.35] text-[#292722] group-hover:text-primary sm:text-sm">{recipe.name}</h3>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] text-gray-500">
