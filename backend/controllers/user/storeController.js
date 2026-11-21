@@ -39,7 +39,7 @@ async function ensureCatalog() {
 }
 
 function escapeRegex(value) {
-  return value.split("").map((character) => "\\^$.*+?()[]{}|".includes(character) ? `\\${character}` : character).join("");
+  return value.split("").map((character) => "\\^$.*+?()[]{}|".includes(character) ? "\\" + character : character).join("");
 }
 exports.getProducts = async (req, res) => {
   try {
