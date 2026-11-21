@@ -5,11 +5,14 @@ import { FeaturesSection } from '@/components/sections/FeaturesSection';
 import { HowItWorksSection } from '@/components/sections/HowItWorksSection';
 import { AIFeaturesSection } from '@/components/sections/AIFeaturesSection';
 import { AppPreviewSection } from '@/components/sections/AppPreviewSection';
+import { FeaturedFoodsSection } from '@/components/sections/FeaturedFoodsSection';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
 import { CTASection } from '@/components/sections/CTASection';
 import { Footer } from '@/components/sections/Footer';
+
 export default function Home() {
-    return (<div className="min-h-screen bg-background font-sans">
+  return (
+    <div className="min-h-screen bg-background font-sans">
       <Navbar />
       <main>
         <HeroSection />
@@ -17,10 +20,12 @@ export default function Home() {
         <FeaturesSection />
         <HowItWorksSection />
         <AIFeaturesSection />
+        <FeaturedFoodsSection />
         <AppPreviewSection />
         <TestimonialsSection />
         <CTASection />
       </main>
       <Footer />
-    </div>);
+    </div>
+  );
 }
