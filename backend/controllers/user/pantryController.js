@@ -271,7 +271,7 @@ exports.compareRecipeWithPantry = async (req, res) => {
   try {
     const [recipe, pantry] = await Promise.all([
       Recipe.findById(req.params.recipeId).lean(),
-      PantryItem.find({ user: req.user.id, quantity: { $gt: 0 }, $or: [{ expiryDate: null }, { expiryDate: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }] }).lean(),
+      PantryItem.find({ ...activePantryQuery(req.user.id), quantity: { $gt: 0 } }).lean(),
     ]);
     if (!recipe) return res.status(404).json({ message: "Recipe not found." });
 
@@ -286,7 +286,7 @@ exports.compareRecipeWithPantry = async (req, res) => {
       const batches = pantryByName.get(normalizeIngredientName(required.name)) || [];
       if (!batches.length) return { ingredient: raw, status: "missing", message: "Not in Pantry" };
       const first = batches[0];
-      if (required.quantity === null) return { ingredient: raw, status: "check", message: "Available — check quantity", pantryItemId: first._id, pantryName: first.name, pantryQuantity: batches.reduce((sum, item) => sum + Number(item.quantity || 0), 0), pantryUnit: first.unit, batchCount: batches.length };
+      if (required.quantity === null) return { ingredient: raw, status: "check", message: "Available - Check Quantity", pantryItemId: first._id, pantryName: first.name, pantryQuantity: batches.reduce((sum, item) => sum + Number(item.quantity || 0), 0), pantryUnit: first.unit, batchCount: batches.length };
       const needed = toComparableQuantity(required.quantity, required.unit);
       if (!needed) return { ingredient: raw, status: "check", message: "Available — check quantity", pantryItemId: first._id, pantryName: first.name, batchCount: batches.length };
       const compatible = batches.map((item) => ({ item, amount: toComparableQuantity(item.quantity, item.unit) }))
