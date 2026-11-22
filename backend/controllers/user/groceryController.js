@@ -302,10 +302,14 @@ exports.getMyGroceryLists = async (req, res) => {
       .map((mealPlan) => existingByMealPlan.get(String(mealPlan._id)))
       .filter(Boolean);
 
-    res.status(200).json({
-      success: true,
-      groceryLists: refreshed,
-    });
+    const language = req.query.language || "en";
+    const localizedLists = await localizeRecords(refreshed, "groceryList", language);
+    for (const list of localizedLists) {
+      if (list.mealPlan && typeof list.mealPlan === "object") {
+        list.mealPlan = await localizeRecord(list.mealPlan, "mealPlan", language);
+      }
+    }
+    res.status(200).json({ success: true, groceryLists: localizedLists });
   } catch (err) {
     console.error("Get Grocery Lists Error:", err);
 
