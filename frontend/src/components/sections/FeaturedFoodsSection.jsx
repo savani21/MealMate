@@ -2,6 +2,7 @@ import { AnimatedSection } from '../AnimatedSection';
 
 const featuredFoods = [
   {
+    id: 'aloo-paratha-with-curd',
     name: 'Aloo Paratha with Curd',
     category: 'COMFORTING BREAKFAST',
     description: 'Golden, pan-roasted potato-stuffed parathas served with cool, creamy curd.',
@@ -9,6 +10,7 @@ const featuredFoods = [
     alt: 'Golden aloo parathas served with a bowl of curd',
   },
   {
+    id: 'poha',
     name: 'Poha',
     category: 'LIGHT & FLAVORFUL',
     description: 'A homestyle bowl of soft, fluffy poha with peanuts, herbs and a hint of lemon.',
@@ -16,13 +18,15 @@ const featuredFoods = [
     alt: 'Indian poha with peanuts, herbs and lemon',
   },
   {
+    id: 'paneer-rice-bowl',
     name: 'Paneer Rice Bowl',
     category: 'WHOLESOME MEAL',
     description: 'A satisfying bowl of fluffy rice topped with paneer, fresh vegetables and herbs.',
-    image: 'https://protibowls.com/wp-content/uploads/2025/03/Highcompressed_854332699.jpg',
+    image: 'https://saviourbites.com/Images/PaneerVeggieRice.jpg',
     alt: 'Paneer rice bowl with vegetables and fresh herbs',
   },
   {
+    id: 'rasmalai',
     name: 'Rasmalai',
     category: 'SWEET FINISH',
     description: 'Soft, delicate rasmalai served in creamy saffron milk with pistachio.',
@@ -33,14 +37,14 @@ const featuredFoods = [
 
 export function FeaturedFoodsSection() {
   return (
-    <section id="featured-foods" className="py-20 md:py-28 bg-[#fffdf8]">
+    <section id="featured-foods" className="scroll-mt-24 bg-[#fffdf8] py-20 md:py-28">
       <div className="container mx-auto px-4 md:px-6">
         <AnimatedSection className="mx-auto mb-12 max-w-3xl text-center md:mb-16">
           <span className="mb-3 inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold tracking-[0.18em] text-orange-700">
             A TASTE OF MEALMATE
           </span>
           <h2 className="mb-5 text-4xl font-black tracking-tight text-gray-900 md:text-5xl">
-            Good food. <span className="text-primary">Made simple.</span>
+            Featured <span className="text-primary">Recipes</span>
           </h2>
           <p className="mx-auto max-w-2xl text-base leading-7 text-gray-600 md:text-lg">
             From a comforting breakfast to a sweet little treat, discover a few delicious ideas to inspire your next meal.
@@ -49,8 +53,11 @@ export function FeaturedFoodsSection() {
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {featuredFoods.map((food, index) => (
-            <AnimatedSection key={food.name} delay={index * 0.08}>
-              <article className="group h-full overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+            <AnimatedSection key={food.id} delay={index * 0.08}>
+              <article
+                id={food.id}
+                className="group h-full scroll-mt-28 overflow-hidden rounded-3xl border border-orange-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+              >
                 <div className="relative aspect-[4/3] overflow-hidden bg-orange-50">
                   <img
                     src={food.image}
