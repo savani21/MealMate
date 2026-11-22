@@ -4,6 +4,8 @@ const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../../
 const { toComparableQuantity } = require("../../utils/quantityConversion");
 const { activePantryQuery, getLocalDayStartUtc } = require("../../utils/pantryExpiry");
 
+const { localizeRecords } = require("../../services/localizationService");
+
 exports.listPantry = async (req, res) => {
   try {
     await processDueOrders();
