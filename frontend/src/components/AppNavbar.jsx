@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import {
   ChefHat, Search, ChevronDown, Menu, X, CalendarDays, BookOpen,
   Heart, Package, ShoppingCart, Store, Sparkles, Bell, UserRound,
@@ -266,6 +267,7 @@ export default function AppNavbar({ children }) {
         </form>
 
         <div className="ml-auto hidden shrink-0 items-center gap-2 lg:flex">
+          <LanguageSwitcher />
           {children}
           <div className="relative" data-notification-root>
             <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
@@ -332,7 +334,10 @@ export default function AppNavbar({ children }) {
             <button type="button" onClick={() => navigate("/profile")} className="rounded-xl bg-gray-50 px-3 py-3 text-sm font-semibold text-gray-700"><UserRound className="mr-2 inline h-4 w-4" />Profile</button>
             {user && <button type="button" onClick={() => { logout(); navigate("/login"); }} className="rounded-xl bg-red-50 px-3 py-3 text-sm font-semibold text-red-600"><LogOut className="mr-2 inline h-4 w-4" />Logout</button>}
           </div>
-          {children && <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">{children}</div>}
+          <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+            <LanguageSwitcher />
+            {children}
+          </div>
         </div>
       )}
     </header>
