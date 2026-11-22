@@ -14,6 +14,7 @@ const {
 
 
 router.post("/register", register);
+router.post("/google", require("../controllers/googleAuthController"));
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
