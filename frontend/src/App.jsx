@@ -6,6 +6,7 @@ import { Route, Switch, useLocation } from "wouter";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import LanguageSelectionPrompt from "@/components/LanguageSelectionPrompt";
+import TranslationLayer from "@/components/TranslationLayer";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import "@/navbar-layout.css";
 
@@ -101,6 +102,7 @@ function App() {
         <LanguageProvider>
           <TooltipProvider>
             <Router />
+            <TranslationLayer />
             <LanguageSelectionPrompt />
             <Suspense fallback={null}><MealMateAssistant /></Suspense>
             <Toaster />
