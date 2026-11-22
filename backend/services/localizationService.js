@@ -17,7 +17,9 @@ function collectDisplayFields(value, path = "", output = {}) {
   if (value == null) return output;
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
-      if (item && typeof item === "object") collectDisplayFields(item, path ? `${path}.${index}` : String(index), output);
+      const itemPath = path ? `${path}.${index}` : String(index);
+      if (typeof item === "string" && path.split(".").pop() === "instructions" && item.trim()) output[itemPath] = item;
+      else if (item && typeof item === "object") collectDisplayFields(item, itemPath, output);
     });
     return output;
   }
