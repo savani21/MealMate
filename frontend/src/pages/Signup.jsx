@@ -62,9 +62,10 @@ export default function Signup() {
       window.google.accounts.id.renderButton(googleButtonRef.current, {
         theme: "outline",
         size: "large",
-        shape: "rectangular",
+        shape: "pill",
         text: "continue_with",
-        width: Math.min(360, googleButtonRef.current.parentElement?.clientWidth || 360),
+        logo_alignment: "center",
+        width: Math.min(400, googleButtonRef.current.parentElement?.clientWidth || 400),
       });
     };
 
