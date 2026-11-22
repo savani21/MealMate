@@ -10,7 +10,8 @@ exports.listPantry = async (req, res) => {
   try {
     await processDueOrders();
     const items = await PantryItem.find({ user: req.user.id }).sort({ name: 1 }).lean();
-    res.json({ items });
+    const localizedItems = await localizeRecords(items, "pantryItem", req.query.language || "en");
+    res.json({ items: localizedItems });
   } catch (error) {
     res.status(500).json({ message: "Failed to load pantry", error: error.message });
   }
