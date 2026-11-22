@@ -78,7 +78,7 @@ export default function AppNavbar({ children }) {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationItems, setNotificationItems] = useState([]);
   const [deliveryAlert, setDeliveryAlert] = useState(null);
-  const previousUnreadCount = useRef(null);
+  const previousNotificationIds = useRef(null);
 
   useEffect(() => {
     if (!deliveryAlert) return undefined;
@@ -111,7 +111,7 @@ export default function AppNavbar({ children }) {
 
   useEffect(() => {
     if (!userId) {
-      previousUnreadCount.current = null;
+      previousNotificationIds.current = null;
       setDeliveryAlert(null);
       setUnreadNotifications(0);
       setNotificationItems([]);
@@ -123,7 +123,7 @@ export default function AppNavbar({ children }) {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const endpoint = isAdmin ? "/api/admin/alerts?limit=2" : "/api/notifications?limit=2";
+        const endpoint = isAdmin ? "/api/admin/alerts?limit=10" : "/api/notifications?limit=10";
         const response = await fetch(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -136,16 +136,22 @@ export default function AppNavbar({ children }) {
         if (!active) return;
 
         const nextUnreadCount = Number(data.unreadCount) || 0;
-        if (!isAdmin && previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
-          const latestUnread = items.find((item) => !item.read);
-          if (latestUnread?.type === "order-delivered") {
+        const knownNotificationIds = previousNotificationIds.current;
+        if (!isAdmin && knownNotificationIds) {
+          const newOrderNotification = items.find((item) =>
+            !knownNotificationIds.has(String(item._id || item.id))
+            && ["order-placed", "order-delivered"].includes(item.type)
+          );
+          if (newOrderNotification) {
             setDeliveryAlert({
-              title: latestUnread.title || "Order delivered",
-              message: formatNotificationDeliveryMessage(latestUnread),
+              title: newOrderNotification.title || (newOrderNotification.type === "order-placed" ? "Order placed" : "Order delivered"),
+              message: newOrderNotification.type === "order-delivered"
+                ? formatNotificationDeliveryMessage(newOrderNotification)
+                : (newOrderNotification.message || "Your order has been placed successfully."),
             });
           }
         }
-        previousUnreadCount.current = nextUnreadCount;
+        previousNotificationIds.current = new Set(items.map((item) => String(item._id || item.id)));
         setUnreadNotifications(nextUnreadCount);
         setNotificationItems(items);
       } catch (error) {
@@ -154,7 +160,7 @@ export default function AppNavbar({ children }) {
     };
 
     loadNotifications();
-    const timer = setInterval(loadNotifications, 15000);
+    const timer = setInterval(loadNotifications, 5000);
     window.addEventListener("mealmate:notifications-updated", loadNotifications);
     return () => {
       active = false;
