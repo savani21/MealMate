@@ -4,6 +4,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import Home from '@/pages/Home';
 import Login from '@/pages/Login';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 import Signup from '@/pages/Signup';
 import Dashboard from '@/pages/Dashboard';
 import { Route, Switch } from 'wouter';
@@ -37,6 +39,8 @@ function Router() {
     <Switch>
       <Route path="/" component={ Home } />
       <Route path="/login" component={ Login } />
+      <Route path="/forgot-password" component={ ForgotPassword } />
+      <Route path="/reset-password/:token" component={ ResetPassword } />
       <Route path="/signup" component={ Signup } />
       <ProtectedRoute path="/dashboard" component={ Dashboard } allowedRoles={ ['admin', 'user'] } />
       <ProtectedRoute path="/meal-planner" component={ MealPlanner } allowedRoles={ ["user"] } />
