@@ -76,10 +76,23 @@ function RecipeDiscoverySection() {
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4 sm:gap-x-6">{[1,2,3,4,5,6,7,8].map((n) => <div key={n}><div className="aspect-[4/5] animate-pulse bg-gray-200" /><div className="mt-2 h-3 w-4/5 animate-pulse bg-gray-200" /></div>)}</div>
         ) : popularRecipes.length ? (
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4 sm:gap-x-6">
-            {popularRecipes.map((recipe) => (
+            {popularRecipes.map((recipe) => {
+              const recipeName = (recipe.name || "").toLowerCase();
+              const fallbackImage = recipeName.includes("paneer rice bowl")
+                ? "https://protibowls.com/wp-content/uploads/2025/03/Highcompressed_854332699.jpg"
+                : recipeName.includes("gram flour potato patties")
+                  ? "https://image.cdn.shpy.in/487660/GreenParkRestaurantJhargramFoods900x600px7-1766794789718.jpeg?format=webp&width=600"
+                  : recipeName.includes("onion tomato wheat paratha")
+                    ? "https://images.slurrp.com/prod/recipe_images/better-butter/tomato-onion-paratha-1614319570_JPSJ2916PX9FX9H7BQ6V.webp?height=900&impolicy=slurrp-20210601&q=75&width=1200"
+                    : recipeName.includes("banana milk egg bowl")
+                      ? "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=85"
+                      : "/images/recipe-placeholder.svg";
+              const imageSrc = recipe.imageUrl || recipe.image || recipe.imageURL || fallbackImage;
+
+              return (
               <button key={recipe._id} onClick={() => setLocation(`/recipes/${recipe._id}`)} className="group min-w-0 text-left">
                 <div className="relative aspect-[16/10] overflow-hidden bg-[#eeeae3]">
-                  <img src={recipe.imageUrl || recipe.image || recipe.imageURL || "/images/recipe-placeholder.svg"} alt={recipe.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/recipe-placeholder.svg"; }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  <img src={imageSrc} alt={recipe.name} loading="lazy" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/images/recipe-placeholder.svg"; }} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
                 </div>
                 <h3 className="mt-2 line-clamp-2 text-xs font-bold leading-[1.35] text-[#292722] group-hover:text-primary sm:text-sm">{recipe.name}</h3>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] text-gray-500">
@@ -87,7 +100,8 @@ function RecipeDiscoverySection() {
                   <span className="inline-flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{Number(recipe.averageRating || 0).toFixed(1)}</span>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="py-10 text-center text-sm text-gray-500">Recipes will appear here when they are available.</div>
