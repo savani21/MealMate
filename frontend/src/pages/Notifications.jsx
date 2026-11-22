@@ -221,7 +221,7 @@ export default function Notifications() {
                         <p className="text-xs text-gray-400 mt-2 flex items-center gap-1"><Clock className="w-3 h-3" /> {formatCreatedAt(notification.createdAt)}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        {!notification.read && <button onClick={() => markAsRead(notification._id)} className="p-2 rounded-lg hover:bg-green-50" title="Mark as read" aria-label="Mark as read"><Check className="w-4 h-4 text-primary" /></button>}
+                        <button type="button" onClick={() => !notification.read && markAsRead(notification._id)} disabled={Boolean(notification.read)} className={`h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg ${notification.read ? "cursor-default text-gray-300" : "text-primary hover:bg-green-50"}`} title={notification.read ? "Already read" : "Mark as read"} aria-label={notification.read ? "Notification already read" : "Mark notification as read"}><Check className="w-5 h-5" /></button>
                         <button onClick={() => deleteNotification(notification._id)} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg hover:bg-red-50" title="Delete" aria-label="Delete notification"><Trash2 className="w-5 h-5 shrink-0 text-gray-400 hover:text-red-500" /></button>
                       </div>
                     </div>
