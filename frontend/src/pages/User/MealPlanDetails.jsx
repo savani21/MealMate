@@ -2,9 +2,12 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import { Sparkles, Utensils, ShoppingBasket, X, RefreshCw, BookOpen, Check } from "lucide-react";
 
 export default function MealPlanDetails() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/meal-plans/:id");
   const [plan, setPlan] = useState(null);
@@ -20,13 +23,13 @@ export default function MealPlanDetails() {
   useEffect(() => {
     fetchMealPlan();
     fetchRecipes();
-  }, [params?.id]);
+  }, [params?.id, language]);
 
   const fetchMealPlan = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) { setLocation("/login"); return; }
-      const response = await fetch(`/api/meal-plans/${params.id}`, {
+      const response = await fetch(`/api/meal-plans/${params.id}?language=${encodeURIComponent(language)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
