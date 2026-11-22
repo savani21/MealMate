@@ -75,6 +75,7 @@ export default function AppNavbar({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [bellIndicatorDismissed, setBellIndicatorDismissed] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationItems, setNotificationItems] = useState([]);
   const [deliveryAlert, setDeliveryAlert] = useState(null);
@@ -138,6 +139,10 @@ export default function AppNavbar({ children }) {
 
         const nextUnreadCount = Number(data.unreadCount) || 0;
         const knownNotificationIds = previousNotificationIds.current;
+        if (knownNotificationIds) {
+          const hasNewNotification = items.some((item) => !knownNotificationIds.has(String(item._id || item.id)));
+          if (hasNewNotification) setBellIndicatorDismissed(false);
+        }
         if (!isAdmin && knownNotificationIds) {
           const newOrderNotification = items.find((item) =>
             !knownNotificationIds.has(String(item._id || item.id))
@@ -183,61 +188,10 @@ export default function AppNavbar({ children }) {
     };
   }, [userId, isAdmin]);
 
-  const handleNotificationClick = (item) => {
-    void markNotificationRead(item);
-  };
-
-  const markNotificationRead = async (item) => {
-    if (item.read) return;
-    const token = localStorage.getItem("token");
-    const endpoint = isAdmin
-      ? `/api/admin/alerts/${item._id}/read`
-      : `/api/notifications/${item._id}/read`;
-    try {
-      const response = await fetch(endpoint, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Unable to update notification.");
-      setNotificationItems((items) => items.map((entry) =>
-        entry._id === item._id ? { ...entry, read: true } : entry
-      ));
-      setUnreadNotifications((count) => Math.max(0, count - 1));
-    } catch (error) {
-      console.error("Mark notification as read failed:", error);
-    }
-  };
-
-  const markAllNotificationsRead = async () => {
-    const token = localStorage.getItem("token");
-    if (!token || unreadNotifications === 0) return;
-
-    const endpoint = isAdmin ? "/api/admin/alerts/read-all" : "/api/notifications/read-all";
-    const previousItems = notificationItems;
-    const previousUnreadCount = unreadNotifications;
-
-    // Update the bell and dropdown immediately while the read status is saved.
-    setNotificationItems((items) => items.map((item) => ({ ...item, read: true })));
-    setUnreadNotifications(0);
-
-    try {
-      const response = await fetch(endpoint, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error("Unable to update notifications.");
-    } catch (error) {
-      // Restore the previous state if persistence fails.
-      setNotificationItems(previousItems);
-      setUnreadNotifications(previousUnreadCount);
-      console.error("Mark all notifications as read failed:", error);
-    }
-  };
-
   const toggleNotificationPanel = () => {
     const willOpen = !notificationOpen;
     setNotificationOpen(willOpen);
-    if (willOpen) void markAllNotificationsRead();
+    if (willOpen) setBellIndicatorDismissed(true);
   };
 
   const navigate = (path) => {
@@ -310,16 +264,16 @@ export default function AppNavbar({ children }) {
           <div className="relative" data-notification-root>
             <button type="button" onClick={toggleNotificationPanel} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
               <Bell className="h-5 w-5" />
-              {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
+              {unreadNotifications > 0 && !bellIndicatorDismissed && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
             </button>
             {notificationOpen && <div className="fixed right-3 top-20 z-[100] flex max-h-[min(75vh,560px)] w-[min(calc(100vw-1.5rem),380px)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
               <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                 <div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>
-                {unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary hover:underline">Mark all read</button>}
+                
               </div>
               <div className="max-h-[min(65vh,420px)] overflow-y-auto">
                 {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 2).map((item) => (
-                  <button key={item._id || item.id} type="button" onClick={() => handleNotificationClick(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left transition hover:bg-green-50/60 ${item.read ? "bg-white" : "bg-green-50/40"}`}>
+                  <button key={item._id || item.id} type="button" className={`block w-full border-b border-gray-50 px-4 py-3 text-left transition hover:bg-green-50/60 ${item.read ? "bg-white" : "bg-green-50/40"}`}>
                     <span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs leading-5 text-gray-500">{item.message || item.source || "A platform update is available."}</span><span className="mt-1 block text-[11px] text-gray-400">{item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}</span></span></span>
                   </button>
                 ))}
@@ -338,7 +292,7 @@ export default function AppNavbar({ children }) {
             {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
           </button>
           {notificationOpen && <div className="fixed right-3 top-20 z-[100] flex max-h-[min(75vh,560px)] w-[min(calc(100vw-1.5rem),380px)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div>{unreadNotifications > 0 && <button type="button" onClick={markAllNotificationsRead} className="text-xs font-semibold text-primary">Mark all read</button>}</div>
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3"><div><p className="font-bold text-gray-900">Notifications</p><p className="text-xs text-gray-500">{isAdmin ? "Platform updates" : "Your MealMate updates"}</p></div></div>
             <div className="max-h-[min(65vh,420px)] overflow-y-auto">
               {notificationItems.length === 0 ? <p className="px-4 py-8 text-center text-sm text-gray-500">You're all caught up.</p> : notificationItems.slice(0, 2).map((item) => <button key={item._id || item.id} type="button" onClick={() => handleNotificationClick(item)} className={`block w-full border-b border-gray-50 px-4 py-3 text-left ${item.read ? "bg-white" : "bg-green-50/40"}`}><span className="flex items-start gap-2"><span className={`mt-1.5 h-2 w-2 rounded-full ${item.read ? "bg-gray-200" : "bg-primary"}`} /><span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-gray-900">{item.title || "MealMate update"}</span><span className="mt-1 block text-xs text-gray-500">{item.message || item.source || "A platform update is available."}</span></span></span></button>)}
             </div>
