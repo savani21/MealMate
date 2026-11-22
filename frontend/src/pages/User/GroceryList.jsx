@@ -29,7 +29,7 @@ export default function GroceryList() {
 
   useEffect(() => {
     fetchGroceryLists();
-  }, []);
+  }, [language]);
 
   const fetchGroceryLists = async () => {
     try {
