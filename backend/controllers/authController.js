@@ -98,7 +98,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        preferences: { theme: user.preferences?.theme || "light" },
+        preferences: { theme: user.preferences?.theme || "light", language: user.preferences?.language || null },
       },
     });
   } catch (err) {
@@ -163,6 +163,33 @@ exports.getProfile = async (req, res) => {
     res.status(200).json({ success: true, user });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+
+exports.updateLanguagePreference = async (req, res) => {
+  try {
+    const { language } = req.body || {};
+    if (!["en", "gu", "hi"].includes(language)) {
+      return res.status(400).json({ message: "Language must be en, gu, or hi." });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { "preferences.language": language } },
+      { returnDocument: "after", runValidators: true }
+    ).select("_id preferences");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    return res.status(200).json({
+      success: true,
+      preferences: {
+        theme: user.preferences?.theme || "light",
+        language: user.preferences?.language || "en",
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };
 

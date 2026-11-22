@@ -55,7 +55,9 @@ exports.createMealPlan = async (req, res) => {
       recommendedIngredients,
       ingredientMode,
       duration,
+      language: requestedLanguage = "en",
     } = req.body;
+    const language = ["en", "gu", "hi"].includes(requestedLanguage) ? requestedLanguage : "en";
 
     if (!["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(diet)) {
       return res.status(400).json({
@@ -111,6 +113,7 @@ exports.createMealPlan = async (req, res) => {
 
     const prompt = `
 Create a practical personalized ${duration}-day meal plan.
+Write recipe names and descriptions in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep ingredient names in canonical English and keep quantities and units unchanged so pantry and grocery matching remain correct. Keep diet values and application fields in their existing format.
 
 User goal: ${goal}
 Diet type: ${diet}
@@ -205,6 +208,7 @@ Do not include markdown or explanations outside JSON.
             const categoryPrompt = `
 You are MealMate, an expert Indian home-cooking meal planner.
 Generate ONLY 3 distinct ${type} recipe options for day ${dayNumber}.
+Write recipe names and descriptions in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep ingredient names in canonical English and preserve quantities and units exactly for pantry and grocery matching.
 User goal: ${goal}
 Diet: ${diet}. Restriction: ${DIET_RULES[diet] || "Follow the selected diet exactly."}
 Planning mode: ${ingredientMode === "recommended" ? "Pantry + recommended ingredients" : "Selected pantry ingredients only"}.
@@ -483,14 +487,17 @@ Rules:
   }
 };
 
+const { localizeRecords, localizeRecord } = require("../services/localizationService");
+
 exports.getMyMealPlans = async (req, res) => {
   try {
     const includeArchived = req.query.includeArchived === "true";
     const filter = { user: req.user.id };
     if (!includeArchived) filter.isArchived = false;
 
-    const mealPlans = await MealPlan.find(filter).sort({ createdAt: -1 });
-    res.status(200).json({ success: true, mealPlans });
+    const mealPlans = await MealPlan.find(filter).sort({ createdAt: -1 }).lean();
+    const localizedMealPlans = await localizeRecords(mealPlans, "mealPlan", req.query.language || "en");
+    res.status(200).json({ success: true, mealPlans: localizedMealPlans });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -508,7 +515,8 @@ exports.getMyMealPlanById = async (req, res) => {
         message: "Meal plan not found",
       });
     }
-    res.status(200).json({ success: true, mealPlan });
+    const localizedMealPlan = await localizeRecord(mealPlan, "mealPlan", req.query.language || "en");
+    res.status(200).json({ success: true, mealPlan: localizedMealPlan });
   } catch (err) {
     console.error("Get Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import {
     MessageCircle,
     X,
@@ -7,6 +8,7 @@ import {
 } from "lucide-react";
 
 export default function MealMateAssistant() {
+    const { language } = useLanguage();
     const [open, setOpen] = useState(false);
 
     const [messages, setMessages] = useState([
@@ -46,8 +48,9 @@ const sendMessage = async () => {
         },
         body: JSON.stringify({
           message: userMessage,
+          language,
 
-          // Send previous conversation to Gemini
+          // Send previous conversation to the AI service
           history: messages.map((msg) => ({
             role: msg.role,
             text: msg.text,

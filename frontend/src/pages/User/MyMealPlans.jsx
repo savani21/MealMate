@@ -2,14 +2,16 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
 import { Sparkles, Utensils, Clock, Search, ArrowDownUp, Trash2, Archive, ArchiveRestore } from "lucide-react";
 
 export default function MyMealPlans() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [mealPlans, setMealPlans] = useState([]); const [loading, setLoading] = useState(true); const [search, setSearch] = useState(""); const [sortOrder, setSortOrder] = useState("newest"); const [showSort, setShowSort] = useState(false); const [viewMode, setViewMode] = useState("active"); const [processingPlanId, setProcessingPlanId] = useState(null);
-  useEffect(() => { fetchMealPlans(); }, [viewMode]);
+  useEffect(() => { fetchMealPlans(); }, [viewMode, language]);
   const getToken = () => localStorage.getItem("token");
-  const fetchMealPlans = async () => { try { setLoading(true); const token = getToken(); if (!token) { setLocation("/login"); return; } const query = viewMode === "archived" ? "?includeArchived=true" : ""; const response = await fetch(`/api/meal-plans${query}`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) { alert(data.message || "Failed to load meal plans"); return; } const plans = viewMode === "archived" ? (data.mealPlans || []).filter((plan) => plan.isArchived) : (data.mealPlans || []).filter((plan) => !plan.isArchived); setMealPlans(plans); } catch (error) { console.error("Load meal plans error:", error); alert("Unable to connect to server."); } finally { setLoading(false); } };
+  const fetchMealPlans = async () => { try { setLoading(true); const token = getToken(); if (!token) { setLocation("/login"); return; } const query = new URLSearchParams({ ...(viewMode === "archived" ? { includeArchived: "true" } : {}), language }).toString(); const response = await fetch(`/api/meal-plans?${query}`, { headers: { Authorization: `Bearer ${token}` } }); const data = await response.json(); if (!response.ok) { alert(data.message || "Failed to load meal plans"); return; } const plans = viewMode === "archived" ? (data.mealPlans || []).filter((plan) => plan.isArchived) : (data.mealPlans || []).filter((plan) => !plan.isArchived); setMealPlans(plans); } catch (error) { console.error("Load meal plans error:", error); alert("Unable to connect to server."); } finally { setLoading(false); } };
   const formatCreatedAt = (createdAt) => !createdAt ? "Creation time unavailable" : new Date(createdAt).toLocaleString([], { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
   const formatDateHeading = (createdAt) => !createdAt ? "Date unavailable" : new Date(createdAt).toLocaleDateString([], { day: "2-digit", month: "long", year: "numeric" });
   const getLocalDateKey = (date) => !date ? "unknown" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;

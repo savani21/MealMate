@@ -59,13 +59,15 @@ async function generateWithOpenRouter(messages, responseFormat) {
 
 const chatWithAI = async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message, history = [], language: requestedLanguage = "en" } = req.body;
+    const language = ["en", "gu", "hi"].includes(requestedLanguage) ? requestedLanguage : "en";
     if (!message || !message.trim()) return res.status(400).json({ message: "Message is required" });
     const messages = [{
       role: "system",
       content: `You are MealMate AI, a friendly food and meal assistant.
 Help users with recipes, meal suggestions, meal planning, ingredients, grocery suggestions, healthy food choices and cooking ideas.
-Keep responses simple, practical and friendly. If asked about unrelated topics, explain that you specialize in MealMate assistance. Do not provide medical diagnosis.`,
+Keep responses simple, practical and friendly. If asked about unrelated topics, explain that you specialize in MealMate assistance. Do not provide medical diagnosis.
+Respond entirely in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep food ingredient identities clear and retain familiar ingredient names in parentheses when useful.`,
     }];
     history.forEach((msg) => {
       if (msg.text) messages.push({ role: msg.role === "user" ? "user" : "assistant", content: msg.text });
@@ -114,7 +116,8 @@ function buildFallbackRecipe({ ingredients, diet, category, mealName }) {
 }
 const generateRecipe = async (req, res) => {
   try {
-    const { ingredients, diet = "Any", category = "Other", mealName = "" } = req.body;
+    const { ingredients, diet = "Any", category = "Other", mealName = "", language: requestedLanguage = "en" } = req.body;
+    const language = ["en", "gu", "hi"].includes(requestedLanguage) ? requestedLanguage : "en";
     if (!ingredients || !ingredients.trim()) return res.status(400).json({ message: "Ingredients are required" });
 
     const mealInstruction = mealName.trim()
@@ -128,6 +131,7 @@ const generateRecipe = async (req, res) => {
     if (normalizedMealName && generationInputIngredients.length) {
       const previousRecipes = await Recipe.find({ createdBy: req.user.id, source: "ai" }).sort({ createdAt: -1 }).lean();
       const existingRecipe = previousRecipes.find((recipe) => {
+        if ((recipe.generationLanguage || "en") !== language) return false;
         if (normalizeIngredientName(recipe.name) !== normalizedMealName) return false;
         const previousInputs = [...new Set((recipe.generationInputIngredients?.length ? recipe.generationInputIngredients : recipe.ingredients || []).map(normalizeIngredientName).filter(Boolean))].sort();
         return previousInputs.length === generationInputIngredients.length && previousInputs.every((item, index) => item === generationInputIngredients[index]);
@@ -137,6 +141,7 @@ const generateRecipe = async (req, res) => {
 
     const prompt = `
 Create one complete, practical recipe for the planned meal: ${mealName || "a suitable meal"}.
+Write the recipe name, description, slogan and cooking instructions in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep ingredient names in canonical English with quantities and units unchanged so Pantry, recipe matching and grocery workflows continue to recognize them. Keep category and diet values in their existing English values for application logic.
 The user's pantry/selected ingredients are: ${ingredients}.
 Diet preference: ${diet}. Category: ${category}.
 Treat the supplied ingredients as what the user has available, NOT as a strict limit on the recipe. Include all essential ingredients normally required to make this dish properly, even when they are not in the supplied list, and clearly list them so the user can buy missing items.
@@ -188,6 +193,7 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
     const normalizedGeneratedName = normalizeIngredientName(recipeData.name);
     const sameTitleRecipes = await Recipe.find({ createdBy: req.user.id, source: "ai" }).sort({ createdAt: -1 }).lean();
     const matchingGeneratedRecipe = sameTitleRecipes.find((recipe) => {
+      if ((recipe.generationLanguage || "en") !== language) return false;
       if (normalizeIngredientName(recipe.name) !== normalizedGeneratedName) return false;
       const previousInputs = [...new Set((recipe.generationInputIngredients || []).map(normalizeIngredientName).filter(Boolean))].sort();
       return previousInputs.length === generationInputIngredients.length && previousInputs.every((item, index) => item === generationInputIngredients[index]);
@@ -213,6 +219,7 @@ Do not invent medical claims. Keep the recipe realistic and easy to prepare.
       source: "ai",
       generationMealName: normalizedGeneratedName,
       generationInputIngredients,
+      generationLanguage: language,
       createdBy: req.user.id,
     });
 

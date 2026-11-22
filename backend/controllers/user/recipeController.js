@@ -7,6 +7,8 @@ const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
 const { createAdminAlert } = require("../../services/adminAlertService");
 
+const { localizeRecords } = require("../../services/localizationService");
+
 const HIGHLY_LIKED_MIN_LIKES = Math.max(1, Number(process.env.HIGHLY_LIKED_MIN_LIKES) || 5);
 
 async function buildLikeCounts() {
@@ -69,7 +71,8 @@ const getRecipes = async (req, res) => {
       ratingCount: stats[recipe._id.toString()]?.ratingCount || 0,
       averageRating: stats[recipe._id.toString()]?.averageRating || 0,
     }));
-    res.status(200).json({ recipes: recipesWithMeta });
+    const localizedRecipes = await localizeRecords(recipesWithMeta, "recipe", req.query.language || "en");
+    res.status(200).json({ recipes: localizedRecipes });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipes" });
@@ -160,9 +163,10 @@ const getRecipeById = async (req, res) => {
 
     const rating = reviewStats[0];
 
+    const localizedRecipe = await localizeRecords([recipe], "recipe", req.query.language || "en");
     res.status(200).json({
       recipe: {
-        ...recipe,
+        ...localizedRecipe[0],
         ratingCount: rating?.ratingCount || 0,
         averageRating: rating ? Number(rating.averageRating.toFixed(1)) : 0,
       },

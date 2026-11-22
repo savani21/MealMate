@@ -1,6 +1,8 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import {
   Search, ChefHat, Clock, Heart, Utensils, Sparkles, X, Star,
   SlidersHorizontal, Flame, ArrowUpDown, Leaf,
@@ -58,6 +60,7 @@ function getRecipeImage(recipe, index) {
 }
 
 export default function Recipes() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const returnToPlanner = params.get("return") === "meal-planner";
@@ -92,7 +95,7 @@ export default function Recipes() {
   const [generating, setGenerating] = useState(false);
   const [generationSlow, setGenerationSlow] = useState(false);
 
-  useEffect(() => { fetchRecipes(); fetchFavorites(); }, []);
+  useEffect(() => { fetchRecipes(); fetchFavorites(); }, [language]);
   useEffect(() => {
     if (!recipes.length) return;
     const images = Object.fromEntries(
@@ -109,7 +112,7 @@ export default function Recipes() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch("/api/recipes");
+      const response = await fetch(`/api/recipes?language=${encodeURIComponent(language)}`);
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to load recipes"); return; }
       setRecipes(data.recipes || []);
@@ -146,7 +149,7 @@ export default function Recipes() {
       const response = await fetch("/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ingredients: generatorIngredients.trim(), mealName, diet: params.get("diet") || "Any", category: mealType || category !== "All" ? (mealType || category) : "Other" }),
+        body: JSON.stringify({ language, ingredients: generatorIngredients.trim(), mealName, diet: params.get("diet") || "Any", category: mealType || category !== "All" ? (mealType || category) : "Other" }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
@@ -334,7 +337,7 @@ export default function Recipes() {
               <article key={recipe._id} className="group flex min-h-28 items-stretch gap-3 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition hover:border-green-200 hover:shadow-md sm:gap-4">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 text-left sm:h-32 sm:w-32">
                   {recipeImages[recipe._id] ? (
-                    <img src={recipeImages[recipe._id]} alt={recipe.name} loading="lazy" data-image-attempt="0"
+                    <img src={recipeImages[recipe._id]} alt={localizedValue(recipe, "name")} loading="lazy" data-image-attempt="0"
                       onError={(event) => {
                         const image = event.currentTarget;
                         const candidates = getRecipeImageCandidates(recipe);
@@ -353,7 +356,7 @@ export default function Recipes() {
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 text-center">
                       <Utensils className="h-7 w-7 text-green-600" />
-                      <span className="line-clamp-2 text-[10px] font-bold text-gray-700">{recipe.name}</span>
+                      <span className="line-clamp-2 text-[10px] font-bold text-gray-700">{localizedValue(recipe, "name")}</span>
                     </div>
                   )}
                   {recipe.isHighlyLiked && <span className="absolute bottom-1 left-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-amber-950">Popular</span>}
@@ -364,7 +367,7 @@ export default function Recipes() {
                     {recipe.diet && <span className="text-[10px] font-medium text-gray-500">{recipe.diet}</span>}
                   </div>
                   <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="text-left">
-                    <h3 className="line-clamp-1 text-base font-extrabold text-gray-900 transition group-hover:text-primary sm:text-lg">{recipe.name}</h3>
+                    <h3 className="line-clamp-1 text-base font-extrabold text-gray-900 transition group-hover:text-primary sm:text-lg">{localizedValue(recipe, "name")}</h3>
                     <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500 sm:text-sm">{recipe.description || "Discover the ingredients and steps for this recipe."}</p>
                   </button>
                   {recipe.slogan && <p className="mt-1 line-clamp-1 text-[11px] italic text-primary">“{recipe.slogan}”</p>}

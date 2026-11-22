@@ -1,4 +1,6 @@
 import AppNavbar from "@/components/AppNavbar";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import { getIngredientImageCandidates } from "@/utils/ingredientImageDatabase";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -89,6 +91,7 @@ const readJson = async (response) => {
 };
 
 export default function Pantry() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [items, setItems] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -110,7 +113,7 @@ export default function Pantry() {
 
   const load = async () => {
     try {
-      const response = await fetch(API, { headers: headers() });
+      const response = await fetch(`${API}?language=${encodeURIComponent(language)}`, { headers: headers() });
       const data = await readJson(response);
       if (!response.ok) throw new Error(data.message || "Unable to load pantry");
       setItems(data.items || []);
@@ -133,7 +136,7 @@ export default function Pantry() {
           .filter(Boolean);
         setSuggestions([...new Set(names)].sort((a, b) => a.localeCompare(b)));
       }).catch(() => {});
-  }, []);
+  }, [language]);
 
   const expiredItems = useMemo(() => items.filter((item) => isPantryItemExpired(item.expiryDate)), [items]);
   const activeItems = useMemo(() => items.filter((item) => !isPantryItemExpired(item.expiryDate)), [items]);
@@ -220,7 +223,7 @@ export default function Pantry() {
 
         <section className="overflow-hidden rounded-[24px] border border-[#f0e5c9] bg-[#fffdf7] shadow-sm">
           <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5 sm:px-6"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-[#b18439]">Freshness reminder</p><h2 className="mt-1 text-xl font-extrabold">Use it before you lose it.</h2><p className="mt-1 text-xs text-[#8b887b]">Recipes that make the most of ingredients expiring soon.</p></div><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fff1d6] text-[#bd8129]"><Clock3 className="h-5 w-5"/></span></div>
-          {expiringCount === 0 ? <div className="mx-5 mb-5 flex min-h-44 flex-col items-center justify-center rounded-2xl bg-[#fff8e9] px-5 text-center sm:mx-6"><img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=420&auto=format&fit=crop&q=80" alt="Fresh healthy ingredients" className="mb-3 h-20 w-28 rounded-xl object-cover"/><p className="text-sm font-bold text-[#665b42]">Your ingredients are looking fresh!</p><p className="mt-1 max-w-sm text-xs leading-5 text-[#92866e]">Add expiry dates to pantry items and we’ll suggest recipes to use them in time.</p></div> : <div className="px-5 pb-5 sm:px-6"><div className="flex flex-wrap gap-2">{expiryData.expiringItems.map((item) => <span key={item._id} className="rounded-full border border-[#f0dba9] bg-white px-3 py-1.5 text-xs font-semibold text-[#795b25]"><AlertTriangle className="mr-1 inline h-3 w-3"/>{item.name} · {new Date(item.expiryDate).toLocaleDateString()}</span>)}</div>{expiryData.recommendations.length ? <div className="mt-4 grid gap-2 sm:grid-cols-2">{expiryData.recommendations.map((recipe) => <button key={recipe._id} onClick={() => setLocation("/recipes/" + recipe._id)} className="flex items-center justify-between rounded-xl border border-[#f0e5c9] bg-white p-3 text-left text-sm font-bold hover:border-[#d8b96e]"><span>{recipe.name}<small className="mt-1 block text-xs font-normal text-[#92866e]">Use: {recipe.expiringIngredients.map((i) => i.name).join(", ")}</small></span><ArrowRight className="h-4 w-4 shrink-0 text-[#bd8129]"/></button>)}</div> : <p className="mt-3 text-xs text-[#92866e]">No saved recipes match these ingredients yet.</p>}</div>}
+          {expiringCount === 0 ? <div className="mx-5 mb-5 flex min-h-44 flex-col items-center justify-center rounded-2xl bg-[#fff8e9] px-5 text-center sm:mx-6"><img src="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=420&auto=format&fit=crop&q=80" alt="Fresh healthy ingredients" className="mb-3 h-20 w-28 rounded-xl object-cover"/><p className="text-sm font-bold text-[#665b42]">Your ingredients are looking fresh!</p><p className="mt-1 max-w-sm text-xs leading-5 text-[#92866e]">Add expiry dates to pantry items and we’ll suggest recipes to use them in time.</p></div> : <div className="px-5 pb-5 sm:px-6"><div className="flex flex-wrap gap-2">{expiryData.expiringItems.map((item) => <span key={item._id} className="rounded-full border border-[#f0dba9] bg-white px-3 py-1.5 text-xs font-semibold text-[#795b25]"><AlertTriangle className="mr-1 inline h-3 w-3"/>{localizedValue(item, "name")} · {new Date(item.expiryDate).toLocaleDateString()}</span>)}</div>{expiryData.recommendations.length ? <div className="mt-4 grid gap-2 sm:grid-cols-2">{expiryData.recommendations.map((recipe) => <button key={recipe._id} onClick={() => setLocation("/recipes/" + recipe._id)} className="flex items-center justify-between rounded-xl border border-[#f0e5c9] bg-white p-3 text-left text-sm font-bold hover:border-[#d8b96e]"><span>{recipe.name}<small className="mt-1 block text-xs font-normal text-[#92866e]">Use: {recipe.expiringIngredients.map((i) => i.name).join(", ")}</small></span><ArrowRight className="h-4 w-4 shrink-0 text-[#bd8129]"/></button>)}</div> : <p className="mt-3 text-xs text-[#92866e]">No saved recipes match these ingredients yet.</p>}</div>}
         </section>
       </section>
 
@@ -228,17 +231,17 @@ export default function Pantry() {
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.15em] text-[#719077]">Your kitchen inventory</p><h2 className="mt-1 text-2xl font-extrabold tracking-tight">{showExpiredBin ? "Expired Items" : "Everything in your pantry"}</h2><p className="mt-1 text-sm text-[#849084]">{showExpiredBin ? `${expiredItems.length} expired ingredients stored separately` : `${activeItems.length} usable ingredients in your pantry`}</p></div><div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"><button type="button" onClick={() => { setShowExpiredBin((current) => !current); setSearch(""); setCategory("all"); }} className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-full border px-4 py-3 text-xs font-bold transition ${showExpiredBin ? "border-red-200 bg-red-50 text-red-700" : "border-[#e3e9df] bg-white text-[#718073] hover:border-red-200 hover:text-red-600"}`}><Trash2 className="h-4 w-4"/>{showExpiredBin ? "Back to Pantry" : "Expired Items"}<span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] text-red-700">{expiredItems.length}</span></button><div className="relative w-full sm:w-64"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9aa49a]"/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={showExpiredBin ? "Search expired items..." : "Search your ingredients..."} className="w-full rounded-full border border-[#e3e9df] bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#72a66b]"/></div></div></div>
         <div className="mb-5 flex gap-2 overflow-x-auto pb-1">{groups.map((group) => { const Icon = group.icon; const active = category === group.id; return <button key={group.id} onClick={() => setCategory(group.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 text-xs font-bold transition ${active ? "bg-[#267342] text-white shadow-md shadow-[#267342]/15" : "border border-[#e5eae1] bg-white text-[#718073] hover:border-[#9cbd91]"}`}><Icon className="h-3.5 w-3.5"/>{group.label}{group.id === "all" ? ` · ${visibleItems.length}` : ""}</button>; })}</div>
         {loading ? <div className="rounded-3xl bg-white p-14 text-center text-sm text-[#849084]">Loading your pantry...</div> : filtered.length === 0 ? <div className="rounded-3xl border border-dashed border-[#dce5d8] bg-white px-5 py-14 text-center">{showExpiredBin ? <Trash2 className="mx-auto h-10 w-10 text-[#a9b8a5]"/> : <Package className="mx-auto h-10 w-10 text-[#a9b8a5]"/>}<p className="mt-3 font-bold">{search || category !== "all" ? "No ingredients found" : showExpiredBin ? "No expired items" : "Your pantry is waiting"}</p><p className="mt-1 text-sm text-[#849084]">{showExpiredBin ? "Expired ingredients will appear here and stay separate from usable pantry stock." : "Try another category or add ingredients to get started."}</p><button onClick={() => {setCategory("all");setSearch(""); if(showExpiredBin) setShowExpiredBin(false);}} className="mt-4 text-xs font-bold text-[#267342]">Show pantry items</button></div> : <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item) => { const group = classify(item.name); return <article key={item._id} className={`group relative flex min-w-0 items-center gap-3 overflow-hidden rounded-[22px] border ${showExpiredBin ? "border-red-100 bg-red-50/40" : "border-[#e8ece2] bg-white"} p-3 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-[#cbdcc5] hover:shadow-md`}>
-              <IngredientImage name={item.name}/>
+              <IngredientImage name={localizedValue(item, "name")}/>
               <div className="min-w-0 flex-1 py-1">
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                  <h3 className="min-w-0 truncate text-sm font-extrabold capitalize text-[#263629]">{item.name}</h3>
+                  <h3 className="min-w-0 truncate text-sm font-extrabold capitalize text-[#263629]">{localizedValue(item, "name")}</h3>
                   <span className="rounded-full bg-[#edf6e8] px-2 py-1 text-[10px] font-bold capitalize text-[#426b48]">{group === "other" ? "Pantry staple" : group}</span>
                 </div>
                 <p className="text-xs font-semibold text-[#657568]">{item.quantity} {item.unit}</p>
                 {item.expiryDate ? (isPantryItemExpired(item.expiryDate) ? <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-red-600"><AlertTriangle className="h-3 w-3 shrink-0"/> Expired on {formatPantryDate(item.expiryDate)}</p> : <p className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-[#9a702b]"><CalendarClock className="h-3 w-3 shrink-0"/> Best before {formatPantryDate(item.expiryDate)}</p>) : <p className="mt-1.5 text-[10px] text-[#a2aca0]">No expiry date added</p>}
                 <div className="mt-2 flex items-center gap-1">
-                  <button onClick={() => startEdit(item)} aria-label={`Edit ${item.name}`} title="Edit ingredient" className="rounded-full p-2 text-[#536655] transition hover:bg-[#edf6e8] hover:text-[#267342]"><Pencil className="h-4 w-4"/></button>
-                  <button onClick={() => remove(item._id)} aria-label={`Remove ${item.name}`} title="Remove ingredient" className="rounded-full p-2 text-[#8a7771] transition hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4"/></button>
+                  <button onClick={() => startEdit(item)} aria-label={`Edit ${localizedValue(item, "name")}`} title="Edit ingredient" className="rounded-full p-2 text-[#536655] transition hover:bg-[#edf6e8] hover:text-[#267342]"><Pencil className="h-4 w-4"/></button>
+                  <button onClick={() => remove(item._id)} aria-label={`Remove ${localizedValue(item, "name")}`} title="Remove ingredient" className="rounded-full p-2 text-[#8a7771] transition hover:bg-red-50 hover:text-red-600"><Trash2 className="h-4 w-4"/></button>
                 </div>
               </div>
             </article>; })}</div>}

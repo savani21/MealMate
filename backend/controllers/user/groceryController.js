@@ -6,6 +6,8 @@ const { calculateSmartGroceryItems } = require("../../utils/smartGroceryCalculat
 const { isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
+const { localizeRecords, localizeRecord } = require("../../services/localizationService");
+
 const DIET_FORBIDDEN = {
   vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
   vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
@@ -300,10 +302,14 @@ exports.getMyGroceryLists = async (req, res) => {
       .map((mealPlan) => existingByMealPlan.get(String(mealPlan._id)))
       .filter(Boolean);
 
-    res.status(200).json({
-      success: true,
-      groceryLists: refreshed,
-    });
+    const language = req.query.language || "en";
+    const localizedLists = await localizeRecords(refreshed, "groceryList", language);
+    for (const list of localizedLists) {
+      if (list.mealPlan && typeof list.mealPlan === "object") {
+        list.mealPlan = await localizeRecord(list.mealPlan, "mealPlan", language);
+      }
+    }
+    res.status(200).json({ success: true, groceryLists: localizedLists });
   } catch (err) {
     console.error("Get Grocery Lists Error:", err);
 

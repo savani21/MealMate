@@ -29,6 +29,7 @@ const recipeSchema = new mongoose.Schema(
     source: { type: String, enum: ["manual", "ai"], default: "manual" },
     generationMealName: { type: String, default: "", trim: true },
     generationInputIngredients: { type: [String], default: [] },
+    generationLanguage: { type: String, enum: ["en", "gu", "hi"], default: "en" },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

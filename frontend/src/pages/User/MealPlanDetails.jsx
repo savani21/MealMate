@@ -2,9 +2,12 @@ import AppNavbar from "@/components/AppNavbar";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useRoute } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import { Sparkles, Utensils, ShoppingBasket, X, RefreshCw, BookOpen, Check } from "lucide-react";
 
 export default function MealPlanDetails() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/meal-plans/:id");
   const [plan, setPlan] = useState(null);
@@ -20,13 +23,13 @@ export default function MealPlanDetails() {
   useEffect(() => {
     fetchMealPlan();
     fetchRecipes();
-  }, [params?.id]);
+  }, [params?.id, language]);
 
   const fetchMealPlan = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) { setLocation("/login"); return; }
-      const response = await fetch(`/api/meal-plans/${params.id}`, {
+      const response = await fetch(`/api/meal-plans/${params.id}?language=${encodeURIComponent(language)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -48,7 +51,7 @@ export default function MealPlanDetails() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch("/api/recipes");
+      const response = await fetch(`/api/recipes?language=${encodeURIComponent(language)}`);
       const data = await response.json();
       if (response.ok) setRecipes(data.recipes || []);
     } catch (error) { console.error("Recipe loading error:", error); }
@@ -217,7 +220,7 @@ export default function MealPlanDetails() {
                 const matchingRecipes = recipes.filter((recipe) => String(recipe.category || "").toLowerCase() === type || !recipe.category || String(recipe.category).toLowerCase() === "other");
                 return <div key={type} className="min-w-0 border border-gray-100 rounded-2xl p-4 sm:p-5">
                   <p className="text-xs uppercase tracking-wide font-bold text-primary">{type}</p>
-                  <p className="font-bold text-gray-900 mt-2">{day[type] || "Meal not available"}</p>
+                  <p className="font-bold text-gray-900 mt-2">{localizedValue(plan, `meals.${plan.meals.indexOf(day)}.${type}`, day[type]) || "Meal not available"}</p>
                   <div className="flex flex-wrap gap-2 mt-4">
                     {getIsFutureMeal(day.day, type) && <button type="button" onClick={() => setActiveMealEditor(activeMealEditor === mealKey ? "" : mealKey)} className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 px-3 py-2 text-xs font-bold text-primary hover:bg-green-50"><RefreshCw className="w-3.5 h-3.5"/> Change meal</button>}
                     <button type="button" onClick={() => openOrGenerateRecipe(day, type)} className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:border-primary hover:text-primary"><BookOpen className="w-3.5 h-3.5"/> Generate recipe</button>
@@ -231,7 +234,7 @@ export default function MealPlanDetails() {
                       <div className="overflow-y-auto p-5 space-y-3">
                         <p className="text-sm font-bold text-gray-800">AI meal alternatives</p>
                         {options.filter((option) => option.name !== day[type]).map((option) => <button key={option.name} type="button" disabled={savingMealKey === mealKey} onClick={async () => { setSavingMealKey(mealKey); await selectMealOption(day.day, type, option); setSavingMealKey(""); setActiveMealEditor(""); }} className="w-full rounded-xl border border-gray-200 p-3 text-left hover:border-primary hover:bg-green-50/40 disabled:opacity-50">
-                          <span className="block text-sm font-bold text-gray-900">{option.name}</span><span className="mt-1 block text-xs text-gray-500">{option.prepTime ? `Time: ${option.prepTime}` : "Preparation time not available"}</span>
+                          <span className="block text-sm font-bold text-gray-900">{localizedValue(plan, `meals.${plan.meals.indexOf(day)}.${type}Options.${options.indexOf(option)}.name`, option.name)}</span><span className="mt-1 block text-xs text-gray-500">{option.prepTime ? `Time: ${option.prepTime}` : "Preparation time not available"}</span>
                         </button>)}
                         {!options.filter((option) => option.name !== day[type]).length && <p className="rounded-lg bg-gray-50 p-3 text-xs text-gray-500">No AI alternatives are available for this meal.</p>}
                         <div className="border-t border-gray-100 pt-4">
@@ -263,7 +266,7 @@ export default function MealPlanDetails() {
             <div className="space-y-3">
               <label className="block text-sm font-semibold text-gray-700">Day<select value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary">{plan.meals.map((day) => <option key={day.day} value={day.day}>Day {day.day}</option>)}</select></label>
               <label className="block text-sm font-semibold text-gray-700">Meal<select value={selectedMealType} onChange={(event) => setSelectedMealType(event.target.value)} className="mt-1.5 w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white outline-none focus:border-primary"><option value="breakfast">Breakfast — {selectedDayPlan?.breakfast || "Not available"}</option><option value="lunch">Lunch — {selectedDayPlan?.lunch || "Not available"}</option><option value="dinner">Dinner — {selectedDayPlan?.dinner || "Not available"}</option></select></label>
-              <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5"><p className="text-[11px] uppercase tracking-wide font-bold text-primary">Selected meal</p><p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{selectedMealName || "Select a meal"}</p></div>
+              <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2.5"><p className="text-[11px] uppercase tracking-wide font-bold text-primary">Selected meal</p><p className="text-sm font-bold text-gray-900 mt-0.5 truncate">{selectedDayPlan ? localizedValue(plan, `meals.${plan.meals.indexOf(selectedDayPlan)}.${selectedMealType}`, selectedMealName) : (selectedMealName || "Select a meal")}</p></div>
               {selectedRecipe ? <div className="rounded-lg border border-green-100 bg-green-50/60 px-3 py-3"><p className="text-xs font-semibold text-primary">Recipe already generated for this meal</p><button onClick={openExistingRecipe} className="w-full mt-2 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90 transition">Open Saved Recipe</button></div> : <button onClick={generateRecipe} disabled={!selectedMealName} className="w-full py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:opacity-90 transition disabled:opacity-50">Generate Recipe</button>}
             </div>
           </div>
@@ -282,7 +285,7 @@ function MealCard({ title, meal, options = [], groupName, onSelect }) {
     <p className="text-xs uppercase tracking-wide font-bold text-primary">{title}</p>
     {options.length > 0 ? <div className="mt-3 space-y-3">{options.slice(0, 3).map((option, index) => <label key={option.name || index} className={`flex gap-2.5 p-2.5 rounded-xl border cursor-pointer transition ${meal === option.name ? "border-primary bg-green-50" : "border-gray-100 hover:border-green-200"}`}>
       <input type="radio" name={groupName} checked={meal === option.name} onChange={() => onSelect?.(option)} className="mt-1 accent-green-700" />
-      <span className="min-w-0"><span className="block text-sm font-bold text-gray-900">{option.name}</span>{option.description && <span className="block text-xs text-gray-500 mt-1">{option.description}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-1">{option.prepTime}</span>}</span>
+      <span className="min-w-0"><span className="block text-sm font-bold text-gray-900">{option.name}</span>{option.description && <span className="block text-xs text-gray-500 mt-1">{localizedValue(plan, `meals.${plan.meals.indexOf(day)}.${type}Options.${options.indexOf(option)}.description`, option.description)}</span>}{option.prepTime && <span className="block text-[11px] text-primary mt-1">{option.prepTime}</span>}</span>
     </label>)}</div> : <p className="font-bold text-gray-900 mt-2">{meal || "Meal not available"}</p>}
   </div>;
 }

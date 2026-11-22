@@ -1,6 +1,8 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, ChevronDown, Star, ArrowDown, Plus } from "lucide-react";
 
 const API = "/api/meal-plans";
@@ -43,6 +45,7 @@ const isExpiredPantryItem = (item, now = new Date()) => {
 };
 
 export default function MealPlanner() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const [goal, setGoal] = useState("");
@@ -71,7 +74,7 @@ export default function MealPlanner() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { setPantryLoading(false); return; }
-    fetch("/api/user/pantry", {
+    fetch(`/api/user/pantry?language=${encodeURIComponent(language)}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (response) => {
@@ -179,7 +182,7 @@ export default function MealPlanner() {
       const response = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...payload, previewOnly: true }),
+        body: JSON.stringify({ ...payload, language, previewOnly: true }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to generate recipe choices");
@@ -228,7 +231,7 @@ export default function MealPlanner() {
       const response = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...payload, selectedDays: draftDays }),
+        body: JSON.stringify({ ...payload, language, selectedDays: draftDays }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to save meal plan");
@@ -383,8 +386,8 @@ export default function MealPlanner() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                       {recommendedRecipes.slice(0, 3).map((recipe) => (
                         <div key={recipe._id} className="rounded-lg border border-gray-100 p-3 bg-gray-50">
-                          <h4 className="font-semibold text-sm text-gray-900">{recipe.name}</h4>
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{recipe.description}</p>
+                          <h4 className="font-semibold text-sm text-gray-900">{localizedValue(recipe, "name")}</h4>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{localizedValue(recipe, "description")}</p>
                           <div className="flex flex-wrap gap-2 mt-3 text-xs">
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-1 font-semibold">
                               <Star className="w-3.5 h-3.5 fill-current" /> {(Number(recipe.averageRating) || 0).toFixed(1)}/5
