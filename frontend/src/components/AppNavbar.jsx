@@ -79,6 +79,7 @@ export default function AppNavbar({ children }) {
   const [notificationItems, setNotificationItems] = useState([]);
   const [deliveryAlert, setDeliveryAlert] = useState(null);
   const previousNotificationIds = useRef(null);
+  const recentOrderReferenceIds = useRef(new Set());
 
   useEffect(() => {
     if (!deliveryAlert) return undefined;
@@ -141,6 +142,7 @@ export default function AppNavbar({ children }) {
           const newOrderNotification = items.find((item) =>
             !knownNotificationIds.has(String(item._id || item.id))
             && ["order-placed", "order-delivered"].includes(item.type)
+            && !recentOrderReferenceIds.current.has(String(item.referenceId || ""))
           );
           if (newOrderNotification) {
             setDeliveryAlert({
@@ -152,6 +154,7 @@ export default function AppNavbar({ children }) {
           }
         }
         previousNotificationIds.current = new Set(items.map((item) => String(item._id || item.id)));
+        items.forEach((item) => recentOrderReferenceIds.current.delete(String(item.referenceId || "")));
         setUnreadNotifications(nextUnreadCount);
         setNotificationItems(items);
       } catch (error) {
@@ -159,13 +162,24 @@ export default function AppNavbar({ children }) {
       }
     };
 
+    const handleOrderPlacedToast = (event) => {
+      const detail = event.detail || {};
+      if (detail.referenceId) recentOrderReferenceIds.current.add(String(detail.referenceId));
+      setDeliveryAlert({
+        title: detail.title || "Order placed",
+        message: detail.message || "Your order has been placed successfully.",
+      });
+    };
+
     loadNotifications();
+    window.addEventListener("mealmate:order-placed", handleOrderPlacedToast);
     const timer = setInterval(loadNotifications, 5000);
     window.addEventListener("mealmate:notifications-updated", loadNotifications);
     return () => {
       active = false;
       clearInterval(timer);
       window.removeEventListener("mealmate:notifications-updated", loadNotifications);
+      window.removeEventListener("mealmate:order-placed", handleOrderPlacedToast);
     };
   }, [userId, isAdmin]);
 

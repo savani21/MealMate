@@ -198,6 +198,13 @@ export default function GroceryStore() {
         return;
       }
 
+      window.dispatchEvent(new CustomEvent("mealmate:order-placed", {
+        detail: {
+          referenceId: data.order?._id,
+          title: "Your grocery order has been placed!",
+          message: `Order ${data.order?.orderId || ""} is confirmed. Your estimated delivery is ${data.order?.deliveryTime ? new Date(data.order.deliveryTime).toLocaleString() : "being scheduled"}.`,
+        },
+      }));
       setCart({ items: [] });
       setCartOpen(false);
       // Refresh the selected meal-plan list after checkout so purchased
