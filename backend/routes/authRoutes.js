@@ -10,6 +10,7 @@ const {
   updateProfile,
   getProfile,
   updateThemePreference,
+  updateLanguagePreference,
 } = require("../controllers/authController");
 
 const authAttemptLimiter = createRateLimiter({
@@ -25,6 +26,7 @@ router.post("/reset-password", authAttemptLimiter, resetPassword);
 router.get("/profile", auth, getProfile);
 router.patch("/profile", auth, updateProfile);
 router.patch("/preferences/theme", auth, updateThemePreference);
+router.patch("/preferences/language", auth, updateLanguagePreference);
 router.get("/admin", auth, admin, (req, res) => {
   res.status(200).json({ success: true, message: "Welcome Admin!" });
 });
