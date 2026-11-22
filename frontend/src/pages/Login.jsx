@@ -128,9 +128,9 @@ const { login } = useAuth();
                 <label className="block text-sm font-semibold text-gray-700">
                   Password
                 </label>
-                <a href="#" className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
+                <Link href="/forgot-password" className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
                   Forgot password?
-                </a>
+                </Link>
               </div>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
