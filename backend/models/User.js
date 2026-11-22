@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema(
       language: {
         type: String,
         enum: ["en", "gu", "hi"],
-        default: "en",
+        default: undefined,
       },
     },
   },
