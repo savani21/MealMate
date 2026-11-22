@@ -95,7 +95,7 @@ export default function Recipes() {
   const [generating, setGenerating] = useState(false);
   const [generationSlow, setGenerationSlow] = useState(false);
 
-  useEffect(() => { fetchRecipes(); fetchFavorites(); }, []);
+  useEffect(() => { fetchRecipes(); fetchFavorites(); }, [language]);
   useEffect(() => {
     if (!recipes.length) return;
     const images = Object.fromEntries(
