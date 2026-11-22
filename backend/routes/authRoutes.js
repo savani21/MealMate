@@ -19,6 +19,7 @@ const authAttemptLimiter = createRateLimiter({
 });
 
 router.post("/register", authAttemptLimiter, register);
+router.post("/google", authAttemptLimiter, require("../controllers/googleAuthController"));
 router.post("/login", authAttemptLimiter, login);
 router.post("/forgot-password", authAttemptLimiter, requestPasswordReset);
 router.post("/reset-password", authAttemptLimiter, resetPassword);
