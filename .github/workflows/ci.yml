@@ -54,12 +54,12 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
       - name: Check JavaScript syntax
         working-directory: backend
         run: find . -path './node_modules' -prune -o -name '*.js' -type f -print0 | xargs -0 -n1 node --check
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
       - name: Run backend unit tests
         working-directory: backend
         run: npm test
