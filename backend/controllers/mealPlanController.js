@@ -487,6 +487,8 @@ Rules:
   }
 };
 
+const { localizeRecords, localizeRecord } = require("../services/localizationService");
+
 exports.getMyMealPlans = async (req, res) => {
   try {
     const includeArchived = req.query.includeArchived === "true";
