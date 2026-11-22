@@ -52,6 +52,9 @@ const orderSchema = new mongoose.Schema(
     inventoryAppliedAt: { type: Date, default: null },
     receiptEmailSentAt: { type: Date, default: null },
     receiptEmailLastAttemptAt: { type: Date, default: null },
+    // Permanent recipient/SMTP failures are recorded so the worker never retries them.
+    receiptEmailFailedAt: { type: Date, default: null },
+    receiptEmailFailureReason: { type: String, default: null, maxlength: 500 },
   },
   {
     timestamps: true,
