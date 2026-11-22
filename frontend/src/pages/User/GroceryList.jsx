@@ -1,4 +1,6 @@
 import AppNavbar from "@/components/AppNavbar";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import PageHeroBanner from "@/components/PageHeroBanner";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -15,6 +17,7 @@ import {
 const API = "";
 
 export default function GroceryList() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [groceryLists, setGroceryLists] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,7 +39,7 @@ export default function GroceryList() {
         return;
       }
 
-      const response = await fetch(`${API}/api/user/grocery`, { headers: authHeaders() });
+      const response = await fetch(`${API}/api/user/grocery?language=${encodeURIComponent(language)}`, { headers: authHeaders() });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to load grocery lists");
       setGroceryLists(data.groceryLists || []);
@@ -192,7 +195,7 @@ export default function GroceryList() {
                                 <button key={item._id} onClick={() => toggleItem(list, item)} className="flex items-center gap-4 p-4 rounded-xl border border-amber-100 bg-amber-50/40 text-left hover:border-amber-300 transition">
                                   <div className="w-7 h-7 rounded-lg border border-amber-300 shrink-0" />
                                   <div>
-                                    <p className="font-semibold text-gray-900 capitalize">{item.name}</p>
+                                    <p className="font-semibold text-gray-900 capitalize">{localizedValue(list, `items.${list.items.indexOf(item)}.name`, item.name)}</p>
                                     {item.quantity && <p className="text-xs text-gray-500 mt-1">{item.quantity}</p>}
                                   </div>
                                 </button>
