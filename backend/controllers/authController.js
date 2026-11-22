@@ -98,7 +98,7 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        preferences: { theme: user.preferences?.theme || "light", language: user.preferences?.language || "en" },
+        preferences: { theme: user.preferences?.theme || "light", language: user.preferences?.language || null },
       },
     });
   } catch (err) {
