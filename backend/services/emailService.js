@@ -125,7 +125,7 @@ async function sendDeliveryReceiptEmail({ user, order }) {
 
   // Keep a fully HTML-rendered receipt as a fallback for email clients that block SVG.
   const html = `
-    <div style="margin:0;padding:24px 12px;background:#f4f7f2;font-family:Arial,Helvetica,sans-serif;color:#202124">
+    <div style="margin:0;padding:24px 12px;background:#f4f7f2;font-family:Arial,Helvetica,sans-serif;color:#202124">\n      <div style="max-width:620px;margin:0 auto 16px;text-align:center"><img src="cid:mealmate-delivery-receipt" alt="MealMate delivery receipt" style="display:block;width:100%;max-width:620px;height:auto;border:0"></div>
       <div style="max-width:620px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden">
         <div style="padding:28px 32px;background:#176b45;color:#fff">
           <div style="font-size:26px;font-weight:700">MealMate</div>
