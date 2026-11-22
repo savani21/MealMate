@@ -82,7 +82,7 @@ export default function AppNavbar({ children }) {
 
   useEffect(() => {
     if (!deliveryAlert) return undefined;
-    const timeout = window.setTimeout(() => setDeliveryAlert(null), 10000);
+    const timeout = window.setTimeout(() => setDeliveryAlert(null), 5000);
     return () => window.clearTimeout(timeout);
   }, [deliveryAlert]);
   const isAdmin = user?.role === "admin";
