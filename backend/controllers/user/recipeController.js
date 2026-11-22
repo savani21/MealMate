@@ -71,7 +71,8 @@ const getRecipes = async (req, res) => {
       ratingCount: stats[recipe._id.toString()]?.ratingCount || 0,
       averageRating: stats[recipe._id.toString()]?.averageRating || 0,
     }));
-    res.status(200).json({ recipes: recipesWithMeta });
+    const localizedRecipes = await localizeRecords(recipesWithMeta, "recipe", req.query.language || "en");
+    res.status(200).json({ recipes: localizedRecipes });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to get recipes" });
