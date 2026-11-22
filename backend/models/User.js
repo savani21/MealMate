@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema(
         enum: ["light", "dark"],
         default: "light",
       },
+      language: {
+        type: String,
+        enum: ["en", "gu", "hi"],
+        default: "en",
+      },
     },
   },
   { timestamps: true }
