@@ -6,6 +6,8 @@ const { calculateSmartGroceryItems } = require("../../utils/smartGroceryCalculat
 const { isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 
+const { localizeRecords, localizeRecord } = require("../../services/localizationService");
+
 const DIET_FORBIDDEN = {
   vegetarian: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|bacon|ham|sausage|gelatin)\b/i,
   vegan: /\b(chicken|mutton|lamb|beef|pork|fish|salmon|tuna|prawn|shrimp|seafood|egg|eggs|milk|paneer|cheese|curd|yogurt|butter|ghee|cream|dairy|gelatin)\b/i,
