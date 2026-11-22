@@ -7,6 +7,8 @@ const { normalizeIngredientName } = require("../../utils/ingredientMatcher");
 const { estimateRecipeNutrition } = require("../../services/nutritionEstimator");
 const { createAdminAlert } = require("../../services/adminAlertService");
 
+const { localizeRecords } = require("../../services/localizationService");
+
 const HIGHLY_LIKED_MIN_LIKES = Math.max(1, Number(process.env.HIGHLY_LIKED_MIN_LIKES) || 5);
 
 async function buildLikeCounts() {
