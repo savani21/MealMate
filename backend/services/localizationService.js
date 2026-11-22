@@ -6,7 +6,7 @@ const LANGUAGE_NAMES = { en: "English", gu: "Gujarati", hi: "Hindi" };
 
 // Deliberately exclude ingredient names, units, quantities, enum keys and IDs.
 // These fields participate in matching, nutrition, diet validation and checkout.
-const DISPLAY_FIELDS = new Set(["name", "title", "description", "slogan", "instructions", "mealName"]);
+const DISPLAY_FIELDS = new Set(["name", "title", "description", "slogan", "instructions", "mealName", "breakfast", "lunch", "dinner"]);
 const EXCLUDED_PATH = /(^|\.)(ingredients|ingredientBreakdown|missingIngredients|nutrition|unit|quantity|diet|goal|status|type|category|_id|id)(\.|$)/i;
 
 function hashSource(value) {
