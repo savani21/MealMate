@@ -2,6 +2,7 @@ import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import {
   Search, ChefHat, Clock, Heart, Utensils, Sparkles, X, Star,
   SlidersHorizontal, Flame, ArrowUpDown, Leaf,
@@ -111,7 +112,7 @@ export default function Recipes() {
 
   const fetchRecipes = async () => {
     try {
-      const response = await fetch("/api/recipes");
+      const response = await fetch(`/api/recipes?language=${encodeURIComponent(language)}`);
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to load recipes"); return; }
       setRecipes(data.recipes || []);
@@ -336,7 +337,7 @@ export default function Recipes() {
               <article key={recipe._id} className="group flex min-h-28 items-stretch gap-3 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3 shadow-sm transition hover:border-green-200 hover:shadow-md sm:gap-4">
                 <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-green-50 to-emerald-100 text-left sm:h-32 sm:w-32">
                   {recipeImages[recipe._id] ? (
-                    <img src={recipeImages[recipe._id]} alt={recipe.name} loading="lazy" data-image-attempt="0"
+                    <img src={recipeImages[recipe._id]} alt={localizedValue(recipe, "name")} loading="lazy" data-image-attempt="0"
                       onError={(event) => {
                         const image = event.currentTarget;
                         const candidates = getRecipeImageCandidates(recipe);
