@@ -495,8 +495,9 @@ exports.getMyMealPlans = async (req, res) => {
     const filter = { user: req.user.id };
     if (!includeArchived) filter.isArchived = false;
 
-    const mealPlans = await MealPlan.find(filter).sort({ createdAt: -1 });
-    res.status(200).json({ success: true, mealPlans });
+    const mealPlans = await MealPlan.find(filter).sort({ createdAt: -1 }).lean();
+    const localizedMealPlans = await localizeRecords(mealPlans, "mealPlan", req.query.language || "en");
+    res.status(200).json({ success: true, mealPlans: localizedMealPlans });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
