@@ -1,5 +1,6 @@
 const User = require("../../models/User");
 const Recipe = require("../../models/user/Recipe");
+const { localizeRecords } = require("../../services/localizationService");
 
 const addFavorite = async (req, res) => {
   try {
@@ -73,9 +74,8 @@ const getFavorites = async (req, res) => {
       });
     }
 
-    res.json({
-      favorites: user.favorites,
-    });
+    const favorites = await localizeRecords(user.favorites, "recipe", req.query.language || "en");
+    res.json({ favorites });
 
   } catch (error) {
     console.log("GET FAVORITES ERROR:", error);
