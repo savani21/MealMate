@@ -215,7 +215,7 @@ export default function GroceryList() {
                           <button key={item._id} onClick={() => toggleItem(list, item)} className="flex items-center gap-4 p-4 rounded-xl border border-green-100 bg-green-50 text-left">
                             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-primary text-white shrink-0"><Check className="w-4 h-4" /></div>
                             <div>
-                              <p className="font-semibold line-through text-gray-400 capitalize">{item.name}</p>
+                              <p className="font-semibold line-through text-gray-400 capitalize">{localizedValue(list, `items.${list.items.indexOf(item)}.name`, item.name)}</p>
                               <p className="text-xs text-gray-400">{item.mealName} · Day {item.day}</p>
                             </div>
                           </button>
