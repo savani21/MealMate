@@ -515,7 +515,8 @@ exports.getMyMealPlanById = async (req, res) => {
         message: "Meal plan not found",
       });
     }
-    res.status(200).json({ success: true, mealPlan });
+    const localizedMealPlan = await localizeRecord(mealPlan, "mealPlan", req.query.language || "en");
+    res.status(200).json({ success: true, mealPlan: localizedMealPlan });
   } catch (err) {
     console.error("Get Meal Plan Error:", err);
     res.status(500).json({ success: false, message: err.message });
