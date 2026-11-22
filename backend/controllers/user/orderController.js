@@ -10,7 +10,11 @@ const PantryItem = require("../../models/user/PantryItem");
 const Notification = require("../../models/user/Notification");
 const { normalizeIngredientName, isCommonHouseholdIngredient } = require("../../utils/ingredientMatcher");
 const { createAdminAlert } = require("../../services/adminAlertService");
-const { sendDeliveryReceiptEmail } = require("../../services/emailService");
+const {
+  sendDeliveryReceiptEmail,
+  isValidEmailAddress,
+  isPermanentEmailError,
+} = require("../../services/emailService");
 
 
 
@@ -93,6 +97,7 @@ exports.processDueOrders = async () => {
     const pendingReceipts = await Order.find({
       status: "delivered",
       receiptEmailSentAt: null,
+      receiptEmailFailedAt: null,
       $or: [
         { receiptEmailLastAttemptAt: null },
         { receiptEmailLastAttemptAt: { $lte: retryBefore } },
@@ -101,14 +106,42 @@ exports.processDueOrders = async () => {
     for (const pending of pendingReceipts) {
       try {
         const receiptUser = await User.findById(pending.user).select("name email");
-        if (!receiptUser?.email) continue;
-        await Order.updateOne({ _id: pending._id }, { $set: { receiptEmailLastAttemptAt: new Date() } });
+        const attemptedAt = new Date();
+        await Order.updateOne(
+          { _id: pending._id },
+          { $set: { receiptEmailLastAttemptAt: attemptedAt } }
+        );
+
+        if (!isValidEmailAddress(receiptUser?.email)) {
+          await Order.updateOne(
+            { _id: pending._id, receiptEmailSentAt: null },
+            {
+              $set: {
+                receiptEmailFailedAt: new Date(),
+                receiptEmailFailureReason: "Customer email is missing or has an invalid format.",
+              },
+            }
+          );
+          continue;
+        }
+
         await sendDeliveryReceiptEmail({ user: receiptUser, order: pending });
         await Order.updateOne(
           { _id: pending._id, receiptEmailSentAt: null },
-          { $set: { receiptEmailSentAt: new Date() } }
+          { $set: { receiptEmailSentAt: new Date() }, $unset: { receiptEmailFailureReason: 1 } }
         );
       } catch (mailError) {
+        if (mailError.permanent || isPermanentEmailError(mailError)) {
+          await Order.updateOne(
+            { _id: pending._id, receiptEmailSentAt: null },
+            {
+              $set: {
+                receiptEmailFailedAt: new Date(),
+                receiptEmailFailureReason: String(mailError.message || "Permanent email rejection").slice(0, 500),
+              },
+            }
+          );
+        }
         console.error(`Delivery receipt retry failed for ${pending.orderId}:`, mailError.message);
       }
     }
@@ -190,11 +223,50 @@ exports.processDueOrders = async () => {
           }
         );
         try {
-          const receiptUser=await User.findById(order.user).select("name email");
-          if(receiptUser?.email){await sendDeliveryReceiptEmail({user:receiptUser,order:{...order.toObject(),status:"delivered",deliveredAt:deliveryNotification.deliveredAt||deliveredAt}});await Order.updateOne({_id:order._id},{$set:{receiptEmailSentAt:new Date(),receiptEmailLastAttemptAt:new Date()}});}
-        } catch(mailError) {
-          await Order.updateOne({_id:order._id},{$set:{receiptEmailLastAttemptAt:new Date()}});
-          console.error(`Delivery receipt email failed for ${order.orderId}:`,mailError.message);
+          const receiptUser = await User.findById(order.user).select("name email");
+          const attemptedAt = new Date();
+          await Order.updateOne(
+            { _id: order._id },
+            { $set: { receiptEmailLastAttemptAt: attemptedAt } }
+          );
+
+          if (!isValidEmailAddress(receiptUser?.email)) {
+            await Order.updateOne(
+              { _id: order._id },
+              {
+                $set: {
+                  receiptEmailFailedAt: new Date(),
+                  receiptEmailFailureReason: "Customer email is missing or has an invalid format.",
+                },
+              }
+            );
+          } else {
+            await sendDeliveryReceiptEmail({
+              user: receiptUser,
+              order: {
+                ...order.toObject(),
+                status: "delivered",
+                deliveredAt: deliveryNotification.deliveredAt || deliveredAt,
+              },
+            });
+            await Order.updateOne(
+              { _id: order._id },
+              {
+                $set: { receiptEmailSentAt: new Date() },
+                $unset: { receiptEmailFailureReason: 1 },
+              }
+            );
+          }
+        } catch (mailError) {
+          const failureUpdate = { receiptEmailLastAttemptAt: new Date() };
+          if (mailError.permanent || isPermanentEmailError(mailError)) {
+            failureUpdate.receiptEmailFailedAt = new Date();
+            failureUpdate.receiptEmailFailureReason = String(
+              mailError.message || "Permanent email rejection"
+            ).slice(0, 500);
+          }
+          await Order.updateOne({ _id: order._id }, { $set: failureUpdate });
+          console.error(`Delivery receipt email failed for ${order.orderId}:`, mailError.message);
         }
       } catch (error) {
         await Order.updateOne(
