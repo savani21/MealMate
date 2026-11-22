@@ -101,6 +101,21 @@ export default function Signup() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/stats")
+      .then((response) => {
+        if (!response.ok) throw new Error("Statistics request failed");
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled) setStats(data);
+      })
+      .catch((err) => console.error("Unable to load public MealMate statistics:", err));
+    return () => { cancelled = true; };
+  }, []);
 
   function update(field) {
     return (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -186,7 +201,7 @@ const handleSignup = async (e) => {
         >
           <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-4 py-2 mb-8">
             <Sparkles className="w-4 h-4 text-green-200" />
-            <span className="text-white text-sm font-medium">Free 14-day premium trial</span>
+            <span className="text-white text-sm font-medium">Your healthy routine starts here</span>
           </div>
 
           <h2 className="text-5xl font-black text-white leading-tight mb-4">
@@ -194,7 +209,7 @@ const handleSignup = async (e) => {
             <span className="text-green-200">healthier today.</span>
           </h2>
           <p className="text-green-100 text-lg mb-10 max-w-sm leading-relaxed">
-            Join 20,000+ people transforming how they eat, plan, and shop — for free.
+            Plan meals, track nutrition, and make grocery shopping simpler with MealMate.
           </p>
 
           <div className="grid grid-cols-1 gap-4">
@@ -213,20 +228,28 @@ const handleSignup = async (e) => {
           </div>
         </motion.div>
 
-        {/* Bottom stat row */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9 }}
-          className="flex items-center gap-8 relative z-10"
-        >
-          {[['50K+', 'Recipes'], ['20K+', 'Users'], ['4.9★', 'Rating']].map(([val, label]) => (
-            <div key={label}>
-              <p className="text-2xl font-black text-white">{val}</p>
-              <p className="text-green-200 text-xs font-medium">{label}</p>
-            </div>
-          ))}
-        </motion.div>
+        {/* Live statistics loaded from MongoDB through /api/stats. */}
+        {stats && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="flex items-center gap-8 relative z-10"
+          >
+            {[
+              { value: stats.recipes, label: "Recipes" },
+              { value: stats.registeredUsers, label: "Registered Users" },
+              ...(stats.averageRecipeRating != null && Number(stats.recipeRatingCount) > 0
+                ? [{ value: `${stats.averageRecipeRating}/5`, label: "Recipe Rating" }]
+                : []),
+            ].map(({ value, label }) => (
+              <div key={label}>
+                <p className="text-2xl font-black text-white">{Number.isFinite(Number(value)) ? Number(value).toLocaleString() : value}</p>
+                <p className="text-green-200 text-xs font-medium">{label}</p>
+              </div>
+            ))}
+          </motion.div>
+        )}
       </div>
 
       {/* ── Right: Form Panel ────────────────────────────── */}
