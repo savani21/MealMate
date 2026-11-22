@@ -42,7 +42,7 @@ const esc = (value) =>
 
 function isValidEmailAddress(value) {
   const email = String(value || "").trim();
-  return email.length <= 254 && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email);
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 // SMTP 5xx responses indicate a permanent rejection (for example, 550 5.1.1).
