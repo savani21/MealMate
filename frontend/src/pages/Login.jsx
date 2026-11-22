@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'wouter';
 import axios from "axios";
@@ -24,8 +24,19 @@ export default function Login() {
   const [forgotEmail,setForgotEmail]=useState('');
   const [forgotMessage,setForgotMessage]=useState('');
   const [forgotLoading,setForgotLoading]=useState(false);
+  const [stats, setStats] = useState(null);
   const [, setLocation] = useLocation();
-const { login } = useAuth();
+  const { login } = useAuth();
+
+  useEffect(() => {
+    let cancelled = false;
+    axios.get("/api/stats")
+      .then((response) => {
+        if (!cancelled) setStats(response.data);
+      })
+      .catch((err) => console.error("Unable to load public MealMate statistics:", err));
+    return () => { cancelled = true; };
+  }, []);
 
  async function handleForgotPassword(e){
   e.preventDefault();setForgotMessage("");
@@ -239,7 +250,9 @@ const { login } = useAuth();
           className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 w-fit"
         >
           <div className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
-          <span className="text-white text-sm font-medium">20,000+ active users</span>
+          <span className="text-white text-sm font-medium">
+            {stats ? `${Number(stats.registeredUsers || 0).toLocaleString()} registered members` : "A smarter way to plan meals"}
+          </span>
         </motion.div>
 
         {/* Center content */ }
@@ -274,32 +287,44 @@ const { login } = useAuth();
           </ul>
         </motion.div>
 
-        {/* Bottom testimonial card */ }
+        {/* Show a real community review when one is available; never display sample testimonials. */}
         <motion.div
           initial={ { opacity: 0, y: 20 } }
           animate={ { opacity: 1, y: 0 } }
           transition={ { duration: 0.6, delay: 0.8 } }
           className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 relative z-10"
         >
-          <div className="flex items-center gap-1 mb-3">
-            { [1, 2, 3, 4, 5].map(s => (
-              <svg key={ s } className="w-4 h-4 fill-amber-400 text-amber-400" viewBox="0 0 20 20">
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            )) }
-          </div>
-          <p className="text-white/90 text-sm leading-relaxed mb-4 italic">
-            "MealMate AI saves me 3 hours a week on meal planning. The AI suggestions are surprisingly good!"
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
-              SJ
-            </div>
-            <div>
-              <p className="text-white font-semibold text-sm">Sarah Johnson</p>
-              <p className="text-green-200 text-xs">Home Chef & Mom</p>
-            </div>
-          </div>
+          {stats?.recentReviews?.[0] ? (
+            <>
+              <div className="flex items-center gap-1 mb-3" aria-label={`${stats.recentReviews[0].rating} out of 5 stars`}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <svg key={star} className={`w-4 h-4 ${star <= stats.recentReviews[0].rating ? "fill-amber-400 text-amber-400" : "fill-white/20 text-white/20"}`} viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <p className="text-white/90 text-sm leading-relaxed mb-4 italic">"{stats.recentReviews[0].feedback}"</p>
+              <p className="text-white font-semibold text-sm">{stats.recentReviews[0].reviewer}</p>
+              <p className="text-green-200 text-xs">Reviewed: {stats.recentReviews[0].recipe}</p>
+              {stats.averageRecipeRating != null && (
+                <p className="text-green-100 text-xs mt-3">
+                  Community average: {stats.averageRecipeRating}/5 ({Number(stats.recipeRatingCount || 0).toLocaleString()} ratings)
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-white font-semibold mb-2">Made for everyday cooking</p>
+              <p className="text-green-100 text-sm leading-relaxed">
+                Plan meals, make the most of your pantry, and discover recipes that fit your routine.
+              </p>
+              {stats?.averageRecipeRating != null && (
+                <p className="text-green-100 text-xs mt-3">
+                  Community recipe rating: {stats.averageRecipeRating}/5 ({Number(stats.recipeRatingCount || 0).toLocaleString()} ratings)
+                </p>
+              )}
+            </>
+          )}
         </motion.div>
       </div>
 
