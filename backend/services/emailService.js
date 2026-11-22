@@ -40,6 +40,18 @@ const esc = (value) =>
     "'": "&#39;",
   }[character]));
 
+function isValidEmailAddress(value) {
+  const email = String(value || "").trim();
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+// SMTP 5xx responses indicate a permanent rejection (for example, 550 5.1.1).
+// Leave 4xx/network errors retryable because they are usually temporary.
+function isPermanentEmailError(error) {
+  const responseCode = Number(error?.responseCode);
+  return responseCode >= 500 && responseCode < 600;
+}
+
 function formatMoney(value) {
   return `₹${Number(value || 0).toFixed(2)}`;
 }
@@ -95,8 +107,11 @@ async function sendPasswordResetEmail({ to, name, resetUrl }) {
 }
 
 async function sendDeliveryReceiptEmail({ user, order }) {
-  if (!user?.email) {
-    throw new Error("Customer email is unavailable.");
+  if (!isValidEmailAddress(user?.email)) {
+    const error = new Error("Customer email is missing or has an invalid format.");
+    error.code = "INVALID_RECIPIENT_ADDRESS";
+    error.permanent = true;
+    throw error;
   }
 
   const items = (order.items || []).map((item) => ({
@@ -166,4 +181,9 @@ async function sendDeliveryReceiptEmail({ user, order }) {
   });
 }
 
-module.exports = { sendPasswordResetEmail, sendDeliveryReceiptEmail };
+module.exports = {
+  sendPasswordResetEmail,
+  sendDeliveryReceiptEmail,
+  isValidEmailAddress,
+  isPermanentEmailError,
+};
