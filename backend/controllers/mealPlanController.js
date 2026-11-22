@@ -55,7 +55,9 @@ exports.createMealPlan = async (req, res) => {
       recommendedIngredients,
       ingredientMode,
       duration,
+      language: requestedLanguage = "en",
     } = req.body;
+    const language = ["en", "gu", "hi"].includes(requestedLanguage) ? requestedLanguage : "en";
 
     if (!["vegetarian", "vegan", "non-vegetarian", "eggetarian"].includes(diet)) {
       return res.status(400).json({
@@ -111,6 +113,7 @@ exports.createMealPlan = async (req, res) => {
 
     const prompt = `
 Create a practical personalized ${duration}-day meal plan.
+Write recipe names and descriptions in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep ingredient names in canonical English and keep quantities and units unchanged so pantry and grocery matching remain correct. Keep diet values and application fields in their existing format.
 
 User goal: ${goal}
 Diet type: ${diet}
@@ -205,6 +208,7 @@ Do not include markdown or explanations outside JSON.
             const categoryPrompt = `
 You are MealMate, an expert Indian home-cooking meal planner.
 Generate ONLY 3 distinct ${type} recipe options for day ${dayNumber}.
+Write recipe names and descriptions in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep ingredient names in canonical English and preserve quantities and units exactly for pantry and grocery matching.
 User goal: ${goal}
 Diet: ${diet}. Restriction: ${DIET_RULES[diet] || "Follow the selected diet exactly."}
 Planning mode: ${ingredientMode === "recommended" ? "Pantry + recommended ingredients" : "Selected pantry ingredients only"}.
