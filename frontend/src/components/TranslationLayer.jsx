@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
 import { translateText } from "@/i18n/translations";
 
-const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE", "TEXTAREA", "INPUT", "SELECT", "OPTION", "SVG", "PATH"]);
+const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "CODE", "PRE", "TEXTAREA", "INPUT", "SVG", "PATH"]);
 const ATTRIBUTES = ["placeholder", "aria-label", "title", "alt"];
 
 export default function TranslationLayer() {
@@ -23,7 +23,7 @@ export default function TranslationLayer() {
 
   function translateTextNode(node, activeLanguage) {
     const parent = node.parentElement;
-    if (!parent || SKIP_TAGS.has(parent.tagName) || parent.closest("[data-no-translate],script,style,code,pre,textarea,input,select,svg,[contenteditable='true']")) return;
+    if (!parent || SKIP_TAGS.has(parent.tagName) || parent.closest("[data-no-translate],script,style,code,pre,textarea,input,svg,[contenteditable='true']")) return;
     const current = node.nodeValue;
     if (!originalText.current.has(node)) originalText.current.set(node, current);
     else if (current !== lastAppliedText.current.get(node) && current !== originalText.current.get(node)) {
