@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { useLanguage } from "@/context/LanguageContext";
 import { localizedValue } from "@/utils/localization";
-import { useLanguage } from "@/context/LanguageContext";
-import { localizedValue } from "@/utils/localization";
 import { ChefHat, Clock, Utensils, Share2, Download, FileText, Trash2, ShoppingCart, Check, ChevronLeft, ChevronRight, X, ClipboardList, Play, Pause, RotateCcw } from "lucide-react";
 import RecipeRating from "../../components/RecipeRating";
 
@@ -14,7 +12,6 @@ const getRecipeImageSource = (recipe) => { const image = recipe?.image || recipe
 const isCommonHouseholdIngredient = (value) => { const normalized = String(value || "").toLowerCase().replace(/\([^)]*\)/g, " ").replace(/^[0-9./½⅓⅔¼¾ ]+\s*(?:cups?|tbsp|tsp|ml|l|g|kg)?\s*(?:of\s+)?/i, "").replace(/\s+[0-9./½⅓⅔¼¾ ]+\s*(?:cups?|tbsp|tsp|ml|l|g|kg)?$/i, "").replace(/[^a-z ]/g, " ").trim().replace(/\s+/g, " "); return normalized === "water" || /^water\s+(?:for|as needed|to|if needed)\b/.test(normalized); };
 
 export default function RecipeDetails() {
-  const { language } = useLanguage();
   const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/recipes/:id");
