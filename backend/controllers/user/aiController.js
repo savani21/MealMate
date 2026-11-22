@@ -141,7 +141,7 @@ const generateRecipe = async (req, res) => {
 
     const prompt = `
 Create one complete, practical recipe for the planned meal: ${mealName || "a suitable meal"}.
-Write every user-facing text field in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"} (recipe name, description, slogan, ingredient names and cooking instructions). Keep quantities, measurement units, ingredient identity, category and diet values structured and unambiguous. Include the familiar English ingredient name in parentheses after its translated name where that helps ingredient matching.
+Write the recipe name, description, slogan and cooking instructions in ${language === "gu" ? "Gujarati" : language === "hi" ? "Hindi" : "English"}. Keep ingredient names in canonical English with quantities and units unchanged so Pantry, recipe matching and grocery workflows continue to recognize them. Keep category and diet values in their existing English values for application logic.
 The user's pantry/selected ingredients are: ${ingredients}.
 Diet preference: ${diet}. Category: ${category}.
 Treat the supplied ingredients as what the user has available, NOT as a strict limit on the recipe. Include all essential ingredients normally required to make this dish properly, even when they are not in the supplied list, and clearly list them so the user can buy missing items.
