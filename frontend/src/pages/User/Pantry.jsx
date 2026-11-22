@@ -1,4 +1,6 @@
 import AppNavbar from "@/components/AppNavbar";
+import { useLanguage } from "@/context/LanguageContext";
+import { localizedValue } from "@/utils/localization";
 import { getIngredientImageCandidates } from "@/utils/ingredientImageDatabase";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -89,6 +91,7 @@ const readJson = async (response) => {
 };
 
 export default function Pantry() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const [items, setItems] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -110,7 +113,7 @@ export default function Pantry() {
 
   const load = async () => {
     try {
-      const response = await fetch(API, { headers: headers() });
+      const response = await fetch(`${API}?language=${encodeURIComponent(language)}`, { headers: headers() });
       const data = await readJson(response);
       if (!response.ok) throw new Error(data.message || "Unable to load pantry");
       setItems(data.items || []);
