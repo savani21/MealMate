@@ -408,8 +408,8 @@ export function translateText(value, language) {
   const trimmed = value.trim();
   const entry = translations[trimmed];
   if (!entry) return value;
-  const leading = value.match(/^\\s*/)?.[0] || "";
-  const trailing = value.match(/\\s*$/)?.[0] || "";
+  const leading = value.match(/^\s*/)?.[0] || "";
+  const trailing = value.match(/\s*$/)?.[0] || "";
   const translated = entry[language === "gu" ? 0 : 1];
   return leading + translated + trailing;
 }
