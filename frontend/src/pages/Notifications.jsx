@@ -222,7 +222,7 @@ export default function Notifications() {
                       </div>
                       <div className="flex items-center gap-1">
                         {!notification.read && <button onClick={() => markAsRead(notification._id)} className="p-2 rounded-lg hover:bg-green-50" title="Mark as read" aria-label="Mark as read"><Check className="w-4 h-4 text-primary" /></button>}
-                        <button onClick={() => deleteNotification(notification._id)} className="p-2 rounded-lg hover:bg-red-50" title="Delete" aria-label="Delete notification"><Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" /></button>
+                        <button onClick={() => deleteNotification(notification._id)} className="h-9 w-9 shrink-0 inline-flex items-center justify-center rounded-lg hover:bg-red-50" title="Delete" aria-label="Delete notification"><Trash2 className="w-5 h-5 shrink-0 text-gray-400 hover:text-red-500" /></button>
                       </div>
                     </div>
                   </div>
