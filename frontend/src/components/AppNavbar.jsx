@@ -79,6 +79,12 @@ export default function AppNavbar({ children }) {
   const [notificationItems, setNotificationItems] = useState([]);
   const [deliveryAlert, setDeliveryAlert] = useState(null);
   const previousUnreadCount = useRef(null);
+
+  useEffect(() => {
+    if (!deliveryAlert) return undefined;
+    const timeout = window.setTimeout(() => setDeliveryAlert(null), 10000);
+    return () => window.clearTimeout(timeout);
+  }, [deliveryAlert]);
   const isAdmin = user?.role === "admin";
   const userId = user?._id || user?.id;
   const groups = isAdmin ? ADMIN_GROUPS : USER_GROUPS;
@@ -132,12 +138,10 @@ export default function AppNavbar({ children }) {
         const nextUnreadCount = Number(data.unreadCount) || 0;
         if (!isAdmin && previousUnreadCount.current !== null && nextUnreadCount > previousUnreadCount.current) {
           const latestUnread = items.find((item) => !item.read);
-          if (latestUnread) {
+          if (latestUnread?.type === "order-delivered") {
             setDeliveryAlert({
-              title: latestUnread.title || "New MealMate notification",
-              message: latestUnread.type === "order-delivered"
-                ? formatNotificationDeliveryMessage(latestUnread)
-                : (latestUnread.message || "You have a new update. View your notifications for details."),
+              title: latestUnread.title || "Order delivered",
+              message: formatNotificationDeliveryMessage(latestUnread),
             });
           }
         }
@@ -261,7 +265,6 @@ export default function AppNavbar({ children }) {
           <div className="min-w-0 flex-1">
             <p className="font-bold text-gray-900">{deliveryAlert.title}</p>
             <p className="mt-1 text-sm text-gray-500">{deliveryAlert.message}</p>
-            <button type="button" onClick={() => { setDeliveryAlert(null); navigate("/notifications"); }} className="mt-2 text-sm font-semibold text-primary hover:underline">View notification</button>
           </div>
           <button type="button" onClick={() => setDeliveryAlert(null)} aria-label="Dismiss notification" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
         </div>
