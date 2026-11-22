@@ -1,6 +1,7 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   Search, ChefHat, Clock, Heart, Utensils, Sparkles, X, Star,
   SlidersHorizontal, Flame, ArrowUpDown, Leaf,
@@ -58,6 +59,7 @@ function getRecipeImage(recipe, index) {
 }
 
 export default function Recipes() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const returnToPlanner = params.get("return") === "meal-planner";
@@ -146,7 +148,7 @@ export default function Recipes() {
       const response = await fetch("/api/ai/generate-recipe", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ ingredients: generatorIngredients.trim(), mealName, diet: params.get("diet") || "Any", category: mealType || category !== "All" ? (mealType || category) : "Other" }),
+        body: JSON.stringify({ language, ingredients: generatorIngredients.trim(), mealName, diet: params.get("diet") || "Any", category: mealType || category !== "All" ? (mealType || category) : "Other" }),
       });
       const data = await response.json();
       if (!response.ok) { alert(data.message || "Failed to generate recipe"); return; }
