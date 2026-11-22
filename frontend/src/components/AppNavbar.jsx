@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -254,7 +255,7 @@ export default function AppNavbar({ children }) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-100 bg-white/95 backdrop-blur-xl">
-      {deliveryAlert && (
+      {deliveryAlert && createPortal((
         <div role="status" aria-live="polite" className="fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-2xl border border-green-100 bg-white p-4 shadow-2xl">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-50"><Bell className="h-5 w-5 text-primary" /></span>
           <div className="min-w-0 flex-1">
@@ -264,7 +265,7 @@ export default function AppNavbar({ children }) {
           </div>
           <button type="button" onClick={() => setDeliveryAlert(null)} aria-label="Dismiss notification" className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"><X className="h-4 w-4" /></button>
         </div>
-      )}
+      ), document.body)}
       <div className="mx-auto flex min-h-[76px] w-full max-w-7xl items-center gap-5 px-4 sm:px-6 lg:px-8">
         <button type="button" onClick={() => navigate("/dashboard")} aria-label="MealMate dashboard" className="flex shrink-0 items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-green-50"><ChefHat className="h-6 w-6 text-primary" /></span>
