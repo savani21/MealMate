@@ -18,6 +18,12 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
     passwordResetToken: {
       type: String,
       select: false,
