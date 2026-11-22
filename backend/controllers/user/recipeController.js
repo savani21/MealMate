@@ -163,9 +163,10 @@ const getRecipeById = async (req, res) => {
 
     const rating = reviewStats[0];
 
+    const localizedRecipe = await localizeRecords([recipe], "recipe", req.query.language || "en");
     res.status(200).json({
       recipe: {
-        ...recipe,
+        ...localizedRecipe[0],
         ratingCount: rating?.ratingCount || 0,
         averageRating: rating ? Number(rating.averageRating.toFixed(1)) : 0,
       },
