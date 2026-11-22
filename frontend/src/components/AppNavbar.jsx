@@ -185,18 +185,34 @@ export default function AppNavbar({ children }) {
 
   const markAllNotificationsRead = async () => {
     const token = localStorage.getItem("token");
+    if (!token || unreadNotifications === 0) return;
+
     const endpoint = isAdmin ? "/api/admin/alerts/read-all" : "/api/notifications/read-all";
+    const previousItems = notificationItems;
+    const previousUnreadCount = unreadNotifications;
+
+    // Update the bell and dropdown immediately while the read status is saved.
+    setNotificationItems((items) => items.map((item) => ({ ...item, read: true })));
+    setUnreadNotifications(0);
+
     try {
       const response = await fetch(endpoint, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error("Unable to update notifications.");
-      setNotificationItems((items) => items.map((item) => ({ ...item, read: true })));
-      setUnreadNotifications(0);
     } catch (error) {
+      // Restore the previous state if persistence fails.
+      setNotificationItems(previousItems);
+      setUnreadNotifications(previousUnreadCount);
       console.error("Mark all notifications as read failed:", error);
     }
+  };
+
+  const toggleNotificationPanel = () => {
+    const willOpen = !notificationOpen;
+    setNotificationOpen(willOpen);
+    if (willOpen) void markAllNotificationsRead();
   };
 
   const navigate = (path) => {
@@ -268,7 +284,7 @@ export default function AppNavbar({ children }) {
         <div className="ml-auto hidden shrink-0 items-center gap-2 lg:flex">
           {children}
           <div className="relative" data-notification-root>
-            <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
+            <button type="button" onClick={toggleNotificationPanel} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-600 transition hover:bg-green-50 hover:text-primary">
               <Bell className="h-5 w-5" />
               {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
             </button>
@@ -293,7 +309,7 @@ export default function AppNavbar({ children }) {
         </div>
 
         {user && <div className="relative lg:hidden" data-notification-root>
-          <button type="button" onClick={() => setNotificationOpen((value) => !value)} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700">
+          <button type="button" onClick={toggleNotificationPanel} aria-label="Notifications" aria-expanded={notificationOpen} className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-700">
             <Bell className="h-5 w-5" />
             {unreadNotifications > 0 && <span aria-label="Unread notifications" className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />}
           </button>
