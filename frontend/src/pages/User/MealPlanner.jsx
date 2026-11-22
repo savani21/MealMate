@@ -1,6 +1,7 @@
 import AppNavbar from "@/components/AppNavbar";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { useLanguage } from "@/context/LanguageContext";
 import { Sparkles, Target, ShoppingBasket, ThumbsUp, CheckCircle2, ChefHat, ChevronDown, Star, ArrowDown, Plus } from "lucide-react";
 
 const API = "/api/meal-plans";
@@ -43,6 +44,7 @@ const isExpiredPantryItem = (item, now = new Date()) => {
 };
 
 export default function MealPlanner() {
+  const { language } = useLanguage();
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const [goal, setGoal] = useState("");
@@ -179,7 +181,7 @@ export default function MealPlanner() {
       const response = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...payload, previewOnly: true }),
+        body: JSON.stringify({ ...payload, language, previewOnly: true }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to generate recipe choices");
@@ -228,7 +230,7 @@ export default function MealPlanner() {
       const response = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ ...payload, selectedDays: draftDays }),
+        body: JSON.stringify({ ...payload, language, selectedDays: draftDays }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to save meal plan");
