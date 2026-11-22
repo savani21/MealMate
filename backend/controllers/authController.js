@@ -91,7 +91,11 @@ exports.forgotPassword = async (req, res) => {
       user.passwordResetExpires = undefined;
       await user.save();
       console.error("MealMate password reset email failed:", mailError.message);
-      return res.status(502).json({ message: "We could not send the reset email. Please try again later." });
+      // Keep the response identical to the unknown-email case to avoid account enumeration.
+      return res.status(200).json({
+        success: true,
+        message: "If an account exists for that email, a password reset link has been sent.",
+      });
     }
 
     return res.status(200).json({
