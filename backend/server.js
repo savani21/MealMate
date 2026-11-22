@@ -50,6 +50,7 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
+app.use("/api/localization", require("./routes/localizationRoutes"));
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/meal-plans", require("./routes/mealPlanRoutes"));
 app.use("/api/nutrition", nutritionRoutes);
