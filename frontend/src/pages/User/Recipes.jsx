@@ -356,7 +356,7 @@ export default function Recipes() {
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 text-center">
                       <Utensils className="h-7 w-7 text-green-600" />
-                      <span className="line-clamp-2 text-[10px] font-bold text-gray-700">{recipe.name}</span>
+                      <span className="line-clamp-2 text-[10px] font-bold text-gray-700">{localizedValue(recipe, "name")}</span>
                     </div>
                   )}
                   {recipe.isHighlyLiked && <span className="absolute bottom-1 left-1 rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-amber-950">Popular</span>}
@@ -367,7 +367,7 @@ export default function Recipes() {
                     {recipe.diet && <span className="text-[10px] font-medium text-gray-500">{recipe.diet}</span>}
                   </div>
                   <button type="button" onClick={() => setLocation(`/recipes/${recipe._id}`)} className="text-left">
-                    <h3 className="line-clamp-1 text-base font-extrabold text-gray-900 transition group-hover:text-primary sm:text-lg">{recipe.name}</h3>
+                    <h3 className="line-clamp-1 text-base font-extrabold text-gray-900 transition group-hover:text-primary sm:text-lg">{localizedValue(recipe, "name")}</h3>
                     <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500 sm:text-sm">{recipe.description || "Discover the ingredients and steps for this recipe."}</p>
                   </button>
                   {recipe.slogan && <p className="mt-1 line-clamp-1 text-[11px] italic text-primary">“{recipe.slogan}”</p>}
