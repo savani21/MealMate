@@ -17,10 +17,10 @@ export default function Home() {
       <main>
         <HeroSection />
         <StatsSection />
-        <FeaturesSection />
+        <FeaturedFoodsSection />
         <HowItWorksSection />
         <AIFeaturesSection />
-        <FeaturedFoodsSection />
+        <FeaturesSection />
         <AppPreviewSection />
         <TestimonialsSection />
         <CTASection />
