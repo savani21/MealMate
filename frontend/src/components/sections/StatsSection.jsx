@@ -86,7 +86,7 @@ export function StatsSection() {
             : undefined;
 
     return (
-        <section className="scroll-mt-20 py-12 md:py-14 bg-white border-y border-gray-100" id="about">
+        <section className="scroll-mt-20 pt-8 pb-12 md:pt-10 md:pb-14 bg-white border-y border-gray-100" id="about">
             <div className="container mx-auto px-4 md:px-6">
                 <AnimatedSection>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
