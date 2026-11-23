@@ -51,7 +51,7 @@ const FEATURES = [
     }
 ];
 export function FeaturesSection() {
-    return (<section id="features" className="py-20 md:py-28 bg-gray-50">
+    return (<section id="features" className="scroll-mt-16 py-20 md:py-28 bg-gray-50">
       <div className="container mx-auto px-4 md:px-6">
         
         <AnimatedSection className="text-center max-w-2xl mx-auto mb-16">
