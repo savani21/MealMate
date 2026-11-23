@@ -5,7 +5,7 @@ export function Footer() {
         e.preventDefault();
         toast({ title: 'Coming soon', description: `${label} isn't ready yet, but it's on the way!` });
     };
-    return (<footer className="bg-gray-900 text-white pt-20 pb-10" id="contact">
+    return (<footer className="scroll-mt-16 bg-gray-900 text-white pt-20 pb-10" id="contact">
       <div className="container mx-auto px-4 md:px-6">
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">

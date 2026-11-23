@@ -4,7 +4,7 @@ import { CheckCircle2, ChevronRight, PieChart, TrendingUp, Package } from 'lucid
 
 export function AppPreviewSection() {
   return (
-    <section className="overflow-hidden bg-gray-950 py-16 text-white md:py-20" id="marketplace">
+    <section className="scroll-mt-16 overflow-hidden bg-gray-950 py-16 text-white md:py-20" id="marketplace">
       <div className="container mx-auto px-4 md:px-6">
         <AnimatedSection className="mx-auto mb-10 max-w-2xl text-center md:mb-12">
           <span className="mb-3 inline-flex rounded-full border border-green-400/20 bg-green-400/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-green-300">
