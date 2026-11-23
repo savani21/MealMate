@@ -15,11 +15,11 @@ export default function Home() {
       <Navbar />
       <main>
         <HeroSection />
-        <StatsSection />
-        <FeaturedFoodsSection />
-        <HowItWorksSection />
         <FeaturesSection />
+        <HowItWorksSection />
+        <FeaturedFoodsSection />
         <AppPreviewSection />
+        <StatsSection />
         <TestimonialsSection />
         <CTASection />
       </main>

@@ -37,7 +37,7 @@ export function HeroSection() {
               <button className="bg-primary text-white px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-primary/90 hover:shadow-lg hover:-translate-y-1 transition-all duration-300" data-testid="hero-cta-primary" onClick={() => { window.location.href = "/login"; }}>
                 Get Started Free
               </button>
-              <button className="group flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('recipes')?.scrollIntoView({ behavior: 'smooth' })}>
+              <button className="group flex items-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 rounded-full text-base sm:text-lg font-semibold text-gray-700 hover:bg-gray-100 transition-all duration-300" data-testid="hero-cta-secondary" onClick={() => document.getElementById('featured-foods')?.scrollIntoView({ behavior: 'smooth' })}>
                 Explore Recipes
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform"/>
               </button>
