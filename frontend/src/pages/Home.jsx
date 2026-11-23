@@ -3,7 +3,6 @@ import { HeroSection } from '@/components/sections/HeroSection';
 import { StatsSection } from '@/components/sections/StatsSection';
 import { FeaturesSection } from '@/components/sections/FeaturesSection';
 import { HowItWorksSection } from '@/components/sections/HowItWorksSection';
-import { AIFeaturesSection } from '@/components/sections/AIFeaturesSection';
 import { FeaturedFoodsSection } from '@/components/sections/FeaturedFoodsSection';
 import { AppPreviewSection } from '@/components/sections/AppPreviewSection';
 import { TestimonialsSection } from '@/components/sections/TestimonialsSection';
@@ -19,7 +18,6 @@ export default function Home() {
         <StatsSection />
         <FeaturedFoodsSection />
         <HowItWorksSection />
-        <AIFeaturesSection />
         <FeaturesSection />
         <AppPreviewSection />
         <TestimonialsSection />
