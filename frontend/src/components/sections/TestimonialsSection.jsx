@@ -22,7 +22,7 @@ export function TestimonialsSection() {
   }, []);
 
   return (
-    <section className="bg-gray-50 py-20 md:py-28" id="testimonials">
+    <section className="bg-gray-50 pt-12 pb-20 md:pt-16 md:pb-28" id="testimonials">
       <div className="container mx-auto px-4 md:px-6">
         <AnimatedSection className="mb-12 text-center">
           <h2 className="text-4xl font-black text-gray-900 md:text-5xl">What cooks are saying</h2>
