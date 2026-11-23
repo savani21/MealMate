@@ -37,7 +37,7 @@ const featuredFoods = [
 
 export function FeaturedFoodsSection() {
   return (
-    <section id="featured-foods" className="scroll-mt-20 bg-[#fffdf8] py-20 md:py-28">
+    <section id="featured-foods" className="scroll-mt-20 bg-[#fffdf8] pt-10 pb-20 md:pt-14 md:pb-28">
       <div className="container mx-auto px-4 md:px-6">
         <AnimatedSection className="mx-auto mb-12 max-w-3xl text-center md:mb-16">
           <span className="mb-3 inline-flex items-center rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-bold tracking-[0.18em] text-orange-700">
