@@ -46,10 +46,10 @@ export function Navbar() {
                 <li key={link.label}>
                   <a
                     href={link.href}
-                    className="relative whitespace-nowrap py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-primary"
+                    className="group relative whitespace-nowrap py-2 text-sm font-semibold text-gray-600 transition-colors hover:text-primary"
                   >
                     {link.label}
-                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-primary transition-transform duration-300 hover:scale-x-100" />
+                    <span className="absolute inset-x-0 -bottom-0.5 h-0.5 origin-left scale-x-0 rounded-full bg-primary transition-transform duration-300 group-hover:scale-x-100" />
                   </a>
                 </li>
               ))}
