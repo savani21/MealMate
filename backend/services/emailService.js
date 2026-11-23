@@ -1,35 +1,51 @@
-const nodemailer = require("nodemailer");
+const RESEND_API_URL = "https://api.resend.com/emails";
+const DEFAULT_SENDER = "MealMate <onboarding@resend.dev>";
 
-let transporter;
+const sender = () => String(process.env.EMAIL_FROM || DEFAULT_SENDER).trim();
 
-function getTransporter() {
-  const host = String(process.env.EMAIL_HOST || "smtp.gmail.com").trim();
-  const user = String(process.env.EMAIL_USER || "").trim();
-  let pass = String(process.env.EMAIL_PASS || "").trim();
-
-  if (!user || !pass) {
-    throw new Error("Email is not configured. Set EMAIL_USER and EMAIL_PASS in backend/.env.");
+async function sendEmail({ to, subject, text, html, attachments = [] }) {
+  const apiKey = String(process.env.RESEND_API_KEY || "").trim();
+  if (!apiKey) {
+    throw new Error("Email is not configured. Set RESEND_API_KEY in the backend environment.");
   }
 
-  // Google App Passwords may be copied with spaces between character groups.
-  if (host.toLowerCase() === "smtp.gmail.com") {
-    pass = pass.replace(/\s+/g, "");
+  const response = await fetch(RESEND_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: sender(),
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      text,
+      html,
+      ...(attachments.length ? { attachments } : {}),
+    }),
+    signal: AbortSignal.timeout(15000),
+  });
+
+  let result = {};
+  try {
+    result = await response.json();
+  } catch {
+    // Keep the HTTP status as the useful diagnostic if the API response is not JSON.
   }
 
-  if (!transporter) {
-    const port = Number(process.env.EMAIL_PORT || 465);
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: String(process.env.EMAIL_SECURE ?? (port === 465)).trim().toLowerCase() === "true",
-      auth: { user, pass },
-    });
+  if (!response.ok) {
+    const error = new Error(result?.message || `Resend email request failed with HTTP ${response.status}.`);
+    error.statusCode = response.status;
+    error.code = result?.name;
+    error.permanent = response.status >= 400
+      && response.status < 500
+      && response.status !== 408
+      && response.status !== 429;
+    throw error;
   }
 
-  return transporter;
+  return result;
 }
-
-const sender = () => process.env.EMAIL_FROM || process.env.EMAIL_USER;
 
 const esc = (value) =>
   String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -45,9 +61,14 @@ function isValidEmailAddress(value) {
   return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-// SMTP 5xx responses indicate a permanent rejection (for example, 550 5.1.1).
-// Leave 4xx/network errors retryable because they are usually temporary.
+// Resend 4xx validation/authentication errors are permanent, except
+// timeouts and rate limits which may succeed on a later retry.
 function isPermanentEmailError(error) {
+  if (error?.permanent) return true;
+  const statusCode = Number(error?.statusCode);
+  if (statusCode) {
+    return statusCode >= 400 && statusCode < 500 && statusCode !== 408 && statusCode !== 429;
+  }
   const responseCode = Number(error?.responseCode);
   return responseCode >= 500 && responseCode < 600;
 }
@@ -97,8 +118,7 @@ function buildReceiptSvg({ customerName, orderId, deliveredAt, items, total }) {
 }
 
 async function sendPasswordResetEmail({ to, name, resetUrl }) {
-  await getTransporter().sendMail({
-    from: sender(),
+  await sendEmail({
     to,
     subject: "Reset your MealMate password",
     text: `Hi ${name || "there"},\nUse this link within 30 minutes to reset your password:\n${resetUrl}\nIf you did not request this, ignore this email.`,
@@ -164,8 +184,7 @@ async function sendDeliveryReceiptEmail({ user, order }) {
       </div>
     </div>`;
 
-  await getTransporter().sendMail({
-    from: sender(),
+  await sendEmail({
     to: user.email,
     subject: `Your MealMate delivery receipt — ${orderId}`,
     text: `Hi ${customerName}, your order is delivered.\nOrder: ${orderId}\nDelivered: ${deliveredAt}\n${textItems}\nTotal: ${formatMoney(total)}`,
@@ -173,9 +192,9 @@ async function sendDeliveryReceiptEmail({ user, order }) {
     attachments: [
       {
         filename: `MealMate-Receipt-${String(orderId).replace(/[^a-zA-Z0-9_-]/g, "_")}.svg`,
-        content: receiptSvg,
-        contentType: "image/svg+xml",
-        cid: "mealmate-delivery-receipt",
+        content: Buffer.from(receiptSvg, "utf8").toString("base64"),
+        content_type: "image/svg+xml",
+        content_id: "mealmate-delivery-receipt",
       },
     ],
   });
