@@ -9,7 +9,7 @@ const STEPS = [
     { icon: Activity, title: "Track Nutrition", desc: "Monitor your health progress" },
 ];
 export function HowItWorksSection() {
-    return (<section className="py-20 md:py-28 bg-green-50/50 relative overflow-hidden" id="how-it-works">
+    return (<section className="pt-12 pb-20 md:pt-16 md:pb-28 bg-green-50/50 relative overflow-hidden" id="how-it-works">
       {/* Decorative BG element */}
       <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-white rounded-full opacity-40 blur-3xl -z-10 translate-x-1/3 -translate-y-1/3"/>
       
