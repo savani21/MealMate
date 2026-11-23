@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { AnimatedSection } from '../AnimatedSection';
 import { toast } from '@/hooks/use-toast';
 export function CTASection() {
-    return (<section className="relative py-24 md:py-32 overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-700">
+    return (<section className="relative pt-16 pb-24 md:pt-20 md:pb-32 overflow-hidden bg-gradient-to-br from-green-500 via-green-600 to-emerald-700">
       
       {/* Abstract Background Shapes */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">

@@ -3,7 +3,7 @@ import { ArrowRight, Sparkles, Salad, Carrot, Apple, Fish } from 'lucide-react';
 import { staggerContainer } from '../AnimatedSection';
 export function HeroSection() {
     const words = ['Plan', 'Better.', 'Eat', 'Healthier.', 'Waste', 'Less.'];
-    return (<section id="home" className="relative min-h-0 lg:min-h-[100dvh] pt-28 sm:pt-32 pb-12 sm:pb-20 flex items-center overflow-hidden">
+    return (<section id="home" className="relative min-h-0 lg:min-h-[100dvh] pt-20 sm:pt-24 pb-12 sm:pb-20 flex items-center overflow-hidden">
       {/* Background blobs */}
       <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-bl from-green-50 to-transparent -z-10 blur-3xl opacity-60"/>
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -z-10"/>
