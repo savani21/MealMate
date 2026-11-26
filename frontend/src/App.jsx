@@ -92,10 +92,38 @@ function Router() {
   );
 }
 
+function BackendKeepAlive() {
+  useEffect(() => {
+    const BACKEND_HEALTH_URL = "https://mealmate-api-msyd.onrender.com/api/health";
+
+    const wakeBackend = () => {
+      fetch(BACKEND_HEALTH_URL, {
+        method: "GET",
+        cache: "no-store",
+      }).catch(() => {
+        // The backend may be starting after an idle period. The next ping will retry.
+      });
+    };
+
+    // Wake the Render service as soon as the frontend loads.
+    wakeBackend();
+
+    // Keep it active while this app remains open in the browser.
+    const keepAliveInterval = window.setInterval(wakeBackend, 10 * 60 * 1000);
+
+    return () => {
+      window.clearInterval(keepAliveInterval);
+    };
+  }, []);
+
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <BackendKeepAlive />
         <TooltipProvider>
           <Router />
           <Suspense fallback={null}><MealMateAssistant /></Suspense>
